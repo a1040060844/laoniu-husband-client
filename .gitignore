@@ -1,0 +1,9 @@
+node_modules/
+dist/
+
+app-data/
+*.log
+*.tsbuildinfo
+
+.DS_Store
+Thumbs.db
