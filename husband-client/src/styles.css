@@ -3411,36 +3411,6 @@ button {
   line-height: 0.85;
 }
 
-.wife-subpage-cue {
-  position: fixed;
-  top: max(8px, env(safe-area-inset-top));
-  color: transparent;
-  font-size: 0;
-}
-
-.wife-subpage-cue::before {
-  content: "鈭?";
-  color: rgba(248, 223, 172, 0.82);
-  font-family: Georgia, serif;
-  font-size: 18px;
-  line-height: 0.85;
-}
-
-.wife-subpage-cue::after {
-  content: "涓嬫粦杩斿洖涓婚〉";
-  color: rgba(231, 199, 141, 0.72);
-  font-family: var(--serif);
-  font-size: 15px;
-}
-
-.wife-subpage-cue::before {
-  content: "\2304";
-}
-
-.wife-subpage-cue::after {
-  content: "\4E0B\6ED1\8FD4\56DE\4E3B\9875";
-}
-
 .wife-today-card {
   position: relative;
   z-index: 2;
