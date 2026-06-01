@@ -650,7 +650,37 @@ button {
   background:
     radial-gradient(circle at 34% 22%, rgba(255, 239, 198, 0.14), transparent 38%),
     rgba(12, 9, 7, 0.2);
+  border: 1px solid rgba(231, 199, 141, 0.18);
   box-shadow: inset 0 0 18px rgba(231, 199, 141, 0.08), 0 0 16px rgba(231, 199, 141, 0.08), 0 14px 34px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+.benefit-bubble::before,
+.benefit-bubble::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.benefit-bubble::before {
+  background:
+    linear-gradient(118deg, transparent 0 42%, rgba(255, 236, 190, 0.7) 43% 45%, transparent 46%),
+    linear-gradient(35deg, transparent 0 48%, rgba(255, 236, 190, 0.45) 49% 50%, transparent 51%),
+    linear-gradient(156deg, transparent 0 52%, rgba(255, 236, 190, 0.36) 53% 54%, transparent 55%);
+  filter: drop-shadow(0 0 5px rgba(248, 223, 172, 0.42));
+}
+
+.benefit-bubble::after {
+  inset: -18px;
+  background:
+    radial-gradient(circle at 24% 32%, rgba(248, 223, 172, 0.64) 0 2px, transparent 3px),
+    radial-gradient(circle at 68% 24%, rgba(231, 199, 141, 0.48) 0 2px, transparent 3px),
+    radial-gradient(circle at 78% 64%, rgba(248, 223, 172, 0.54) 0 1px, transparent 3px),
+    radial-gradient(circle at 36% 78%, rgba(231, 199, 141, 0.42) 0 1px, transparent 3px);
+  filter: blur(0.2px);
 }
 
 .benefit-bubble:nth-child(1) {
@@ -781,6 +811,27 @@ button {
 .benefit-bubble--cooldown {
   opacity: 0.46;
   filter: grayscale(0.5);
+}
+
+.benefit-bubble--bursting {
+  animation: benefitBubbleBurst 260ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.benefit-bubble--bursting::before {
+  animation: benefitBubbleCrack 180ms ease-out 70ms both;
+}
+
+.benefit-bubble--bursting::after {
+  animation: benefitBubbleDust 240ms ease-out 120ms both;
+}
+
+.benefit-page--light-curtain .benefit-orbit .benefit-bubble {
+  opacity: 0.34;
+  filter: blur(1.2px) brightness(0.58) saturate(0.8);
+}
+
+.benefit-page--light-curtain .cinema-image {
+  filter: brightness(0.72) saturate(0.9);
 }
 
 .benefit-commission {
@@ -1257,6 +1308,280 @@ button {
   text-align: center;
 }
 
+.benefit-modal-backdrop {
+  place-items: center;
+  padding: 18px;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(231, 199, 141, 0.1), transparent 16rem),
+    rgba(0, 0, 0, 0.46);
+  backdrop-filter: blur(3px) brightness(0.78);
+}
+
+.benefit-modal-backdrop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.12), transparent 38%, rgba(0, 0, 0, 0.28)),
+    radial-gradient(ellipse at center, transparent 0 48%, rgba(0, 0, 0, 0.46) 100%);
+}
+
+.benefit-modal-dust {
+  position: absolute;
+  left: 50%;
+  top: 35%;
+  width: 168px;
+  height: 118px;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 34%, rgba(248, 223, 172, 0.4) 0 2px, transparent 3px),
+    radial-gradient(circle at 36% 20%, rgba(231, 199, 141, 0.36) 0 1px, transparent 3px),
+    radial-gradient(circle at 62% 28%, rgba(248, 223, 172, 0.34) 0 2px, transparent 3px),
+    radial-gradient(circle at 78% 52%, rgba(231, 199, 141, 0.3) 0 1px, transparent 3px),
+    radial-gradient(circle at 44% 72%, rgba(248, 223, 172, 0.32) 0 1px, transparent 3px);
+  filter: blur(0.4px);
+  transform: translate(-50%, -50%);
+  animation: benefitModalDust 380ms ease-out both;
+}
+
+.benefit-modal {
+  position: relative;
+  width: min(100%, 390px);
+  max-height: min(88dvh, 720px);
+  padding: 22px 18px 18px;
+  overflow: auto;
+  border: 1px solid rgba(231, 199, 141, 0.56);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 238, 196, 0.05), transparent 28%),
+    radial-gradient(circle at 50% 0%, rgba(231, 199, 141, 0.16), transparent 14rem),
+    rgba(9, 8, 7, 0.76);
+  box-shadow:
+    0 0 0 1px rgba(255, 238, 196, 0.05) inset,
+    0 0 32px rgba(231, 199, 141, 0.12),
+    0 26px 90px rgba(0, 0, 0, 0.76);
+  backdrop-filter: blur(18px) saturate(1.05);
+  transform-origin: center 62%;
+  animation: benefitCurtainRise 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.benefit-modal::before,
+.benefit-modal::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.benefit-modal::before {
+  inset: 7px;
+  border: 1px solid rgba(248, 223, 172, 0.12);
+  border-radius: 6px;
+}
+
+.benefit-modal::after {
+  left: 16px;
+  right: 16px;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(248, 223, 172, 0.72), transparent);
+  box-shadow: 0 0 16px rgba(248, 223, 172, 0.24);
+}
+
+.benefit-modal__close {
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(231, 199, 141, 0.18);
+  border-radius: 50%;
+  color: rgba(248, 223, 172, 0.82);
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.benefit-modal__header,
+.benefit-modal__content,
+.benefit-modal__usage,
+.benefit-modal__actions {
+  position: relative;
+  z-index: 1;
+  animation: benefitContentFade 180ms ease-out 130ms both;
+}
+
+.benefit-modal__header {
+  padding-right: 38px;
+}
+
+.benefit-modal__header h2 {
+  margin: 8px 0 8px;
+  color: var(--gold-strong);
+  font-family: var(--serif);
+  font-size: 30px;
+  font-weight: 500;
+}
+
+.benefit-modal__header p:not(.kicker) {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.benefit-modal__status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  margin-top: 12px;
+  padding: 0 10px;
+  border: 1px solid rgba(231, 199, 141, 0.34);
+  border-radius: 999px;
+  color: var(--gold-strong);
+  background: rgba(231, 199, 141, 0.1);
+  font-size: 12px;
+}
+
+.benefit-modal__content {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 14px;
+  align-items: center;
+  margin-top: 18px;
+}
+
+.benefit-modal__emblem {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 88px;
+  height: 88px;
+  border: 1px solid rgba(231, 199, 141, 0.34);
+  border-radius: 50%;
+  color: var(--gold-strong);
+  background:
+    radial-gradient(circle at 36% 24%, rgba(255, 239, 198, 0.18), transparent 36%),
+    rgba(0, 0, 0, 0.24);
+  box-shadow: inset 0 0 24px rgba(231, 199, 141, 0.1), 0 0 22px rgba(231, 199, 141, 0.1);
+}
+
+.benefit-modal__emblem::after {
+  content: "";
+  position: absolute;
+  inset: 11px;
+  border: 1px solid rgba(231, 199, 141, 0.12);
+  border-radius: 50%;
+}
+
+.benefit-modal__details p {
+  margin: 0 0 12px;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.benefit-modal__details dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.benefit-modal__details dl div {
+  display: grid;
+  grid-template-columns: 66px 1fr;
+  gap: 10px;
+}
+
+.benefit-modal__details dt,
+.benefit-modal__usage span {
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.benefit-modal__details dd {
+  margin: 0;
+  color: var(--gold);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.benefit-modal__usage {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  margin-top: 18px;
+  border: 1px solid rgba(231, 199, 141, 0.18);
+  background: rgba(231, 199, 141, 0.12);
+}
+
+.benefit-modal__usage div {
+  min-height: 62px;
+  padding: 10px;
+  background: rgba(6, 5, 4, 0.52);
+}
+
+.benefit-modal__usage strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--gold-strong);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.benefit-modal__actions {
+  display: grid;
+  grid-template-columns: 1fr 112px;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.benefit-modal__primary {
+  min-height: 46px;
+  color: #251709;
+  background: linear-gradient(180deg, #fff1cc, #c9954f);
+  box-shadow: 0 0 20px rgba(231, 199, 141, 0.14);
+}
+
+.benefit-modal__secondary {
+  min-height: 46px;
+  border: 1px solid rgba(231, 199, 141, 0.24);
+  color: var(--gold);
+  background: rgba(0, 0, 0, 0.24);
+}
+
+.benefit-modal--cooldown {
+  border-color: rgba(196, 184, 153, 0.38);
+  background:
+    linear-gradient(180deg, rgba(221, 214, 194, 0.04), transparent 30%),
+    radial-gradient(circle at 50% 0%, rgba(196, 184, 153, 0.12), transparent 14rem),
+    rgba(9, 8, 7, 0.78);
+  box-shadow: 0 0 26px rgba(196, 184, 153, 0.08), 0 26px 90px rgba(0, 0, 0, 0.76);
+}
+
+.benefit-modal--cooldown .benefit-modal__status,
+.benefit-modal--cooldown .benefit-modal__emblem,
+.benefit-modal--cooldown .benefit-modal__usage strong {
+  color: rgba(221, 214, 194, 0.82);
+}
+
+.benefit-modal--locked {
+  border-color: rgba(231, 199, 141, 0.22);
+  filter: brightness(0.78) saturate(0.72);
+}
+
+.benefit-modal--locked .benefit-modal__emblem,
+.benefit-modal--locked .benefit-modal__content,
+.benefit-modal--locked .benefit-modal__usage {
+  opacity: 0.7;
+}
+
+.benefit-modal--cooldown .benefit-modal__primary,
+.benefit-modal--locked .benefit-modal__primary {
+  box-shadow: none;
+}
+
 .submit-modal textarea {
   width: 100%;
   resize: vertical;
@@ -1438,6 +1763,90 @@ button {
   }
 }
 
+@keyframes benefitBubbleBurst {
+  0% {
+    opacity: 1;
+    filter: none;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  31% {
+    opacity: 0.96;
+    filter: brightness(1.06);
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+  100% {
+    opacity: 0.18;
+    filter: blur(4px) brightness(1.28);
+    transform: translate(-50%, -50%) scale(0.58);
+  }
+}
+
+@keyframes benefitBubbleCrack {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) rotate(-3deg);
+  }
+  42% {
+    opacity: 0.92;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.2) rotate(2deg);
+  }
+}
+
+@keyframes benefitBubbleDust {
+  0% {
+    opacity: 0;
+    transform: scale(0.68);
+  }
+  38% {
+    opacity: 0.82;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.55);
+  }
+}
+
+@keyframes benefitCurtainRise {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.96);
+    filter: blur(7px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes benefitContentFade {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes benefitModalDust {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -42%) scale(0.82);
+  }
+  32% {
+    opacity: 0.72;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -58%) scale(1.28);
+  }
+}
+
 @keyframes modal-panel-enter {
   from {
     opacity: 0;
@@ -1569,6 +1978,21 @@ button {
 
 .benefit-bubble:not(.benefit-bubble--locked):not(.benefit-bubble--cooldown):active {
   scale: 0.97;
+}
+
+.husband-pager__screen--active .benefit-bubble--bursting,
+.husband-pager__screen--active .benefit-bubble--bursting:not(.benefit-bubble--locked):not(.benefit-bubble--cooldown),
+.husband-pager__screen--active .benefit-bubble--bursting.benefit-bubble--cooldown,
+.husband-pager__screen--active .benefit-bubble--bursting.benefit-bubble--locked {
+  animation: benefitBubbleBurst 260ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.husband-pager__screen--active .benefit-bubble--bursting::before {
+  animation: benefitBubbleCrack 180ms ease-out 70ms both;
+}
+
+.husband-pager__screen--active .benefit-bubble--bursting::after {
+  animation: benefitBubbleDust 240ms ease-out 120ms both;
 }
 
 .husband-pager__screen--active .task-header,

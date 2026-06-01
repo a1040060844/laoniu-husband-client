@@ -38,15 +38,16 @@ interface BenefitBubbleProps {
   computedStatus: BenefitStatus;
   statusText: string;
   index: number;
+  isBursting?: boolean;
   onOpen: (benefit: Benefit) => void;
 }
 
-export function BenefitBubble({ benefit, computedStatus, statusText, index, onOpen }: BenefitBubbleProps) {
+export function BenefitBubble({ benefit, computedStatus, statusText, index, isBursting = false, onOpen }: BenefitBubbleProps) {
   const Icon = iconMap[benefit.icon as keyof typeof iconMap] ?? Gift;
 
   return (
     <button
-      className={`benefit-bubble benefit-bubble--${computedStatus}`}
+      className={`benefit-bubble benefit-bubble--${computedStatus}${isBursting ? " benefit-bubble--bursting" : ""}`}
       style={{ "--bubble-step": index } as React.CSSProperties}
       type="button"
       onClick={() => onOpen(benefit)}

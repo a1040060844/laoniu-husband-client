@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { Coins } from "lucide-react";
 import { BenefitBubble } from "./BenefitBubble";
 import { BenefitModal } from "./BenefitModal";
@@ -23,6 +24,9 @@ interface BenefitPageProps {
 function getStatus(role: Role, benefit: Benefit): { status: BenefitStatus; text: string } {
   if (role.level < benefit.levelRequired) {
     return { status: "locked", text: `Lv.${String(benefit.levelRequired).padStart(2, "0")}解锁` };
+  }
+  if (benefit.status === "locked") {
+    return { status: "locked", text: "尚未解锁" };
   }
   if (benefit.status === "cooldown") {
     return { status: "cooldown", text: benefit.cooldownText ?? "冷却中" };
@@ -52,6 +56,8 @@ export function BenefitPage({
   onUseBenefit,
   onSelectView,
 }: BenefitPageProps) {
+  const [burstingBenefitId, setBurstingBenefitId] = useState<string | null>(null);
+  const openTimerRef = useRef<number | null>(null);
   const isLockedPreview = role.level > currentLevel;
   const directionClass = `benefit-page--dir-${previewDirection}`;
   const visibleBenefits = benefits.filter((benefit) => isVisibleForRole(role, benefit));
@@ -61,10 +67,35 @@ export function BenefitPage({
   const selectedStatus = visibleSelectedBenefit
     ? getStatus(role, visibleSelectedBenefit)
     : { status: "locked" as BenefitStatus, text: "" };
+  const isLightCurtainActive = Boolean(visibleSelectedBenefit);
+
+  useEffect(() => {
+    return () => {
+      if (openTimerRef.current) {
+        window.clearTimeout(openTimerRef.current);
+      }
+    };
+  }, []);
+
+  function handleOpenBenefit(benefit: Benefit) {
+    if (openTimerRef.current) {
+      window.clearTimeout(openTimerRef.current);
+    }
+    setBurstingBenefitId(benefit.id);
+    openTimerRef.current = window.setTimeout(() => {
+      onOpenBenefit(benefit);
+      setBurstingBenefitId(null);
+      openTimerRef.current = null;
+    }, 260);
+  }
 
   return (
-    <section className={`benefit-page page-screen ${directionClass}${isLockedPreview ? " page-screen--locked-role" : ""}`}>
-      <img className="cinema-image" src={role.roleImage} alt={`${role.title}权益背景`} />
+    <section
+      className={`benefit-page page-screen ${directionClass}${isLockedPreview ? " page-screen--locked-role" : ""}${
+        isLightCurtainActive ? " benefit-page--light-curtain" : ""
+      }`}
+    >
+      <img className="cinema-image" src={role.benefitImage} alt={`${role.title}权益背景`} />
       <div className="image-scrim image-scrim--benefit" />
       {isLockedPreview && <div className="locked-character-mask" aria-hidden="true" />}
 
@@ -87,7 +118,8 @@ export function BenefitPage({
               computedStatus={status}
               statusText={text}
               index={index}
-              onOpen={onOpenBenefit}
+              isBursting={burstingBenefitId === benefit.id}
+              onOpen={handleOpenBenefit}
             />
           );
         })}
