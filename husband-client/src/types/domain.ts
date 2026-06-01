@@ -2,7 +2,13 @@ export type ViewKey = "role" | "benefits" | "tasks";
 
 export type BenefitStatus = "available" | "cooldown" | "locked";
 
-export type TaskStatus = "todo" | "doing" | "submitted" | "confirmed" | "failed" | "completed";
+export type TaskStatus =
+  | "todo"
+  | "doing"
+  | "submitted"
+  | "confirmed"
+  | "failed"
+  | "completed";
 
 export type TaskType = "daily" | "weekly" | "custom" | "urgent";
 

@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BenefitPage } from "./components/BenefitPage";
-import { HUSBAND_PAGES, HusbandVerticalPager } from "./components/HusbandVerticalPager";
+import {
+  HUSBAND_PAGES,
+  HusbandVerticalPager,
+} from "./components/HusbandVerticalPager";
 import { RolePage } from "./components/RolePage";
 import { StoryModal } from "./components/StoryModal";
 import { TaskPage } from "./components/TaskPage";
@@ -15,7 +18,12 @@ import {
   roleWithProgress,
   settleConfirmedTasks,
 } from "./game/progression";
-import { loadTaskSystem, persistLocalTaskSystem, readLocalTaskSystem, saveTaskSystem } from "./lib/taskSystem";
+import {
+  loadTaskSystem,
+  persistLocalTaskSystem,
+  readLocalTaskSystem,
+  saveTaskSystem,
+} from "./lib/taskSystem";
 import type { Benefit, StoryEvent, Task, ViewKey } from "./types/domain";
 import "./styles.css";
 
@@ -23,11 +31,14 @@ export type PreviewDirection = "none" | "next" | "prev";
 
 export default function App() {
   const initialState = useMemo(readLocalTaskSystem, []);
-  const [route, setRoute] = useState(() => (window.location.pathname.startsWith("/wife") ? "wife" : "husband"));
+  const [route, setRoute] = useState(() =>
+    window.location.pathname.startsWith("/wife") ? "wife" : "husband",
+  );
   const [activePage, setActivePage] = useState<number>(HUSBAND_PAGES.ROLE);
   const [progress, setProgress] = useState(initialState.progress);
   const [previewLevel, setPreviewLevel] = useState(initialState.progress.level);
-  const [previewDirection, setPreviewDirection] = useState<PreviewDirection>("none");
+  const [previewDirection, setPreviewDirection] =
+    useState<PreviewDirection>("none");
   const [tasks, setTasks] = useState<Task[]>(initialState.tasks);
   const [selectedBenefit, setSelectedBenefit] = useState<Benefit | null>(null);
   const [story, setStory] = useState<StoryEvent | null>(null);
@@ -83,7 +94,9 @@ export default function App() {
 
   useEffect(() => {
     const handlePopState = () => {
-      setRoute(window.location.pathname.startsWith("/wife") ? "wife" : "husband");
+      setRoute(
+        window.location.pathname.startsWith("/wife") ? "wife" : "husband",
+      );
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
@@ -109,13 +122,19 @@ export default function App() {
   }
 
   function handleStartTask(id: string) {
-    setTasks((current) => current.map((task) => (task.id === id ? { ...task, status: "doing" } : task)));
+    setTasks((current) =>
+      current.map((task) =>
+        task.id === id ? { ...task, status: "doing" } : task,
+      ),
+    );
   }
 
   function handleSubmitTask(id: string, submitNote: string) {
     setTasks((current) =>
       current.map((task) =>
-        task.id === id ? { ...task, status: "submitted", submitNote, deadline: "刚刚提交" } : task,
+        task.id === id
+          ? { ...task, status: "submitted", submitNote, deadline: "刚刚提交" }
+          : task,
       ),
     );
     setStory({
@@ -187,7 +206,12 @@ export default function App() {
   function handleAdjustExperience(amount: number) {
     if (amount > 0) {
       setProgress((current) => {
-        const result = grantExperience(current, amount, roles, "老妞大人亲自赏赐");
+        const result = grantExperience(
+          current,
+          amount,
+          roles,
+          "老妞大人亲自赏赐",
+        );
         if (result.stories.length) {
           setStory(result.stories[result.stories.length - 1]);
         }
@@ -218,7 +242,12 @@ export default function App() {
     setStory({
       title: "职务裁定",
       text: `老妞大人已${reason}，当前职务定为「${roles[safeLevel].title}」。`,
-      tone: safeLevel > progress.level ? "upgrade" : safeLevel < progress.level ? "down" : "normal",
+      tone:
+        safeLevel > progress.level
+          ? "upgrade"
+          : safeLevel < progress.level
+            ? "down"
+            : "normal",
     });
   }
 
@@ -252,7 +281,12 @@ export default function App() {
           onApproveBenefit={handleApproveBenefit}
           onAdjustExperience={handleAdjustExperience}
           onCustomExperience={handleCustomExperience}
-          onSetLevel={(level) => handleSetLevel(level, level === MIN_LEVEL ? "打入流落街头" : "重新指定等级")}
+          onSetLevel={(level) =>
+            handleSetLevel(
+              level,
+              level === MIN_LEVEL ? "打入流落街头" : "重新指定等级",
+            )
+          }
           onLevelDelta={(delta) =>
             handleSetLevel(
               clampLevel(progress.level + delta),

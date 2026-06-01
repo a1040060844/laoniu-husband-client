@@ -1,4 +1,10 @@
-import { useRef, useState, type ReactNode, type TouchEvent, type WheelEvent } from "react";
+import {
+  useRef,
+  useState,
+  type ReactNode,
+  type TouchEvent,
+  type WheelEvent,
+} from "react";
 
 export const HUSBAND_PAGES = {
   BENEFIT: 0,
@@ -58,11 +64,16 @@ export function HusbandVerticalPager({
   function handleTouchEnd(event: TouchEvent<HTMLDivElement>) {
     if (!touchStart.current) return;
     const touch = event.changedTouches[0];
-    const deltaX = (touch?.clientX ?? touchStart.current.x) - touchStart.current.x;
-    const deltaY = (touch?.clientY ?? touchStart.current.y) - touchStart.current.y;
+    const deltaX =
+      (touch?.clientX ?? touchStart.current.x) - touchStart.current.x;
+    const deltaY =
+      (touch?.clientY ?? touchStart.current.y) - touchStart.current.y;
     touchStart.current = null;
 
-    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > SWIPE_THRESHOLD) {
+    if (
+      Math.abs(deltaX) > Math.abs(deltaY) &&
+      Math.abs(deltaX) > SWIPE_THRESHOLD
+    ) {
       if (deltaX < 0) {
         onSwipeLeft?.();
       } else {
@@ -80,11 +91,18 @@ export function HusbandVerticalPager({
 
   function handleWheel(event: WheelEvent<HTMLDivElement>) {
     if (wheelLocked.current || Math.abs(event.deltaY) < WHEEL_THRESHOLD) return;
-    const scroller = (event.target as HTMLElement | null)?.closest(".task-page");
+    const scroller = (event.target as HTMLElement | null)?.closest(
+      ".task-page",
+    );
     if (scroller instanceof HTMLElement && currentPage === HUSBAND_PAGES.TASK) {
-      const canScrollDown = scroller.scrollTop + scroller.clientHeight < scroller.scrollHeight - 2;
+      const canScrollDown =
+        scroller.scrollTop + scroller.clientHeight < scroller.scrollHeight - 2;
       const canScrollUp = scroller.scrollTop > 2;
-      if ((event.deltaY > 0 && canScrollDown) || (event.deltaY < 0 && canScrollUp)) return;
+      if (
+        (event.deltaY > 0 && canScrollDown) ||
+        (event.deltaY < 0 && canScrollUp)
+      )
+        return;
     }
 
     wheelLocked.current = true;
@@ -101,7 +119,10 @@ export function HusbandVerticalPager({
       onTouchEnd={handleTouchEnd}
       onWheel={handleWheel}
     >
-      <div className="husband-pager__track" style={{ transform: `translateY(-${currentPage * 100}dvh)` }}>
+      <div
+        className="husband-pager__track"
+        style={{ transform: `translateY(-${currentPage * 100}dvh)` }}
+      >
         {children.map((child, index) => (
           <section
             className={`husband-pager__screen${index === currentPage ? " husband-pager__screen--active" : ""}`}

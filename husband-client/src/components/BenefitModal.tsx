@@ -51,7 +51,11 @@ interface BenefitModalProps {
   onUse: (benefit: Benefit) => void;
 }
 
-function getUsageFallback(benefit: Benefit, computedStatus: BenefitStatus, statusText: string): BenefitUsageSummary {
+function getUsageFallback(
+  benefit: Benefit,
+  computedStatus: BenefitStatus,
+  statusText: string,
+): BenefitUsageSummary {
   if (computedStatus === "cooldown") {
     return {
       currentStatus: statusText,
@@ -78,18 +82,37 @@ function getUsageFallback(benefit: Benefit, computedStatus: BenefitStatus, statu
   };
 }
 
-export function BenefitModal({ benefit, computedStatus, statusText, usage, onClose, onUse }: BenefitModalProps) {
+export function BenefitModal({
+  benefit,
+  computedStatus,
+  statusText,
+  usage,
+  onClose,
+  onUse,
+}: BenefitModalProps) {
   if (!benefit) return null;
 
   const buttonText =
-    computedStatus === "available" ? "申请恩准" : computedStatus === "cooldown" ? "冷却中" : "尚未解锁";
+    computedStatus === "available"
+      ? "申请恩准"
+      : computedStatus === "cooldown"
+        ? "冷却中"
+        : "尚未解锁";
   const statusLabel =
-    computedStatus === "available" ? "可申请" : computedStatus === "cooldown" ? "冷却中" : "未解锁";
+    computedStatus === "available"
+      ? "可申请"
+      : computedStatus === "cooldown"
+        ? "冷却中"
+        : "未解锁";
   const Icon = iconMap[benefit.icon as keyof typeof iconMap] ?? Gift;
-  const usageSummary = usage ?? getUsageFallback(benefit, computedStatus, statusText);
+  const usageSummary =
+    usage ?? getUsageFallback(benefit, computedStatus, statusText);
 
   return createPortal(
-    <div className={`modal-backdrop benefit-modal-backdrop benefit-modal-backdrop--${computedStatus}`} role="presentation">
+    <div
+      className={`modal-backdrop benefit-modal-backdrop benefit-modal-backdrop--${computedStatus}`}
+      role="presentation"
+    >
       <div className="benefit-modal-dust" aria-hidden="true" />
       <section
         className={`sheet-modal benefit-modal benefit-modal--${computedStatus}`}
@@ -97,7 +120,12 @@ export function BenefitModal({ benefit, computedStatus, statusText, usage, onClo
         aria-modal="true"
         aria-labelledby="benefit-modal-title"
       >
-        <button className="icon-close benefit-modal__close" type="button" onClick={onClose} aria-label="关闭">
+        <button
+          className="icon-close benefit-modal__close"
+          type="button"
+          onClick={onClose}
+          aria-label="关闭"
+        >
           <X size={18} strokeWidth={1.6} />
         </button>
 
@@ -160,7 +188,11 @@ export function BenefitModal({ benefit, computedStatus, statusText, usage, onClo
           >
             {buttonText}
           </button>
-          <button className="benefit-modal__secondary" type="button" onClick={onClose}>
+          <button
+            className="benefit-modal__secondary"
+            type="button"
+            onClick={onClose}
+          >
             关闭光幕
           </button>
         </div>

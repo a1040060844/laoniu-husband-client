@@ -35,7 +35,11 @@ body,
 
 body {
   background:
-    radial-gradient(circle at 50% 0%, rgba(143, 103, 53, 0.18), transparent 34rem),
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(143, 103, 53, 0.18),
+      transparent 34rem
+    ),
     linear-gradient(180deg, #0f0b08, #040302 68%);
   color: var(--ink);
   font-family: var(--sans);
@@ -61,7 +65,9 @@ button {
   margin: 0 auto;
   overflow: hidden;
   background: var(--bg);
-  box-shadow: 0 0 0 1px rgba(231, 199, 141, 0.08), 0 0 90px rgba(0, 0, 0, 0.9);
+  box-shadow:
+    0 0 0 1px rgba(231, 199, 141, 0.08),
+    0 0 90px rgba(0, 0, 0, 0.9);
 }
 
 .husband-pager {
@@ -122,7 +128,12 @@ button {
   z-index: -1;
   height: 38%;
   pointer-events: none;
-  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.66) 42%, rgba(5, 3, 2, 0.92) 100%);
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(0, 0, 0, 0.66) 42%,
+    rgba(5, 3, 2, 0.92) 100%
+  );
 }
 
 .cinema-image,
@@ -143,8 +154,19 @@ button {
   inset: 0;
   z-index: -2;
   background:
-    radial-gradient(circle at 50% 37%, transparent 0 22%, rgba(0, 0, 0, 0.06) 36%, rgba(0, 0, 0, 0.62) 82%),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.24), transparent 38%, rgba(0, 0, 0, 0.62) 80%, rgba(5, 3, 2, 0.94));
+    radial-gradient(
+      circle at 50% 37%,
+      transparent 0 22%,
+      rgba(0, 0, 0, 0.06) 36%,
+      rgba(0, 0, 0, 0.62) 82%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.24),
+      transparent 38%,
+      rgba(0, 0, 0, 0.62) 80%,
+      rgba(5, 3, 2, 0.94)
+    );
 }
 
 .image-scrim::after,
@@ -152,35 +174,93 @@ button {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at center, transparent 46%, rgba(0, 0, 0, 0.68) 100%);
+  background: radial-gradient(
+    ellipse at center,
+    transparent 46%,
+    rgba(0, 0, 0, 0.68) 100%
+  );
 }
 
 .image-scrim--benefit {
   background:
-    radial-gradient(circle at 50% 34%, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.28) 58%, rgba(5, 3, 2, 0.76) 94%),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.22), transparent 52%, rgba(0, 0, 0, 0.76));
+    radial-gradient(
+      circle at 50% 34%,
+      rgba(0, 0, 0, 0.04),
+      rgba(0, 0, 0, 0.28) 58%,
+      rgba(5, 3, 2, 0.76) 94%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.22),
+      transparent 52%,
+      rgba(0, 0, 0, 0.76)
+    );
 }
 
 .role-page .image-scrim {
   background:
-    linear-gradient(180deg, rgba(5, 3, 2, 0.66) 0 10%, rgba(5, 3, 2, 0.34) 22%, rgba(5, 3, 2, 0.04) 40%, rgba(0, 0, 0, 0.48) 84%, rgba(5, 3, 2, 0.94)),
-    radial-gradient(circle at 50% 38%, transparent 0 30%, rgba(0, 0, 0, 0.06) 50%, rgba(0, 0, 0, 0.6) 86%),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.66), transparent 20%, transparent 80%, rgba(0, 0, 0, 0.66));
+    linear-gradient(
+      180deg,
+      rgba(5, 3, 2, 0.66) 0 10%,
+      rgba(5, 3, 2, 0.34) 22%,
+      rgba(5, 3, 2, 0.04) 40%,
+      rgba(0, 0, 0, 0.48) 84%,
+      rgba(5, 3, 2, 0.94)
+    ),
+    radial-gradient(
+      circle at 50% 38%,
+      transparent 0 30%,
+      rgba(0, 0, 0, 0.06) 50%,
+      rgba(0, 0, 0, 0.6) 86%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.66),
+      transparent 20%,
+      transparent 80%,
+      rgba(0, 0, 0, 0.66)
+    );
 }
 
 .role-page .image-scrim::after {
-  background: radial-gradient(ellipse at center, transparent 54%, rgba(0, 0, 0, 0.54) 100%);
+  background: radial-gradient(
+    ellipse at center,
+    transparent 54%,
+    rgba(0, 0, 0, 0.54) 100%
+  );
 }
 
 .benefit-page .image-scrim {
   background:
-    linear-gradient(180deg, rgba(5, 3, 2, 0.88) 0 10%, rgba(5, 3, 2, 0.48) 24%, rgba(5, 3, 2, 0.04) 48%, rgba(0, 0, 0, 0.48) 84%, rgba(5, 3, 2, 0.96) 100%),
-    radial-gradient(circle at 50% 52%, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.16) 58%, rgba(5, 3, 2, 0.7) 98%),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.72), transparent 22%, transparent 78%, rgba(0, 0, 0, 0.72));
+    linear-gradient(
+      180deg,
+      rgba(5, 3, 2, 0.88) 0 10%,
+      rgba(5, 3, 2, 0.48) 24%,
+      rgba(5, 3, 2, 0.04) 48%,
+      rgba(0, 0, 0, 0.48) 84%,
+      rgba(5, 3, 2, 0.96) 100%
+    ),
+    radial-gradient(
+      circle at 50% 52%,
+      rgba(0, 0, 0, 0.02),
+      rgba(0, 0, 0, 0.16) 58%,
+      rgba(5, 3, 2, 0.7) 98%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.72),
+      transparent 22%,
+      transparent 78%,
+      rgba(0, 0, 0, 0.72)
+    );
 }
 
 .benefit-page .image-scrim::after {
-  background: radial-gradient(ellipse at center, transparent 52%, rgba(0, 0, 0, 0.58) 100%);
+  background: radial-gradient(
+    ellipse at center,
+    transparent 52%,
+    rgba(0, 0, 0, 0.58) 100%
+  );
 }
 
 .benefit-page .cinema-image {
@@ -199,14 +279,38 @@ button {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(ellipse at 50% 52%, rgba(0, 0, 0, 0.46) 0 20%, rgba(0, 0, 0, 0.34) 34%, rgba(0, 0, 0, 0.14) 48%, transparent 62%),
-    linear-gradient(90deg, transparent 0 16%, rgba(0, 0, 0, 0.08) 32%, rgba(0, 0, 0, 0.1) 68%, transparent 84%);
+    radial-gradient(
+      ellipse at 50% 52%,
+      rgba(0, 0, 0, 0.46) 0 20%,
+      rgba(0, 0, 0, 0.34) 34%,
+      rgba(0, 0, 0, 0.14) 48%,
+      transparent 62%
+    ),
+    linear-gradient(
+      90deg,
+      transparent 0 16%,
+      rgba(0, 0, 0, 0.08) 32%,
+      rgba(0, 0, 0, 0.1) 68%,
+      transparent 84%
+    );
 }
 
 .benefit-page .locked-character-mask {
   background:
-    radial-gradient(ellipse at 50% 62%, rgba(0, 0, 0, 0.44) 0 22%, rgba(0, 0, 0, 0.3) 36%, rgba(0, 0, 0, 0.12) 50%, transparent 64%),
-    linear-gradient(90deg, transparent 0 15%, rgba(0, 0, 0, 0.08) 32%, rgba(0, 0, 0, 0.1) 68%, transparent 85%);
+    radial-gradient(
+      ellipse at 50% 62%,
+      rgba(0, 0, 0, 0.44) 0 22%,
+      rgba(0, 0, 0, 0.3) 36%,
+      rgba(0, 0, 0, 0.12) 50%,
+      transparent 64%
+    ),
+    linear-gradient(
+      90deg,
+      transparent 0 15%,
+      rgba(0, 0, 0, 0.08) 32%,
+      rgba(0, 0, 0, 0.1) 68%,
+      transparent 85%
+    );
 }
 
 .hero-title {
@@ -215,7 +319,9 @@ button {
   left: 18px;
   right: 18px;
   text-align: center;
-  text-shadow: 0 0 18px rgba(231, 199, 141, 0.36), 0 3px 12px #000;
+  text-shadow:
+    0 0 18px rgba(231, 199, 141, 0.36),
+    0 3px 12px #000;
 }
 
 .hero-title--role {
@@ -282,9 +388,16 @@ button {
   border: 1px solid rgba(231, 199, 141, 0.42);
   color: var(--ink);
   background:
-    radial-gradient(circle at 34% 22%, rgba(255, 239, 198, 0.2), transparent 38%),
+    radial-gradient(
+      circle at 34% 22%,
+      rgba(255, 239, 198, 0.2),
+      transparent 38%
+    ),
     rgba(12, 9, 7, 0.34);
-  box-shadow: inset 0 0 22px rgba(231, 199, 141, 0.1), 0 0 22px rgba(231, 199, 141, 0.12), 0 18px 42px rgba(0, 0, 0, 0.48);
+  box-shadow:
+    inset 0 0 22px rgba(231, 199, 141, 0.1),
+    0 0 22px rgba(231, 199, 141, 0.12),
+    0 18px 42px rgba(0, 0, 0, 0.48);
   backdrop-filter: blur(6px);
 }
 
@@ -346,7 +459,11 @@ button {
 .overview-panel,
 .month-panel {
   border: 1px solid rgba(231, 199, 141, 0.32);
-  background: linear-gradient(180deg, rgba(10, 8, 6, 0.74), rgba(10, 8, 6, 0.52));
+  background: linear-gradient(
+    180deg,
+    rgba(10, 8, 6, 0.74),
+    rgba(10, 8, 6, 0.52)
+  );
   box-shadow: var(--shadow);
   backdrop-filter: blur(8px);
 }
@@ -479,7 +596,9 @@ button {
   border-radius: 999px;
   color: var(--gold-strong);
   background: rgba(10, 8, 6, 0.34);
-  box-shadow: inset 0 0 18px rgba(231, 199, 141, 0.06), 0 12px 34px rgba(0, 0, 0, 0.36);
+  box-shadow:
+    inset 0 0 18px rgba(231, 199, 141, 0.06),
+    0 12px 34px rgba(0, 0, 0, 0.36);
   backdrop-filter: blur(7px);
   opacity: 0.86;
   transform: translateY(-50%);
@@ -571,7 +690,9 @@ button {
   border-radius: 0;
   color: #241608;
   background: linear-gradient(180deg, #fff0c8, #c89854);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.34), 0 8px 28px rgba(0, 0, 0, 0.38);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.34),
+    0 8px 28px rgba(0, 0, 0, 0.38);
   font-weight: 700;
 }
 
@@ -591,7 +712,11 @@ button {
   gap: 3px;
   place-items: center;
   color: var(--gold);
-  background: radial-gradient(ellipse at 50% 100%, rgba(231, 199, 141, 0.16), transparent 70%);
+  background: radial-gradient(
+    ellipse at 50% 100%,
+    rgba(231, 199, 141, 0.16),
+    transparent 70%
+  );
   border: 0;
   box-shadow: none;
   font-family: var(--serif);
@@ -648,10 +773,17 @@ button {
   font-family: var(--serif);
   transform: translate(-50%, -50%);
   background:
-    radial-gradient(circle at 34% 22%, rgba(255, 239, 198, 0.14), transparent 38%),
+    radial-gradient(
+      circle at 34% 22%,
+      rgba(255, 239, 198, 0.14),
+      transparent 38%
+    ),
     rgba(12, 9, 7, 0.2);
   border: 1px solid rgba(231, 199, 141, 0.18);
-  box-shadow: inset 0 0 18px rgba(231, 199, 141, 0.08), 0 0 16px rgba(231, 199, 141, 0.08), 0 14px 34px rgba(0, 0, 0, 0.4);
+  box-shadow:
+    inset 0 0 18px rgba(231, 199, 141, 0.08),
+    0 0 16px rgba(231, 199, 141, 0.08),
+    0 14px 34px rgba(0, 0, 0, 0.4);
   overflow: hidden;
 }
 
@@ -667,19 +799,50 @@ button {
 
 .benefit-bubble::before {
   background:
-    linear-gradient(118deg, transparent 0 42%, rgba(255, 236, 190, 0.7) 43% 45%, transparent 46%),
-    linear-gradient(35deg, transparent 0 48%, rgba(255, 236, 190, 0.45) 49% 50%, transparent 51%),
-    linear-gradient(156deg, transparent 0 52%, rgba(255, 236, 190, 0.36) 53% 54%, transparent 55%);
+    linear-gradient(
+      118deg,
+      transparent 0 42%,
+      rgba(255, 236, 190, 0.7) 43% 45%,
+      transparent 46%
+    ),
+    linear-gradient(
+      35deg,
+      transparent 0 48%,
+      rgba(255, 236, 190, 0.45) 49% 50%,
+      transparent 51%
+    ),
+    linear-gradient(
+      156deg,
+      transparent 0 52%,
+      rgba(255, 236, 190, 0.36) 53% 54%,
+      transparent 55%
+    );
   filter: drop-shadow(0 0 5px rgba(248, 223, 172, 0.42));
 }
 
 .benefit-bubble::after {
   inset: -18px;
   background:
-    radial-gradient(circle at 24% 32%, rgba(248, 223, 172, 0.64) 0 2px, transparent 3px),
-    radial-gradient(circle at 68% 24%, rgba(231, 199, 141, 0.48) 0 2px, transparent 3px),
-    radial-gradient(circle at 78% 64%, rgba(248, 223, 172, 0.54) 0 1px, transparent 3px),
-    radial-gradient(circle at 36% 78%, rgba(231, 199, 141, 0.42) 0 1px, transparent 3px);
+    radial-gradient(
+      circle at 24% 32%,
+      rgba(248, 223, 172, 0.64) 0 2px,
+      transparent 3px
+    ),
+    radial-gradient(
+      circle at 68% 24%,
+      rgba(231, 199, 141, 0.48) 0 2px,
+      transparent 3px
+    ),
+    radial-gradient(
+      circle at 78% 64%,
+      rgba(248, 223, 172, 0.54) 0 1px,
+      transparent 3px
+    ),
+    radial-gradient(
+      circle at 36% 78%,
+      rgba(231, 199, 141, 0.42) 0 1px,
+      transparent 3px
+    );
   filter: blur(0.2px);
 }
 
@@ -911,8 +1074,17 @@ button {
   position: absolute;
   z-index: 0;
   background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.24), rgba(0, 0, 0, 0.66) 40%, rgba(7, 5, 4, 0.94)),
-    radial-gradient(circle at 50% 0%, rgba(231, 199, 141, 0.18), transparent 31rem);
+    linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.24),
+      rgba(0, 0, 0, 0.66) 40%,
+      rgba(7, 5, 4, 0.94)
+    ),
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(231, 199, 141, 0.18),
+      transparent 31rem
+    );
 }
 
 .task-shell {
@@ -921,7 +1093,8 @@ button {
   display: grid;
   gap: 14px;
   min-height: 100%;
-  padding: max(12px, env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom));
+  padding: max(12px, env(safe-area-inset-top)) 16px
+    max(18px, env(safe-area-inset-bottom));
 }
 
 .task-header {
@@ -1051,7 +1224,11 @@ button {
   position: relative;
   padding: 14px;
   border: 1px solid rgba(231, 199, 141, 0.3);
-  background: linear-gradient(180deg, rgba(18, 13, 8, 0.76), rgba(8, 6, 4, 0.72));
+  background: linear-gradient(
+    180deg,
+    rgba(18, 13, 8, 0.76),
+    rgba(8, 6, 4, 0.72)
+  );
   box-shadow: 0 16px 42px rgba(0, 0, 0, 0.44);
   backdrop-filter: blur(8px);
 }
@@ -1179,7 +1356,11 @@ button {
   padding: 22px 14px;
   border: 1px solid rgba(231, 199, 141, 0.24);
   color: rgba(231, 199, 141, 0.74);
-  background: linear-gradient(180deg, rgba(10, 8, 6, 0.72), rgba(10, 8, 6, 0.5));
+  background: linear-gradient(
+    180deg,
+    rgba(10, 8, 6, 0.72),
+    rgba(10, 8, 6, 0.5)
+  );
   box-shadow: 0 14px 38px rgba(0, 0, 0, 0.36);
   backdrop-filter: blur(8px);
   text-align: center;
@@ -1214,7 +1395,11 @@ button {
   width: 100%;
   border: 1px solid rgba(231, 199, 141, 0.42);
   background:
-    radial-gradient(circle at 50% 0%, rgba(231, 199, 141, 0.16), transparent 20rem),
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(231, 199, 141, 0.16),
+      transparent 20rem
+    ),
     rgba(9, 7, 5, 0.94);
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.72);
 }
@@ -1312,7 +1497,11 @@ button {
   place-items: center;
   padding: 18px;
   background:
-    radial-gradient(circle at 50% 48%, rgba(231, 199, 141, 0.1), transparent 16rem),
+    radial-gradient(
+      circle at 50% 48%,
+      rgba(231, 199, 141, 0.1),
+      transparent 16rem
+    ),
     rgba(0, 0, 0, 0.46);
   backdrop-filter: blur(3px) brightness(0.78);
 }
@@ -1323,8 +1512,17 @@ button {
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.12), transparent 38%, rgba(0, 0, 0, 0.28)),
-    radial-gradient(ellipse at center, transparent 0 48%, rgba(0, 0, 0, 0.46) 100%);
+    linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.12),
+      transparent 38%,
+      rgba(0, 0, 0, 0.28)
+    ),
+    radial-gradient(
+      ellipse at center,
+      transparent 0 48%,
+      rgba(0, 0, 0, 0.46) 100%
+    );
 }
 
 .benefit-modal-dust {
@@ -1335,11 +1533,31 @@ button {
   height: 118px;
   pointer-events: none;
   background:
-    radial-gradient(circle at 18% 34%, rgba(248, 223, 172, 0.4) 0 2px, transparent 3px),
-    radial-gradient(circle at 36% 20%, rgba(231, 199, 141, 0.36) 0 1px, transparent 3px),
-    radial-gradient(circle at 62% 28%, rgba(248, 223, 172, 0.34) 0 2px, transparent 3px),
-    radial-gradient(circle at 78% 52%, rgba(231, 199, 141, 0.3) 0 1px, transparent 3px),
-    radial-gradient(circle at 44% 72%, rgba(248, 223, 172, 0.32) 0 1px, transparent 3px);
+    radial-gradient(
+      circle at 18% 34%,
+      rgba(248, 223, 172, 0.4) 0 2px,
+      transparent 3px
+    ),
+    radial-gradient(
+      circle at 36% 20%,
+      rgba(231, 199, 141, 0.36) 0 1px,
+      transparent 3px
+    ),
+    radial-gradient(
+      circle at 62% 28%,
+      rgba(248, 223, 172, 0.34) 0 2px,
+      transparent 3px
+    ),
+    radial-gradient(
+      circle at 78% 52%,
+      rgba(231, 199, 141, 0.3) 0 1px,
+      transparent 3px
+    ),
+    radial-gradient(
+      circle at 44% 72%,
+      rgba(248, 223, 172, 0.32) 0 1px,
+      transparent 3px
+    );
   filter: blur(0.4px);
   transform: translate(-50%, -50%);
   animation: benefitModalDust 380ms ease-out both;
@@ -1355,7 +1573,11 @@ button {
   border-radius: 8px;
   background:
     linear-gradient(180deg, rgba(255, 238, 196, 0.05), transparent 28%),
-    radial-gradient(circle at 50% 0%, rgba(231, 199, 141, 0.16), transparent 14rem),
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(231, 199, 141, 0.16),
+      transparent 14rem
+    ),
     rgba(9, 8, 7, 0.76);
   box-shadow:
     0 0 0 1px rgba(255, 238, 196, 0.05) inset,
@@ -1384,7 +1606,12 @@ button {
   right: 16px;
   top: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(248, 223, 172, 0.72), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(248, 223, 172, 0.72),
+    transparent
+  );
   box-shadow: 0 0 16px rgba(248, 223, 172, 0.24);
 }
 
@@ -1461,9 +1688,15 @@ button {
   border-radius: 50%;
   color: var(--gold-strong);
   background:
-    radial-gradient(circle at 36% 24%, rgba(255, 239, 198, 0.18), transparent 36%),
+    radial-gradient(
+      circle at 36% 24%,
+      rgba(255, 239, 198, 0.18),
+      transparent 36%
+    ),
     rgba(0, 0, 0, 0.24);
-  box-shadow: inset 0 0 24px rgba(231, 199, 141, 0.1), 0 0 22px rgba(231, 199, 141, 0.1);
+  box-shadow:
+    inset 0 0 24px rgba(231, 199, 141, 0.1),
+    0 0 22px rgba(231, 199, 141, 0.1);
 }
 
 .benefit-modal__emblem::after {
@@ -1555,9 +1788,15 @@ button {
   border-color: rgba(196, 184, 153, 0.38);
   background:
     linear-gradient(180deg, rgba(221, 214, 194, 0.04), transparent 30%),
-    radial-gradient(circle at 50% 0%, rgba(196, 184, 153, 0.12), transparent 14rem),
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(196, 184, 153, 0.12),
+      transparent 14rem
+    ),
     rgba(9, 8, 7, 0.78);
-  box-shadow: 0 0 26px rgba(196, 184, 153, 0.08), 0 26px 90px rgba(0, 0, 0, 0.76);
+  box-shadow:
+    0 0 26px rgba(196, 184, 153, 0.08),
+    0 26px 90px rgba(0, 0, 0, 0.76);
 }
 
 .benefit-modal--cooldown .benefit-modal__status,
@@ -1904,12 +2143,14 @@ button {
 
 .husband-pager__screen--active .role-page--dir-next .hero-title--role,
 .husband-pager__screen--active .role-page--dir-next .bottom-panel--role {
-  animation: role-content-enter-next 340ms cubic-bezier(0.22, 1, 0.36, 1) 40ms both;
+  animation: role-content-enter-next 340ms cubic-bezier(0.22, 1, 0.36, 1) 40ms
+    both;
 }
 
 .husband-pager__screen--active .role-page--dir-prev .hero-title--role,
 .husband-pager__screen--active .role-page--dir-prev .bottom-panel--role {
-  animation: role-content-enter-prev 340ms cubic-bezier(0.22, 1, 0.36, 1) 40ms both;
+  animation: role-content-enter-prev 340ms cubic-bezier(0.22, 1, 0.36, 1) 40ms
+    both;
 }
 
 .husband-pager__screen--active .role-page .side-guide,
@@ -1935,15 +2176,18 @@ button {
 }
 
 .husband-pager__screen--active .benefit-page--dir-next .hero-title--benefit {
-  animation: role-content-enter-next 320ms cubic-bezier(0.22, 1, 0.36, 1) 40ms both;
+  animation: role-content-enter-next 320ms cubic-bezier(0.22, 1, 0.36, 1) 40ms
+    both;
 }
 
 .husband-pager__screen--active .benefit-page--dir-prev .hero-title--benefit {
-  animation: role-content-enter-prev 320ms cubic-bezier(0.22, 1, 0.36, 1) 40ms both;
+  animation: role-content-enter-prev 320ms cubic-bezier(0.22, 1, 0.36, 1) 40ms
+    both;
 }
 
 .husband-pager__screen--active .benefit-page .benefit-commission {
-  animation: benefit-commission-enter 780ms cubic-bezier(0.22, 1, 0.36, 1) 260ms both;
+  animation: benefit-commission-enter 780ms cubic-bezier(0.22, 1, 0.36, 1) 260ms
+    both;
 }
 
 .benefit-bubble {
@@ -1956,34 +2200,51 @@ button {
 }
 
 .husband-pager__screen--active .benefit-bubble {
-  animation: benefit-bubble-enter 360ms cubic-bezier(0.22, 1, 0.36, 1) calc(120ms + var(--bubble-step) * 55ms) both;
+  animation: benefit-bubble-enter 360ms cubic-bezier(0.22, 1, 0.36, 1)
+    calc(120ms + var(--bubble-step) * 55ms) both;
   will-change: opacity, transform, translate;
 }
 
-.husband-pager__screen--active .benefit-bubble:not(.benefit-bubble--locked):not(.benefit-bubble--cooldown) {
+.husband-pager__screen--active
+  .benefit-bubble:not(.benefit-bubble--locked):not(.benefit-bubble--cooldown) {
   animation:
-    benefit-bubble-enter 360ms cubic-bezier(0.22, 1, 0.36, 1) calc(120ms + var(--bubble-step) * 55ms) both,
-    benefit-bubble-float 4200ms ease-in-out calc(900ms + var(--bubble-step) * 120ms) infinite alternate;
+    benefit-bubble-enter 360ms cubic-bezier(0.22, 1, 0.36, 1)
+      calc(120ms + var(--bubble-step) * 55ms) both,
+    benefit-bubble-float 4200ms ease-in-out
+      calc(900ms + var(--bubble-step) * 120ms) infinite alternate;
 }
 
 .husband-pager__screen--active .benefit-bubble--locked,
 .husband-pager__screen--active .benefit-bubble--cooldown {
-  animation: benefit-bubble-muted-enter 360ms cubic-bezier(0.22, 1, 0.36, 1) calc(120ms + var(--bubble-step) * 55ms) both;
+  animation: benefit-bubble-muted-enter 360ms cubic-bezier(0.22, 1, 0.36, 1)
+    calc(120ms + var(--bubble-step) * 55ms) both;
 }
 
-.benefit-bubble:not(.benefit-bubble--locked):not(.benefit-bubble--cooldown):hover {
+.benefit-bubble:not(.benefit-bubble--locked):not(
+    .benefit-bubble--cooldown
+  ):hover {
   border-color: rgba(248, 223, 172, 0.58);
-  box-shadow: inset 0 0 20px rgba(231, 199, 141, 0.12), 0 0 20px rgba(231, 199, 141, 0.14), 0 16px 38px rgba(0, 0, 0, 0.46);
+  box-shadow:
+    inset 0 0 20px rgba(231, 199, 141, 0.12),
+    0 0 20px rgba(231, 199, 141, 0.14),
+    0 16px 38px rgba(0, 0, 0, 0.46);
 }
 
-.benefit-bubble:not(.benefit-bubble--locked):not(.benefit-bubble--cooldown):active {
+.benefit-bubble:not(.benefit-bubble--locked):not(
+    .benefit-bubble--cooldown
+  ):active {
   scale: 0.97;
 }
 
 .husband-pager__screen--active .benefit-bubble--bursting,
-.husband-pager__screen--active .benefit-bubble--bursting:not(.benefit-bubble--locked):not(.benefit-bubble--cooldown),
-.husband-pager__screen--active .benefit-bubble--bursting.benefit-bubble--cooldown,
-.husband-pager__screen--active .benefit-bubble--bursting.benefit-bubble--locked {
+.husband-pager__screen--active
+  .benefit-bubble--bursting:not(.benefit-bubble--locked):not(
+    .benefit-bubble--cooldown
+  ),
+.husband-pager__screen--active
+  .benefit-bubble--bursting.benefit-bubble--cooldown,
+.husband-pager__screen--active
+  .benefit-bubble--bursting.benefit-bubble--locked {
   animation: benefitBubbleBurst 260ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
@@ -2035,7 +2296,8 @@ button {
 }
 
 .husband-pager__screen--active .task-card {
-  animation: task-card-enter 320ms cubic-bezier(0.22, 1, 0.36, 1) calc(80ms + var(--task-step) * 55ms) both;
+  animation: task-card-enter 320ms cubic-bezier(0.22, 1, 0.36, 1)
+    calc(80ms + var(--task-step) * 55ms) both;
 }
 
 .month-panel {
@@ -2174,9 +2436,26 @@ button {
 .wife-hero__shade {
   z-index: -2;
   background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.3) 0 10%, rgba(0, 0, 0, 0.02) 28%, rgba(0, 0, 0, 0.12) 46%, rgba(0, 0, 0, 0.86) 61%, #030201 76%),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.72), transparent 19% 81%, rgba(0, 0, 0, 0.72)),
-    radial-gradient(ellipse at 50% 32%, transparent 0 35%, rgba(0, 0, 0, 0.34) 66%, rgba(0, 0, 0, 0.85) 100%);
+    linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.3) 0 10%,
+      rgba(0, 0, 0, 0.02) 28%,
+      rgba(0, 0, 0, 0.12) 46%,
+      rgba(0, 0, 0, 0.86) 61%,
+      #030201 76%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.72),
+      transparent 19% 81%,
+      rgba(0, 0, 0, 0.72)
+    ),
+    radial-gradient(
+      ellipse at 50% 32%,
+      transparent 0 35%,
+      rgba(0, 0, 0, 0.34) 66%,
+      rgba(0, 0, 0, 0.85) 100%
+    );
 }
 
 .wife-title {
@@ -2242,7 +2521,12 @@ button {
   margin: 0;
   color: rgba(231, 199, 141, 0.68);
   background:
-    linear-gradient(180deg, rgba(248, 223, 172, 0.08), rgba(0, 0, 0, 0.08) 38%, rgba(0, 0, 0, 0.42)),
+    linear-gradient(
+      180deg,
+      rgba(248, 223, 172, 0.08),
+      rgba(0, 0, 0, 0.08) 38%,
+      rgba(0, 0, 0, 0.42)
+    ),
     rgba(2, 2, 2, 0.4);
   box-shadow: inset 0 0 14px rgba(248, 223, 172, 0.035);
   font-family: var(--serif);
@@ -2251,7 +2535,9 @@ button {
   line-height: 1.28;
   letter-spacing: 0;
   text-align: center;
-  text-shadow: 0 0 5px rgba(0, 0, 0, 0.95), 0 2px 12px rgba(0, 0, 0, 0.82);
+  text-shadow:
+    0 0 5px rgba(0, 0, 0, 0.95),
+    0 2px 12px rgba(0, 0, 0, 0.82);
   text-decoration: none;
 }
 
@@ -2282,7 +2568,11 @@ button {
   padding: 12px 16px 11px;
   border: 1px solid rgba(231, 199, 141, 0.38);
   background:
-    radial-gradient(circle at 50% 0%, rgba(231, 199, 141, 0.1), transparent 13rem),
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(231, 199, 141, 0.1),
+      transparent 13rem
+    ),
     rgba(6, 5, 4, 0.68);
   box-shadow:
     inset 0 0 0 1px rgba(255, 244, 212, 0.06),
@@ -2426,7 +2716,9 @@ button {
   background:
     linear-gradient(180deg, rgba(231, 199, 141, 0.12), transparent 42%),
     rgba(5, 4, 3, 0.66);
-  box-shadow: inset 0 0 0 1px rgba(255, 244, 212, 0.04), 0 12px 34px rgba(0, 0, 0, 0.42);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 244, 212, 0.04),
+    0 12px 34px rgba(0, 0, 0, 0.42);
   font-family: var(--serif);
   font-size: 17px;
   letter-spacing: 2px;
@@ -2458,7 +2750,11 @@ button {
   min-height: 60px !important;
   color: var(--gold-strong) !important;
   background:
-    radial-gradient(circle at 50% 0%, rgba(248, 223, 172, 0.2), transparent 70%),
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(248, 223, 172, 0.2),
+      transparent 70%
+    ),
     linear-gradient(180deg, rgba(231, 199, 141, 0.14), rgba(8, 6, 4, 0.74)) !important;
 }
 
@@ -2476,7 +2772,11 @@ button {
   border-top: 1px solid rgba(231, 199, 141, 0.16);
   color: rgba(231, 199, 141, 0.72);
   background:
-    radial-gradient(ellipse at 50% 0%, rgba(231, 199, 141, 0.14), transparent 72%),
+    radial-gradient(
+      ellipse at 50% 0%,
+      rgba(231, 199, 141, 0.14),
+      transparent 72%
+    ),
     linear-gradient(180deg, rgba(14, 10, 5, 0.86), rgba(4, 3, 2, 0.28));
   font-family: var(--serif);
   font-size: 15px;
@@ -2497,7 +2797,8 @@ button {
   position: relative;
   height: 100dvh;
   min-height: 100dvh;
-  padding: max(22px, env(safe-area-inset-top)) 18px max(24px, env(safe-area-inset-bottom));
+  padding: max(22px, env(safe-area-inset-top)) 18px
+    max(24px, env(safe-area-inset-bottom));
   overflow-x: hidden;
   overflow-y: auto;
   isolation: isolate;
@@ -2532,9 +2833,23 @@ button {
 .wife-growth__shade {
   z-index: -2;
   background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.06) 0, rgba(0, 0, 0, 0.24) 174px, #030201 300px),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.94) 0 28%, rgba(0, 0, 0, 0.4) 58%, rgba(0, 0, 0, 0.06) 100%),
-    radial-gradient(circle at 78% 8%, rgba(231, 199, 141, 0.18), transparent 17rem);
+    linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.06) 0,
+      rgba(0, 0, 0, 0.24) 174px,
+      #030201 300px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.94) 0 28%,
+      rgba(0, 0, 0, 0.4) 58%,
+      rgba(0, 0, 0, 0.06) 100%
+    ),
+    radial-gradient(
+      circle at 78% 8%,
+      rgba(231, 199, 141, 0.18),
+      transparent 17rem
+    );
 }
 
 .wife-growth-title {
@@ -2587,7 +2902,11 @@ button {
   border: 1px solid rgba(231, 199, 141, 0.42);
   border-radius: 12px;
   background:
-    radial-gradient(circle at 45% 0%, rgba(231, 199, 141, 0.11), transparent 15rem),
+    radial-gradient(
+      circle at 45% 0%,
+      rgba(231, 199, 141, 0.11),
+      transparent 15rem
+    ),
     rgba(7, 6, 5, 0.72);
   box-shadow:
     inset 0 0 0 1px rgba(255, 244, 212, 0.045),
@@ -2761,9 +3080,15 @@ button {
   border-radius: 9px;
   color: #fff0d4;
   background:
-    radial-gradient(circle at 50% 0%, rgba(231, 199, 141, 0.22), transparent 82%),
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(231, 199, 141, 0.22),
+      transparent 82%
+    ),
     rgba(30, 19, 7, 0.62);
-  box-shadow: inset 0 0 0 1px rgba(255, 244, 212, 0.06), 0 12px 28px rgba(0, 0, 0, 0.42);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 244, 212, 0.06),
+    0 12px 28px rgba(0, 0, 0, 0.42);
   font-family: Georgia, serif;
   font-size: 18px;
 }
@@ -2932,7 +3257,11 @@ button {
 .wife-punish-card {
   border-color: rgba(217, 70, 62, 0.56);
   background:
-    radial-gradient(circle at 50% 0%, rgba(217, 70, 62, 0.14), transparent 17rem),
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(217, 70, 62, 0.14),
+      transparent 17rem
+    ),
     rgba(13, 5, 4, 0.8);
 }
 
@@ -2990,7 +3319,11 @@ button {
   border-top: 1px solid rgba(231, 199, 141, 0.14);
   color: rgba(231, 199, 141, 0.7);
   background:
-    radial-gradient(ellipse at 50% 0%, rgba(231, 199, 141, 0.12), transparent 72%),
+    radial-gradient(
+      ellipse at 50% 0%,
+      rgba(231, 199, 141, 0.12),
+      transparent 72%
+    ),
     linear-gradient(180deg, rgba(14, 10, 5, 0.72), rgba(4, 3, 2, 0.18));
   font-family: var(--serif);
   font-size: 14px;
@@ -3046,9 +3379,23 @@ button {
 .wife-today__shade {
   z-index: -2;
   background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.04) 0, rgba(0, 0, 0, 0.3) 260px, #030201 430px),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.24) 54%, rgba(0, 0, 0, 0.44)),
-    radial-gradient(circle at 73% 8%, rgba(231, 199, 141, 0.2), transparent 16rem);
+    linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.04) 0,
+      rgba(0, 0, 0, 0.3) 260px,
+      #030201 430px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.9),
+      rgba(0, 0, 0, 0.24) 54%,
+      rgba(0, 0, 0, 0.44)
+    ),
+    radial-gradient(
+      circle at 73% 8%,
+      rgba(231, 199, 141, 0.2),
+      transparent 16rem
+    );
 }
 
 .wife-today-title {
@@ -3108,7 +3455,11 @@ button {
   border-bottom: 1px solid rgba(231, 199, 141, 0.14);
   color: rgba(231, 199, 141, 0.72);
   background:
-    radial-gradient(ellipse at 50% 100%, rgba(231, 199, 141, 0.12), transparent 72%),
+    radial-gradient(
+      ellipse at 50% 100%,
+      rgba(231, 199, 141, 0.12),
+      transparent 72%
+    ),
     linear-gradient(180deg, rgba(4, 3, 2, 0.22), rgba(14, 10, 5, 0.78));
   font-family: var(--serif);
   font-size: 15px;
@@ -3135,7 +3486,11 @@ button {
   border: 1px solid rgba(231, 199, 141, 0.42);
   border-radius: 14px;
   background:
-    radial-gradient(circle at 50% 0%, rgba(231, 199, 141, 0.1), transparent 15rem),
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(231, 199, 141, 0.1),
+      transparent 15rem
+    ),
     rgba(7, 6, 5, 0.72);
   box-shadow:
     inset 0 0 0 1px rgba(255, 244, 212, 0.045),
@@ -3312,9 +3667,15 @@ button {
   border-radius: 10px;
   color: rgba(248, 223, 172, 0.94);
   background:
-    radial-gradient(circle at 50% 0%, rgba(248, 223, 172, 0.18), transparent 70%),
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(248, 223, 172, 0.18),
+      transparent 70%
+    ),
     linear-gradient(180deg, rgba(231, 199, 141, 0.12), rgba(8, 6, 4, 0.72));
-  box-shadow: inset 0 0 0 1px rgba(255, 244, 212, 0.08), 0 12px 38px rgba(0, 0, 0, 0.46);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 244, 212, 0.08),
+    0 12px 38px rgba(0, 0, 0, 0.46);
   text-align: left;
 }
 
@@ -3403,9 +3764,23 @@ button {
 .wife-subpage__shade {
   z-index: -2;
   background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.04) 0, rgba(0, 0, 0, 0.34) 246px, #030201 424px),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.24) 52%, rgba(0, 0, 0, 0.5)),
-    radial-gradient(circle at 74% 6%, rgba(231, 199, 141, 0.18), transparent 16rem);
+    linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.04) 0,
+      rgba(0, 0, 0, 0.34) 246px,
+      #030201 424px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.9),
+      rgba(0, 0, 0, 0.24) 52%,
+      rgba(0, 0, 0, 0.5)
+    ),
+    radial-gradient(
+      circle at 74% 6%,
+      rgba(231, 199, 141, 0.18),
+      transparent 16rem
+    );
 }
 
 .wife-subpage-back {
@@ -3424,7 +3799,9 @@ button {
   background:
     linear-gradient(180deg, rgba(231, 199, 141, 0.1), transparent 54%),
     rgba(5, 4, 3, 0.72);
-  box-shadow: inset 0 0 0 1px rgba(255, 244, 212, 0.04), 0 12px 34px rgba(0, 0, 0, 0.42);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 244, 212, 0.04),
+    0 12px 34px rgba(0, 0, 0, 0.42);
   font-family: var(--serif);
   font-size: 14px;
   letter-spacing: 1px;
@@ -3493,9 +3870,15 @@ button {
   border-radius: 12px;
   color: rgba(248, 223, 172, 0.95);
   background:
-    radial-gradient(circle at 50% 0%, rgba(248, 223, 172, 0.16), transparent 72%),
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(248, 223, 172, 0.16),
+      transparent 72%
+    ),
     linear-gradient(180deg, rgba(231, 199, 141, 0.12), rgba(8, 6, 4, 0.74));
-  box-shadow: inset 0 0 0 1px rgba(255, 244, 212, 0.07), 0 14px 42px rgba(0, 0, 0, 0.48);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 244, 212, 0.07),
+    0 14px 42px rgba(0, 0, 0, 0.48);
   text-align: left;
 }
 
@@ -3535,7 +3918,11 @@ button {
   border: 1px solid rgba(231, 199, 141, 0.34);
   border-radius: 12px;
   background:
-    radial-gradient(circle at 50% 0%, rgba(231, 199, 141, 0.12), transparent 76%),
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(231, 199, 141, 0.12),
+      transparent 76%
+    ),
     rgba(7, 6, 5, 0.68);
   font-family: var(--serif);
 }
@@ -3644,9 +4031,15 @@ button {
   border-radius: 13px;
   color: rgba(243, 234, 219, 0.76);
   background:
-    radial-gradient(circle at 50% 0%, rgba(231, 199, 141, 0.13), transparent 76%),
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(231, 199, 141, 0.13),
+      transparent 76%
+    ),
     rgba(7, 6, 5, 0.7);
-  box-shadow: inset 0 0 0 1px rgba(255, 244, 212, 0.04), 0 16px 48px rgba(0, 0, 0, 0.48);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 244, 212, 0.04),
+    0 16px 48px rgba(0, 0, 0, 0.48);
 }
 
 .wife-order-panel div {
@@ -3686,7 +4079,11 @@ button {
 .wife-subpage-actions button:last-child {
   color: #fff0d4;
   background:
-    radial-gradient(circle at 50% 0%, rgba(248, 223, 172, 0.16), transparent 76%),
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(248, 223, 172, 0.16),
+      transparent 76%
+    ),
     rgba(77, 46, 10, 0.42);
 }
 
@@ -3767,7 +4164,9 @@ button {
   border-radius: 12px 12px 0 0;
   overflow: hidden;
   background: rgba(4, 3, 2, 0.92);
-  box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 244, 212, 0.04);
+  box-shadow:
+    0 -12px 48px rgba(0, 0, 0, 0.6),
+    inset 0 0 0 1px rgba(255, 244, 212, 0.04);
   backdrop-filter: blur(10px);
   transform: translateX(-50%);
 }
@@ -3795,14 +4194,22 @@ button {
 .wife-today-tabs .active {
   color: #fff0d4;
   background:
-    radial-gradient(circle at 50% 0%, rgba(248, 223, 172, 0.24), transparent 68%),
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(248, 223, 172, 0.24),
+      transparent 68%
+    ),
     rgba(96, 61, 19, 0.32);
 }
 
 .wife-review-list article {
   padding: 15px;
   border: 1px solid rgba(231, 199, 141, 0.28);
-  background: linear-gradient(180deg, rgba(19, 14, 9, 0.82), rgba(8, 6, 4, 0.82));
+  background: linear-gradient(
+    180deg,
+    rgba(19, 14, 9, 0.82),
+    rgba(8, 6, 4, 0.82)
+  );
 }
 
 .wife-review-list span {
@@ -3840,7 +4247,11 @@ button {
   padding: 24px 18px 18px;
   border: 1px solid rgba(231, 199, 141, 0.42);
   background:
-    radial-gradient(circle at 50% 0%, rgba(231, 199, 141, 0.16), transparent 18rem),
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(231, 199, 141, 0.16),
+      transparent 18rem
+    ),
     rgba(8, 6, 4, 0.96);
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.74);
 }

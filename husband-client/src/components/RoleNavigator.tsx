@@ -8,9 +8,18 @@ interface RoleNavigatorProps {
   onNext: () => void;
 }
 
-export function RoleNavigator({ canPrev, canNext, locked = false, onPrev, onNext }: RoleNavigatorProps) {
+export function RoleNavigator({
+  canPrev,
+  canNext,
+  locked = false,
+  onPrev,
+  onNext,
+}: RoleNavigatorProps) {
   return (
-    <div className={`role-navigator${locked ? " role-navigator--locked" : ""}`} aria-label="切换职务">
+    <div
+      className={`role-navigator${locked ? " role-navigator--locked" : ""}`}
+      aria-label="切换职务"
+    >
       <button
         className="role-navigator__button role-navigator__button--prev"
         type="button"

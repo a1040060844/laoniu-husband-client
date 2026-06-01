@@ -1,9 +1,22 @@
-import { CircleDollarSign, ClipboardList, Hourglass, Send, Sparkles, UserRoundCheck } from "lucide-react";
+import {
+  CircleDollarSign,
+  ClipboardList,
+  Hourglass,
+  Send,
+  Sparkles,
+  UserRoundCheck,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { StatCard } from "./StatCard";
 import { TaskCard } from "./TaskCard";
 import type { GameProgress } from "../game/progression";
-import type { Role, Task, TaskSource, TaskStatus, ViewKey } from "../types/domain";
+import type {
+  Role,
+  Task,
+  TaskSource,
+  TaskStatus,
+  ViewKey,
+} from "../types/domain";
 
 type FilterKey = "all" | "todo" | "doing" | "submitted" | "completed";
 
@@ -32,7 +45,14 @@ const filters: Array<{ key: FilterKey; label: string }> = [
   { key: "completed", label: "已完成" },
 ];
 
-export function TaskPage({ role, progress, tasks, onStartTask, onSubmitTask, onSelectView }: TaskPageProps) {
+export function TaskPage({
+  role,
+  progress,
+  tasks,
+  onStartTask,
+  onSubmitTask,
+  onSelectView,
+}: TaskPageProps) {
   const [source, setSource] = useState<TaskSource>("wife");
   const [filter, setFilter] = useState<FilterKey>("all");
   const [submittingTask, setSubmittingTask] = useState<Task | null>(null);
@@ -40,13 +60,18 @@ export function TaskPage({ role, progress, tasks, onStartTask, onSubmitTask, onS
   const [note, setNote] = useState("");
 
   const visibleTasks = useMemo(() => {
-    return tasks.filter((task) => task.source === source && statusForFilter[filter].includes(task.status));
+    return tasks.filter(
+      (task) =>
+        task.source === source && statusForFilter[filter].includes(task.status),
+    );
   }, [filter, source, tasks]);
 
   const overview = useMemo(() => {
     const pending = tasks.filter((task) => task.status === "todo").length;
     const doing = tasks.filter((task) => task.status === "doing").length;
-    const submitted = tasks.filter((task) => task.status === "submitted").length;
+    const submitted = tasks.filter(
+      (task) => task.status === "submitted",
+    ).length;
     const todayExp = tasks
       .filter((task) => task.status === "todo" || task.status === "doing")
       .reduce((sum, task) => sum + task.rewardExp, 0);
@@ -55,13 +80,20 @@ export function TaskPage({ role, progress, tasks, onStartTask, onSubmitTask, onS
   }, [tasks]);
 
   const month = useMemo(() => {
-    const done = tasks.filter((task) => task.status === "completed" || task.status === "confirmed");
+    const done = tasks.filter(
+      (task) => task.status === "completed" || task.status === "confirmed",
+    );
     return {
       money: progress.wallet,
       count: Math.max(done.length, progress.rewardedTaskIds.length),
       exp: progress.totalExp,
     };
-  }, [progress.rewardedTaskIds.length, progress.totalExp, progress.wallet, tasks]);
+  }, [
+    progress.rewardedTaskIds.length,
+    progress.totalExp,
+    progress.wallet,
+    tasks,
+  ]);
 
   function submitCurrentTask() {
     if (!submittingTask) return;
@@ -85,14 +117,20 @@ export function TaskPage({ role, progress, tasks, onStartTask, onSubmitTask, onS
       <div className="task-scrim" />
 
       <div className="task-shell">
-        <button className="swipe-hint swipe-hint--task-top" type="button" onClick={() => onSelectView("role")}>
+        <button
+          className="swipe-hint swipe-hint--task-top"
+          type="button"
+          onClick={() => onSelectView("role")}
+        >
           <span>⌄</span>
           下滑进入主页
         </button>
 
         <header className="task-header">
           <div>
-            <p className="level-line level-line--small">Lv. {String(role.level).padStart(2, "0")}</p>
+            <p className="level-line level-line--small">
+              Lv. {String(role.level).padStart(2, "0")}
+            </p>
             <h1>{role.title}</h1>
             <span>老哥任务簿 · 今日待执行</span>
           </div>
@@ -104,18 +142,43 @@ export function TaskPage({ role, progress, tasks, onStartTask, onSubmitTask, onS
             <span /> 今日执行概况 <span />
           </p>
           <div className="stats-grid stats-grid--four">
-            <StatCard label="待执行" value={overview.pending} icon={<ClipboardList size={19} />} />
-            <StatCard label="待提交" value={overview.doing} icon={<Send size={19} />} />
-            <StatCard label="待确认" value={overview.submitted} icon={<Hourglass size={19} />} />
-            <StatCard label="今日可得" value={`+${overview.todayExp}`} muted="EXP" icon={<Sparkles size={19} />} />
+            <StatCard
+              label="待执行"
+              value={overview.pending}
+              icon={<ClipboardList size={19} />}
+            />
+            <StatCard
+              label="待提交"
+              value={overview.doing}
+              icon={<Send size={19} />}
+            />
+            <StatCard
+              label="待确认"
+              value={overview.submitted}
+              icon={<Hourglass size={19} />}
+            />
+            <StatCard
+              label="今日可得"
+              value={`+${overview.todayExp}`}
+              muted="EXP"
+              icon={<Sparkles size={19} />}
+            />
           </div>
         </section>
 
         <nav className="source-tabs" aria-label="任务来源">
-          <button type="button" className={source === "wife" ? "active" : ""} onClick={() => setSource("wife")}>
+          <button
+            type="button"
+            className={source === "wife" ? "active" : ""}
+            onClick={() => setSource("wife")}
+          >
             老婆发布
           </button>
-          <button type="button" className={source === "daily" ? "active" : ""} onClick={() => setSource("daily")}>
+          <button
+            type="button"
+            className={source === "daily" ? "active" : ""}
+            onClick={() => setSource("daily")}
+          >
             每日任务
           </button>
         </nav>
@@ -136,7 +199,13 @@ export function TaskPage({ role, progress, tasks, onStartTask, onSubmitTask, onS
         <div key={`${source}-${filter}`} className="task-list">
           {visibleTasks.length ? (
             visibleTasks.map((task, index) => (
-              <TaskCard key={task.id} task={task} index={index} onStart={onStartTask} onSubmit={setSubmittingTask} />
+              <TaskCard
+                key={task.id}
+                task={task}
+                index={index}
+                onStart={onStartTask}
+                onSubmit={setSubmittingTask}
+              />
             ))
           ) : (
             <p className="task-empty">暂无符合条件的任务</p>
@@ -148,9 +217,21 @@ export function TaskPage({ role, progress, tasks, onStartTask, onSubmitTask, onS
             <span /> 本月收获 <span />
           </p>
           <div className="stats-grid">
-            <StatCard label="本月获得零花钱" value={`¥ ${month.money}`} icon={<CircleDollarSign size={21} />} />
-            <StatCard label="本月完成任务数" value={month.count} icon={<UserRoundCheck size={21} />} />
-            <StatCard label="本月经验总数" value={`${month.exp} EXP`} icon={<Sparkles size={21} />} />
+            <StatCard
+              label="本月获得零花钱"
+              value={`¥ ${month.money}`}
+              icon={<CircleDollarSign size={21} />}
+            />
+            <StatCard
+              label="本月完成任务数"
+              value={month.count}
+              icon={<UserRoundCheck size={21} />}
+            />
+            <StatCard
+              label="本月经验总数"
+              value={`${month.exp} EXP`}
+              icon={<Sparkles size={21} />}
+            />
           </div>
           <p className="month-note">本月表现正在稳步提升</p>
         </section>
@@ -170,7 +251,12 @@ export function TaskPage({ role, progress, tasks, onStartTask, onSubmitTask, onS
               }
             }}
           >
-            <button className="icon-close" type="button" onClick={() => setSubmittingTask(null)} aria-label="关闭">
+            <button
+              className="icon-close"
+              type="button"
+              onClick={() => setSubmittingTask(null)}
+              aria-label="关闭"
+            >
               ×
             </button>
             <p className="kicker">提交任务</p>

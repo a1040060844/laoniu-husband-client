@@ -47,10 +47,15 @@ export function hydrateProgress(raw: unknown): GameProgress {
 
   return {
     level,
-    exp: Math.min(required, Math.max(0, Number(value.exp ?? initialProgress.exp))),
+    exp: Math.min(
+      required,
+      Math.max(0, Number(value.exp ?? initialProgress.exp)),
+    ),
     totalExp: Math.max(0, Number(value.totalExp ?? initialProgress.totalExp)),
     wallet: Math.max(0, Number(value.wallet ?? initialProgress.wallet)),
-    rewardedTaskIds: Array.isArray(value.rewardedTaskIds) ? value.rewardedTaskIds.filter(Boolean) : [],
+    rewardedTaskIds: Array.isArray(value.rewardedTaskIds)
+      ? value.rewardedTaskIds.filter(Boolean)
+      : [],
   };
 }
 
@@ -59,12 +64,22 @@ export function roleWithProgress(role: Role, progress: GameProgress): Role {
   return {
     ...role,
     salary: salaryForLevel(role.level),
-    expCurrent: role.level === progress.level ? (isMaxLevel ? expRequiredForLevel(role.level) : progress.exp) : 0,
+    expCurrent:
+      role.level === progress.level
+        ? isMaxLevel
+          ? expRequiredForLevel(role.level)
+          : progress.exp
+        : 0,
     expRequired: expRequiredForLevel(role.level),
   };
 }
 
-export function grantExperience(current: GameProgress, amount: number, roles: Role[], reason: string): ProgressResult {
+export function grantExperience(
+  current: GameProgress,
+  amount: number,
+  roles: Role[],
+  reason: string,
+): ProgressResult {
   const safeAmount = Math.trunc(amount);
   if (safeAmount <= 0) {
     return { progress: current, stories: [] };
@@ -101,12 +116,21 @@ export function grantExperience(current: GameProgress, amount: number, roles: Ro
   };
 }
 
-export function settleTaskReward(current: GameProgress, task: Task, roles: Role[]): ProgressResult {
+export function settleTaskReward(
+  current: GameProgress,
+  task: Task,
+  roles: Role[],
+): ProgressResult {
   if (current.rewardedTaskIds.includes(task.id)) {
     return { progress: current, stories: [] };
   }
 
-  const expResult = grantExperience(current, task.rewardExp, roles, `完成「${task.title}」`);
+  const expResult = grantExperience(
+    current,
+    task.rewardExp,
+    roles,
+    `完成「${task.title}」`,
+  );
   const progress = {
     ...expResult.progress,
     wallet: expResult.progress.wallet + task.rewardMoney,
@@ -122,9 +146,15 @@ export function settleTaskReward(current: GameProgress, task: Task, roles: Role[
   return { progress, stories: [rewardStory, ...expResult.stories] };
 }
 
-export function settleConfirmedTasks(current: GameProgress, tasks: Task[], roles: Role[]): ProgressResult {
+export function settleConfirmedTasks(
+  current: GameProgress,
+  tasks: Task[],
+  roles: Role[],
+): ProgressResult {
   return tasks
-    .filter((task) => task.status === "confirmed" || task.status === "completed")
+    .filter(
+      (task) => task.status === "confirmed" || task.status === "completed",
+    )
     .reduce<ProgressResult>(
       (result, task) => {
         const settled = settleTaskReward(result.progress, task, roles);

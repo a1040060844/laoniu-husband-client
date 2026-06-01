@@ -21,9 +21,15 @@ interface BenefitPageProps {
   onSelectView: (view: ViewKey) => void;
 }
 
-function getStatus(role: Role, benefit: Benefit): { status: BenefitStatus; text: string } {
+function getStatus(
+  role: Role,
+  benefit: Benefit,
+): { status: BenefitStatus; text: string } {
   if (role.level < benefit.levelRequired) {
-    return { status: "locked", text: `Lv.${String(benefit.levelRequired).padStart(2, "0")}解锁` };
+    return {
+      status: "locked",
+      text: `Lv.${String(benefit.levelRequired).padStart(2, "0")}解锁`,
+    };
   }
   if (benefit.status === "locked") {
     return { status: "locked", text: "尚未解锁" };
@@ -56,14 +62,21 @@ export function BenefitPage({
   onUseBenefit,
   onSelectView,
 }: BenefitPageProps) {
-  const [burstingBenefitId, setBurstingBenefitId] = useState<string | null>(null);
+  const [burstingBenefitId, setBurstingBenefitId] = useState<string | null>(
+    null,
+  );
   const openTimerRef = useRef<number | null>(null);
   const isLockedPreview = role.level > currentLevel;
   const directionClass = `benefit-page--dir-${previewDirection}`;
-  const visibleBenefits = benefits.filter((benefit) => isVisibleForRole(role, benefit));
+  const visibleBenefits = benefits.filter((benefit) =>
+    isVisibleForRole(role, benefit),
+  );
   const orbitClassName = `benefit-orbit${visibleBenefits.length > 8 ? " benefit-orbit--dense" : ""}`;
   const visibleSelectedBenefit =
-    selectedBenefit && visibleBenefits.some((benefit) => benefit.id === selectedBenefit.id) ? selectedBenefit : null;
+    selectedBenefit &&
+    visibleBenefits.some((benefit) => benefit.id === selectedBenefit.id)
+      ? selectedBenefit
+      : null;
   const selectedStatus = visibleSelectedBenefit
     ? getStatus(role, visibleSelectedBenefit)
     : { status: "locked" as BenefitStatus, text: "" };
@@ -95,11 +108,20 @@ export function BenefitPage({
         isLightCurtainActive ? " benefit-page--light-curtain" : ""
       }`}
     >
-      <img className="cinema-image" src={role.benefitImage} alt={`${role.title}权益背景`} />
+      <img
+        className="cinema-image"
+        src={role.benefitImage}
+        alt={`${role.title}权益背景`}
+      />
       <div className="image-scrim image-scrim--benefit" />
-      {isLockedPreview && <div className="locked-character-mask" aria-hidden="true" />}
+      {isLockedPreview && (
+        <div className="locked-character-mask" aria-hidden="true" />
+      )}
 
-      <header key={`benefit-title-${role.level}`} className="hero-title hero-title--benefit">
+      <header
+        key={`benefit-title-${role.level}`}
+        className="hero-title hero-title--benefit"
+      >
         <div className="level-line">
           <span />
           <strong>Lv. {String(role.level).padStart(2, "0")}</strong>
@@ -141,7 +163,11 @@ export function BenefitPage({
         <strong>¥ {role.salary}</strong>
       </footer>
 
-      <button className="swipe-hint swipe-hint--benefit" type="button" onClick={() => onSelectView("role")}>
+      <button
+        className="swipe-hint swipe-hint--benefit"
+        type="button"
+        onClick={() => onSelectView("role")}
+      >
         <span>⌃</span>
         上滑进入主页
       </button>

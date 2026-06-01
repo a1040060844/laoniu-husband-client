@@ -42,7 +42,14 @@ interface BenefitBubbleProps {
   onOpen: (benefit: Benefit) => void;
 }
 
-export function BenefitBubble({ benefit, computedStatus, statusText, index, isBursting = false, onOpen }: BenefitBubbleProps) {
+export function BenefitBubble({
+  benefit,
+  computedStatus,
+  statusText,
+  index,
+  isBursting = false,
+  onOpen,
+}: BenefitBubbleProps) {
   const Icon = iconMap[benefit.icon as keyof typeof iconMap] ?? Gift;
 
   return (

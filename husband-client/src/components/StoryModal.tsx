@@ -10,7 +10,11 @@ export function StoryModal({ story, onClose }: StoryModalProps) {
 
   return (
     <div className="modal-backdrop" role="presentation">
-      <section className={`story-modal story-modal--${story.tone ?? "normal"}`} role="dialog" aria-modal="true">
+      <section
+        className={`story-modal story-modal--${story.tone ?? "normal"}`}
+        role="dialog"
+        aria-modal="true"
+      >
         <p className="kicker">剧情事件</p>
         <h2>{story.title}</h2>
         <p>{story.text}</p>

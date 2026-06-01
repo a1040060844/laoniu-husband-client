@@ -1,4 +1,13 @@
-import { AlertTriangle, CheckCircle2, Clock3, FileText, Gift, Hourglass, Play, Send } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock3,
+  FileText,
+  Gift,
+  Hourglass,
+  Play,
+  Send,
+} from "lucide-react";
 import type { Task } from "../types/domain";
 
 const typeLabel = {
@@ -42,10 +51,17 @@ export function TaskCard({ task, index, onStart, onSubmit }: TaskCardProps) {
         ? { label: "提交完成", action: () => onSubmit(task), disabled: false }
         : task.status === "submitted"
           ? { label: "等待老妞确认", action: () => undefined, disabled: true }
-          : { label: "查看提交记录", action: () => onSubmit(task), disabled: false };
+          : {
+              label: "查看提交记录",
+              action: () => onSubmit(task),
+              disabled: false,
+            };
 
   return (
-    <article className={`task-card task-card--${task.status}`} style={{ "--task-step": index } as React.CSSProperties}>
+    <article
+      className={`task-card task-card--${task.status}`}
+      style={{ "--task-step": index } as React.CSSProperties}
+    >
       <div className="task-card__mark">
         <StatusIcon size={28} strokeWidth={1.6} />
       </div>
@@ -67,9 +83,16 @@ export function TaskCard({ task, index, onStart, onSubmit }: TaskCardProps) {
           <FileText size={14} />
           <span>{task.deadline}</span>
         </div>
-        {task.resultText ? <p className="task-result">{task.resultText}</p> : null}
+        {task.resultText ? (
+          <p className="task-result">{task.resultText}</p>
+        ) : null}
       </div>
-      <button className="task-action" type="button" disabled={primary.disabled} onClick={primary.action}>
+      <button
+        className="task-action"
+        type="button"
+        disabled={primary.disabled}
+        onClick={primary.action}
+      >
         {task.status === "doing" ? <Send size={15} /> : null}
         {primary.label}
       </button>

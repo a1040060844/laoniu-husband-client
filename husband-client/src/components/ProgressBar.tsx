@@ -4,8 +4,13 @@ interface ProgressBarProps {
   compact?: boolean;
 }
 
-export function ProgressBar({ current, required, compact = false }: ProgressBarProps) {
-  const value = required <= 0 ? 0 : Math.min(100, Math.round((current / required) * 100));
+export function ProgressBar({
+  current,
+  required,
+  compact = false,
+}: ProgressBarProps) {
+  const value =
+    required <= 0 ? 0 : Math.min(100, Math.round((current / required) * 100));
 
   return (
     <div className={compact ? "progress progress--compact" : "progress"}>
