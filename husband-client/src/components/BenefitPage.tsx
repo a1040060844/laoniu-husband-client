@@ -6,6 +6,7 @@ import type { Benefit, BenefitStatus, Role, ViewKey } from "../types/domain";
 
 interface BenefitPageProps {
   role: Role;
+  previewDirection: "none" | "next" | "prev";
   currentLevel: number;
   benefits: Benefit[];
   canPrev: boolean;
@@ -29,8 +30,16 @@ function getStatus(role: Role, benefit: Benefit): { status: BenefitStatus; text:
   return { status: "available", text: "可使用" };
 }
 
+function isVisibleForRole(role: Role, benefit: Benefit): boolean {
+  if (role.level === 0) {
+    return benefit.levelRequired === 0;
+  }
+  return benefit.levelRequired > 0 && role.level >= benefit.levelRequired;
+}
+
 export function BenefitPage({
   role,
+  previewDirection,
   currentLevel,
   benefits,
   canPrev,
@@ -44,7 +53,9 @@ export function BenefitPage({
   onSelectView,
 }: BenefitPageProps) {
   const isLockedPreview = role.level > currentLevel;
-  const visibleBenefits = benefits.filter((benefit) => role.level >= benefit.levelRequired && benefit.status !== "locked");
+  const directionClass = `benefit-page--dir-${previewDirection}`;
+  const visibleBenefits = benefits.filter((benefit) => isVisibleForRole(role, benefit));
+  const orbitClassName = `benefit-orbit${visibleBenefits.length > 8 ? " benefit-orbit--dense" : ""}`;
   const visibleSelectedBenefit =
     selectedBenefit && visibleBenefits.some((benefit) => benefit.id === selectedBenefit.id) ? selectedBenefit : null;
   const selectedStatus = visibleSelectedBenefit
@@ -52,12 +63,12 @@ export function BenefitPage({
     : { status: "locked" as BenefitStatus, text: "" };
 
   return (
-    <section className={`benefit-page page-screen${isLockedPreview ? " page-screen--locked-role" : ""}`}>
+    <section className={`benefit-page page-screen ${directionClass}${isLockedPreview ? " page-screen--locked-role" : ""}`}>
       <img className="cinema-image" src={role.roleImage} alt={`${role.title}权益背景`} />
       <div className="image-scrim image-scrim--benefit" />
       {isLockedPreview && <div className="locked-character-mask" aria-hidden="true" />}
 
-      <header className="hero-title hero-title--benefit">
+      <header key={`benefit-title-${role.level}`} className="hero-title hero-title--benefit">
         <div className="level-line">
           <span />
           <strong>Lv. {String(role.level).padStart(2, "0")}</strong>
@@ -66,7 +77,7 @@ export function BenefitPage({
         <h1>{role.title}</h1>
       </header>
 
-      <div className="benefit-orbit" aria-label="权益列表">
+      <div className={orbitClassName} aria-label="权益列表">
         {visibleBenefits.map((benefit, index) => {
           const { status, text } = getStatus(role, benefit);
           return (

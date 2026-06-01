@@ -36,6 +36,7 @@ export function TaskPage({ role, progress, tasks, onStartTask, onSubmitTask, onS
   const [source, setSource] = useState<TaskSource>("wife");
   const [filter, setFilter] = useState<FilterKey>("all");
   const [submittingTask, setSubmittingTask] = useState<Task | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [note, setNote] = useState("");
 
   const visibleTasks = useMemo(() => {
@@ -67,6 +68,15 @@ export function TaskPage({ role, progress, tasks, onStartTask, onSubmitTask, onS
     onSubmitTask(submittingTask.id, note.trim() || "已完成，请老妞大人确认。");
     setSubmittingTask(null);
     setNote("");
+  }
+
+  function submitCurrentTaskWithFeedback() {
+    if (!submittingTask || isSubmitting) return;
+    setIsSubmitting(true);
+    window.setTimeout(() => {
+      submitCurrentTask();
+      setIsSubmitting(false);
+    }, 400);
   }
 
   return (
@@ -123,10 +133,14 @@ export function TaskPage({ role, progress, tasks, onStartTask, onSubmitTask, onS
           ))}
         </div>
 
-        <div className="task-list">
-          {visibleTasks.map((task) => (
-            <TaskCard key={task.id} task={task} onStart={onStartTask} onSubmit={setSubmittingTask} />
-          ))}
+        <div key={`${source}-${filter}`} className="task-list">
+          {visibleTasks.length ? (
+            visibleTasks.map((task, index) => (
+              <TaskCard key={task.id} task={task} index={index} onStart={onStartTask} onSubmit={setSubmittingTask} />
+            ))
+          ) : (
+            <p className="task-empty">暂无符合条件的任务</p>
+          )}
         </div>
 
         <section className="month-panel">
@@ -144,7 +158,18 @@ export function TaskPage({ role, progress, tasks, onStartTask, onSubmitTask, onS
 
       {submittingTask ? (
         <div className="modal-backdrop" role="presentation">
-          <section className="sheet-modal submit-modal" role="dialog" aria-modal="true">
+          <section
+            className="sheet-modal submit-modal"
+            role="dialog"
+            aria-modal="true"
+            onClickCapture={(event) => {
+              if (!isSubmitting) return;
+              if ((event.target as HTMLElement).closest(".icon-close")) {
+                event.preventDefault();
+                event.stopPropagation();
+              }
+            }}
+          >
             <button className="icon-close" type="button" onClick={() => setSubmittingTask(null)} aria-label="关闭">
               ×
             </button>
@@ -156,7 +181,12 @@ export function TaskPage({ role, progress, tasks, onStartTask, onSubmitTask, onS
               placeholder="写下完成说明，后续可扩展上传图片。"
               rows={5}
             />
-            <button className="primary-button" type="button" onClick={submitCurrentTask}>
+            <button
+              className={`primary-button${isSubmitting ? " primary-button--submitting" : ""}`}
+              type="button"
+              onClick={submitCurrentTaskWithFeedback}
+              disabled={isSubmitting}
+            >
               提交给老妞确认
             </button>
           </section>

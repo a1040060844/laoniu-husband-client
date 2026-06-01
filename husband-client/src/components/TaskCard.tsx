@@ -28,11 +28,12 @@ const statusIcon = {
 
 interface TaskCardProps {
   task: Task;
+  index: number;
   onStart: (id: string) => void;
   onSubmit: (task: Task) => void;
 }
 
-export function TaskCard({ task, onStart, onSubmit }: TaskCardProps) {
+export function TaskCard({ task, index, onStart, onSubmit }: TaskCardProps) {
   const StatusIcon = statusIcon[task.status];
   const primary =
     task.status === "todo"
@@ -44,7 +45,7 @@ export function TaskCard({ task, onStart, onSubmit }: TaskCardProps) {
           : { label: "查看提交记录", action: () => onSubmit(task), disabled: false };
 
   return (
-    <article className={`task-card task-card--${task.status}`}>
+    <article className={`task-card task-card--${task.status}`} style={{ "--task-step": index } as React.CSSProperties}>
       <div className="task-card__mark">
         <StatusIcon size={28} strokeWidth={1.6} />
       </div>

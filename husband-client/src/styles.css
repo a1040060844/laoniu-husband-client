@@ -685,8 +685,77 @@ button {
   left: 50%;
   top: 116%;
 }
-.benefit-bubble:nth-child(n + 9) {
-  display: none;
+
+.benefit-orbit--dense {
+  top: 154px;
+  height: min(54dvh, 460px);
+}
+
+.benefit-orbit--dense .benefit-bubble {
+  width: 72px;
+  height: 72px;
+  padding: 7px 5px;
+}
+
+.benefit-orbit--dense .benefit-bubble strong {
+  font-size: 11px;
+}
+
+.benefit-orbit--dense .benefit-bubble small {
+  font-size: 8px;
+}
+
+.benefit-orbit--dense .benefit-bubble:nth-child(1) {
+  left: 25%;
+  top: 9%;
+}
+.benefit-orbit--dense .benefit-bubble:nth-child(2) {
+  left: 50%;
+  top: 7%;
+}
+.benefit-orbit--dense .benefit-bubble:nth-child(3) {
+  left: 75%;
+  top: 9%;
+}
+.benefit-orbit--dense .benefit-bubble:nth-child(4) {
+  left: 15%;
+  top: 31%;
+}
+.benefit-orbit--dense .benefit-bubble:nth-child(5) {
+  left: 39%;
+  top: 31%;
+}
+.benefit-orbit--dense .benefit-bubble:nth-child(6) {
+  left: 62%;
+  top: 31%;
+}
+.benefit-orbit--dense .benefit-bubble:nth-child(7) {
+  left: 85%;
+  top: 31%;
+}
+.benefit-orbit--dense .benefit-bubble:nth-child(8) {
+  left: 15%;
+  top: 57%;
+}
+.benefit-orbit--dense .benefit-bubble:nth-child(9) {
+  left: 39%;
+  top: 57%;
+}
+.benefit-orbit--dense .benefit-bubble:nth-child(10) {
+  left: 62%;
+  top: 57%;
+}
+.benefit-orbit--dense .benefit-bubble:nth-child(11) {
+  left: 85%;
+  top: 57%;
+}
+.benefit-orbit--dense .benefit-bubble:nth-child(12) {
+  left: 32%;
+  top: 83%;
+}
+.benefit-orbit--dense .benefit-bubble:nth-child(13) {
+  left: 68%;
+  top: 83%;
 }
 
 .benefit-bubble__icon {
@@ -940,6 +1009,21 @@ button {
   border-color: rgba(215, 123, 98, 0.5);
 }
 
+.task-card--submitted {
+  border-color: rgba(231, 199, 141, 0.24);
+  filter: brightness(0.92);
+}
+
+.task-card--confirmed,
+.task-card--completed {
+  opacity: 0.82;
+  border-color: rgba(231, 199, 141, 0.22);
+}
+
+.task-card--failed {
+  border-color: rgba(215, 123, 98, 0.42);
+}
+
 .task-card__mark {
   width: 54px;
   height: 54px;
@@ -982,6 +1066,18 @@ button {
   color: var(--ink);
 }
 
+.task-card--submitted .task-status,
+.task-card--confirmed .task-status,
+.task-card--completed .task-status {
+  background: rgba(231, 199, 141, 0.12);
+}
+
+.task-card--failed .task-status {
+  color: rgba(255, 170, 150, 0.94);
+  border-color: rgba(215, 123, 98, 0.32);
+  background: rgba(115, 36, 24, 0.18);
+}
+
 .task-card h3 {
   margin: 10px 0 5px;
   color: var(--ink);
@@ -1015,8 +1111,9 @@ button {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  min-width: 132px;
+  min-width: 148px;
   padding: 0 14px;
+  white-space: nowrap;
 }
 
 .task-action:disabled,
@@ -1024,6 +1121,20 @@ button {
   opacity: 0.48;
   color: var(--muted);
   background: rgba(33, 28, 21, 0.8);
+}
+
+.task-empty {
+  margin: 0;
+  padding: 22px 14px;
+  border: 1px solid rgba(231, 199, 141, 0.24);
+  color: rgba(231, 199, 141, 0.74);
+  background: linear-gradient(180deg, rgba(10, 8, 6, 0.72), rgba(10, 8, 6, 0.5));
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.36);
+  backdrop-filter: blur(8px);
+  text-align: center;
+  font-family: var(--serif);
+  letter-spacing: 2px;
+  animation: task-card-enter 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .month-note {
@@ -1122,7 +1233,21 @@ button {
 }
 
 .primary-button {
+  position: relative;
   width: 100%;
+}
+
+.primary-button--submitting {
+  color: transparent !important;
+}
+
+.primary-button--submitting::after {
+  content: "正在递交...";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
 }
 
 .modal-note {
@@ -1142,6 +1267,434 @@ button {
   background: rgba(0, 0, 0, 0.35);
   padding: 12px;
   line-height: 1.5;
+}
+
+@keyframes role-image-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes role-title-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes role-image-enter-next {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes role-image-enter-prev {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes role-content-enter-next {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes role-content-enter-prev {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes benefit-image-enter-next {
+  from {
+    opacity: 0;
+    transform: translateY(18dvh) translateX(14px) scale(1);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(18dvh) translateX(0) scale(1);
+  }
+}
+
+@keyframes benefit-image-enter-prev {
+  from {
+    opacity: 0;
+    transform: translateY(18dvh) translateX(-14px) scale(1);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(18dvh) translateX(0) scale(1);
+  }
+}
+
+@keyframes fade-up-soft {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes fade-in-soft {
+  from {
+    opacity: 0;
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+@keyframes progress-fill-enter {
+  from {
+    width: 0;
+  }
+}
+
+@keyframes benefit-commission-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(12px);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes benefit-bubble-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 6px)) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes benefit-bubble-muted-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 6px)) scale(0.94);
+  }
+  to {
+    opacity: 0.46;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes benefit-bubble-float {
+  from {
+    translate: 0 0;
+  }
+  to {
+    translate: 0 -4px;
+  }
+}
+
+@keyframes modal-backdrop-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes task-list-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes task-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.husband-pager__screen--active .role-page .cinema-image {
+  animation: role-image-enter 900ms ease-out both;
+}
+
+.husband-pager__screen--active .role-page--dir-next .cinema-image {
+  animation: role-image-enter-next 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.husband-pager__screen--active .role-page--dir-prev .cinema-image {
+  animation: role-image-enter-prev 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.husband-pager__screen--active .role-page .hero-title--role {
+  animation: role-title-enter 760ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
+}
+
+.husband-pager__screen--active .role-page .bottom-panel--role {
+  animation: fade-up-soft 820ms cubic-bezier(0.22, 1, 0.36, 1) 220ms both;
+}
+
+.husband-pager__screen--active .role-page--dir-next .hero-title--role,
+.husband-pager__screen--active .role-page--dir-next .bottom-panel--role {
+  animation: role-content-enter-next 340ms cubic-bezier(0.22, 1, 0.36, 1) 40ms both;
+}
+
+.husband-pager__screen--active .role-page--dir-prev .hero-title--role,
+.husband-pager__screen--active .role-page--dir-prev .bottom-panel--role {
+  animation: role-content-enter-prev 340ms cubic-bezier(0.22, 1, 0.36, 1) 40ms both;
+}
+
+.husband-pager__screen--active .role-page .side-guide,
+.husband-pager__screen--active .role-page .role-navigator {
+  animation: fade-in-soft 820ms ease-out 460ms both;
+}
+
+.husband-pager__screen--active .progress__fill {
+  animation: progress-fill-enter 920ms cubic-bezier(0.22, 1, 0.36, 1) 520ms both;
+  transition: width 520ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.husband-pager__screen--active .benefit-page .hero-title--benefit {
+  animation: fade-in-soft 820ms ease-out 120ms both;
+}
+
+.husband-pager__screen--active .benefit-page--dir-next .cinema-image {
+  animation: benefit-image-enter-next 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.husband-pager__screen--active .benefit-page--dir-prev .cinema-image {
+  animation: benefit-image-enter-prev 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.husband-pager__screen--active .benefit-page--dir-next .hero-title--benefit {
+  animation: role-content-enter-next 320ms cubic-bezier(0.22, 1, 0.36, 1) 40ms both;
+}
+
+.husband-pager__screen--active .benefit-page--dir-prev .hero-title--benefit {
+  animation: role-content-enter-prev 320ms cubic-bezier(0.22, 1, 0.36, 1) 40ms both;
+}
+
+.husband-pager__screen--active .benefit-page .benefit-commission {
+  animation: benefit-commission-enter 780ms cubic-bezier(0.22, 1, 0.36, 1) 260ms both;
+}
+
+.benefit-bubble {
+  scale: 1;
+  transition:
+    border-color 320ms ease,
+    box-shadow 320ms ease,
+    filter 320ms ease,
+    scale 120ms ease;
+}
+
+.husband-pager__screen--active .benefit-bubble {
+  animation: benefit-bubble-enter 360ms cubic-bezier(0.22, 1, 0.36, 1) calc(120ms + var(--bubble-step) * 55ms) both;
+  will-change: opacity, transform, translate;
+}
+
+.husband-pager__screen--active .benefit-bubble:not(.benefit-bubble--locked):not(.benefit-bubble--cooldown) {
+  animation:
+    benefit-bubble-enter 360ms cubic-bezier(0.22, 1, 0.36, 1) calc(120ms + var(--bubble-step) * 55ms) both,
+    benefit-bubble-float 4200ms ease-in-out calc(900ms + var(--bubble-step) * 120ms) infinite alternate;
+}
+
+.husband-pager__screen--active .benefit-bubble--locked,
+.husband-pager__screen--active .benefit-bubble--cooldown {
+  animation: benefit-bubble-muted-enter 360ms cubic-bezier(0.22, 1, 0.36, 1) calc(120ms + var(--bubble-step) * 55ms) both;
+}
+
+.benefit-bubble:not(.benefit-bubble--locked):not(.benefit-bubble--cooldown):hover {
+  border-color: rgba(248, 223, 172, 0.58);
+  box-shadow: inset 0 0 20px rgba(231, 199, 141, 0.12), 0 0 20px rgba(231, 199, 141, 0.14), 0 16px 38px rgba(0, 0, 0, 0.46);
+}
+
+.benefit-bubble:not(.benefit-bubble--locked):not(.benefit-bubble--cooldown):active {
+  scale: 0.97;
+}
+
+.husband-pager__screen--active .task-header,
+.husband-pager__screen--active .overview-panel,
+.husband-pager__screen--active .source-tabs,
+.husband-pager__screen--active .filter-row,
+.husband-pager__screen--active .month-panel {
+  animation: fade-up-soft 680ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.task-header {
+  animation-delay: 80ms;
+}
+
+.overview-panel {
+  animation-delay: 160ms;
+}
+
+.source-tabs {
+  animation-delay: 240ms;
+}
+
+.filter-row {
+  animation-delay: 320ms;
+}
+
+.task-card {
+  --task-step: 0;
+  transition:
+    border-color 320ms ease,
+    background 320ms ease,
+    box-shadow 320ms ease,
+    filter 320ms ease,
+    opacity 320ms ease,
+    transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.husband-pager__screen--active .task-list {
+  animation: task-list-enter 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.husband-pager__screen--active .task-card {
+  animation: task-card-enter 320ms cubic-bezier(0.22, 1, 0.36, 1) calc(80ms + var(--task-step) * 55ms) both;
+}
+
+.month-panel {
+  animation-delay: 820ms;
+}
+
+.source-tabs button,
+.filter-row button,
+.task-action,
+.primary-button,
+.role-navigator__button,
+.swipe-hint {
+  scale: 1;
+  transition:
+    border-color 240ms ease,
+    background 240ms ease,
+    box-shadow 240ms ease,
+    color 240ms ease,
+    opacity 240ms ease,
+    scale 120ms ease;
+}
+
+.task-action:not(:disabled):active,
+.primary-button:not(:disabled):active,
+.source-tabs button:not(:disabled):active,
+.filter-row button:not(:disabled):active,
+.role-navigator__button:not(:disabled):active,
+.swipe-hint:not(:disabled):active {
+  scale: 0.97;
+}
+
+.modal-backdrop {
+  animation: modal-backdrop-enter 260ms ease-out both;
+}
+
+.story-modal,
+.sheet-modal {
+  animation: modal-panel-enter 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .husband-pager__track,
+  .role-page .cinema-image,
+  .role-page .hero-title--role,
+  .role-page .bottom-panel--role,
+  .role-page .side-guide,
+  .role-page .role-navigator,
+  .progress__fill,
+  .benefit-page .hero-title--benefit,
+  .benefit-page .benefit-commission,
+  .benefit-bubble,
+  .task-header,
+  .overview-panel,
+  .source-tabs,
+  .filter-row,
+  .task-card,
+  .month-panel,
+  .modal-backdrop,
+  .story-modal,
+  .sheet-modal {
+    animation: none;
+  }
+
+  .husband-pager__track,
+  .progress__fill,
+  .benefit-bubble,
+  .source-tabs button,
+  .filter-row button,
+  .task-card,
+  .task-action,
+  .primary-button,
+  .role-navigator__button,
+  .swipe-hint {
+    transition: none;
+  }
+
+  .benefit-bubble:active,
+  .task-action:not(:disabled):active,
+  .primary-button:not(:disabled):active,
+  .role-navigator__button:not(:disabled):active,
+  .swipe-hint:not(:disabled):active {
+    scale: 1;
+  }
 }
 
 .app--wife {
@@ -3070,6 +3623,25 @@ button {
     font-size: 8px;
   }
 
+  .benefit-orbit--dense {
+    top: 124px;
+    height: 52dvh;
+  }
+
+  .benefit-orbit--dense .benefit-bubble {
+    width: 62px;
+    height: 62px;
+    padding: 6px 4px;
+  }
+
+  .benefit-orbit--dense .benefit-bubble strong {
+    font-size: 10px;
+  }
+
+  .benefit-orbit--dense .benefit-bubble small {
+    font-size: 7px;
+  }
+
   .benefit-commission {
     bottom: max(78px, calc(env(safe-area-inset-bottom) + 68px));
     min-width: 154px;
@@ -3093,5 +3665,26 @@ button {
   .hero-title h1,
   .hero-title--benefit h1 {
     font-size: 38px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .benefit-bubble:active,
+  .task-action:not(:disabled):active,
+  .primary-button:not(:disabled):active,
+  .source-tabs button:not(:disabled):active,
+  .filter-row button:not(:disabled):active,
+  .role-navigator__button:not(:disabled):active,
+  .swipe-hint:not(:disabled):active {
+    scale: 1;
   }
 }

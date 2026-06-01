@@ -19,12 +19,15 @@ import { loadTaskSystem, persistLocalTaskSystem, readLocalTaskSystem, saveTaskSy
 import type { Benefit, StoryEvent, Task, ViewKey } from "./types/domain";
 import "./styles.css";
 
+export type PreviewDirection = "none" | "next" | "prev";
+
 export default function App() {
   const initialState = useMemo(readLocalTaskSystem, []);
   const [route, setRoute] = useState(() => (window.location.pathname.startsWith("/wife") ? "wife" : "husband"));
   const [activePage, setActivePage] = useState<number>(HUSBAND_PAGES.ROLE);
   const [progress, setProgress] = useState(initialState.progress);
   const [previewLevel, setPreviewLevel] = useState(initialState.progress.level);
+  const [previewDirection, setPreviewDirection] = useState<PreviewDirection>("none");
   const [tasks, setTasks] = useState<Task[]>(initialState.tasks);
   const [selectedBenefit, setSelectedBenefit] = useState<Benefit | null>(null);
   const [story, setStory] = useState<StoryEvent | null>(null);
@@ -96,10 +99,12 @@ export default function App() {
   }
 
   function handlePreviewPrev() {
+    setPreviewDirection("prev");
     setPreviewLevel((level) => Math.max(0, level - 1));
   }
 
   function handlePreviewNext() {
+    setPreviewDirection("next");
     setPreviewLevel((level) => Math.min(roles.length - 1, level + 1));
   }
 
@@ -270,7 +275,9 @@ export default function App() {
         onSwipeRight={handlePreviewPrev}
       >
         <BenefitPage
+          key={`benefit-page-${previewRole.level}`}
           role={previewRole}
+          previewDirection={previewDirection}
           currentLevel={progress.level}
           benefits={sortedBenefits}
           canPrev={previewLevel > 0}
@@ -285,8 +292,10 @@ export default function App() {
         />
 
         <RolePage
+          key={`role-page-${previewRole.level}`}
           role={currentRole}
           previewRole={previewRole}
+          previewDirection={previewDirection}
           canPrev={previewLevel > 0}
           canNext={previewLevel < roles.length - 1}
           roleCount={roles.length}

@@ -6,6 +6,7 @@ import type { Role, ViewKey } from "../types/domain";
 interface RolePageProps {
   role: Role;
   previewRole: Role;
+  previewDirection: "none" | "next" | "prev";
   canPrev: boolean;
   canNext: boolean;
   roleCount: number;
@@ -17,6 +18,7 @@ interface RolePageProps {
 export function RolePage({
   role,
   previewRole,
+  previewDirection,
   canPrev,
   canNext,
   roleCount = 12,
@@ -26,14 +28,15 @@ export function RolePage({
 }: RolePageProps) {
   const isPreviewing = previewRole.level !== role.level;
   const isLockedPreview = previewRole.level > role.level;
+  const directionClass = `role-page--dir-${previewDirection}`;
 
   return (
-    <section className={`role-page page-screen${isLockedPreview ? " page-screen--locked-role" : ""}`}>
+    <section className={`role-page page-screen ${directionClass}${isLockedPreview ? " page-screen--locked-role" : ""}`}>
       <img className="cinema-image" src={previewRole.roleImage} alt={`${previewRole.title}职务形象`} />
       <div className="image-scrim" />
       {isLockedPreview && <div className="locked-character-mask" aria-hidden="true" />}
 
-      <header className="hero-title hero-title--role">
+      <header key={`role-title-${previewRole.level}`} className="hero-title hero-title--role">
         <div className="level-line">
           <span />
           <strong>Lv. {String(previewRole.level).padStart(2, "0")}</strong>
@@ -56,7 +59,7 @@ export function RolePage({
         onNext={onPreviewNext}
       />
 
-      <div className="bottom-panel bottom-panel--role">
+      <div key={`role-panel-${previewRole.level}`} className="bottom-panel bottom-panel--role">
         <article className="bio-panel bio-panel--role">
           <p className="panel-title">
             <span /> 人物小传 <span />

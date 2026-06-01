@@ -103,7 +103,10 @@ export function HusbandVerticalPager({
     >
       <div className="husband-pager__track" style={{ transform: `translateY(-${currentPage * 100}dvh)` }}>
         {children.map((child, index) => (
-          <section className="husband-pager__screen" key={index}>
+          <section
+            className={`husband-pager__screen${index === currentPage ? " husband-pager__screen--active" : ""}`}
+            key={index}
+          >
             {child}
           </section>
         ))}
