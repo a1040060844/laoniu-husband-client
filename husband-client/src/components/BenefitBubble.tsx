@@ -14,6 +14,7 @@ import {
   Sparkles,
   Utensils,
 } from "lucide-react";
+import type { CSSProperties } from "react";
 import type { Benefit, BenefitStatus } from "../types/domain";
 
 const iconMap = {
@@ -39,6 +40,7 @@ interface BenefitBubbleProps {
   statusText: string;
   index: number;
   isBursting?: boolean;
+  style?: CSSProperties;
   onOpen: (benefit: Benefit) => void;
 }
 
@@ -48,6 +50,7 @@ export function BenefitBubble({
   statusText,
   index,
   isBursting = false,
+  style,
   onOpen,
 }: BenefitBubbleProps) {
   const Icon = iconMap[benefit.icon as keyof typeof iconMap] ?? Gift;
@@ -55,7 +58,7 @@ export function BenefitBubble({
   return (
     <button
       className={`benefit-bubble benefit-bubble--${computedStatus}${isBursting ? " benefit-bubble--bursting" : ""}`}
-      style={{ "--bubble-step": index } as React.CSSProperties}
+      style={{ "--bubble-step": index, ...style } as CSSProperties}
       type="button"
       onClick={() => onOpen(benefit)}
     >

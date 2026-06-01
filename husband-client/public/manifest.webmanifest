@@ -1,0 +1,25 @@
+{
+  "name": "老妞大人",
+  "short_name": "老妞大人",
+  "description": "老妞大人宠夫场",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#080604",
+  "theme_color": "#080604",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/wife/wife-main.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,10 +1,11 @@
 import type { Role } from "../types/domain";
 import { expRequiredForLevel, salaryForLevel } from "../game/progression";
+import { publicAsset } from "../lib/assets";
 
 const roleImage = (level: number) =>
-  `/assets/roles/role-${String(level).padStart(2, "0")}.png`;
+  publicAsset(`/assets/roles/role-${String(level).padStart(2, "0")}.png`);
 const benefitImage = (level: number) =>
-  `/assets/benefits/benefit-${String(level).padStart(2, "0")}.png`;
+  publicAsset(`/assets/benefits/benefit-${String(level).padStart(2, "0")}.png`);
 
 function createRole(level: number, title: string, biography: string): Role {
   return {

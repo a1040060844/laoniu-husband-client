@@ -89,10 +89,10 @@ export function grantExperience(
   let exp = Math.max(0, current.exp) + safeAmount;
   const stories: StoryEvent[] = [];
 
-  if (level < MAX_LEVEL && exp >= expRequiredForLevel(level)) {
+  while (level < MAX_LEVEL && exp >= expRequiredForLevel(level)) {
     const from = roles[level];
+    exp -= expRequiredForLevel(level);
     level += 1;
-    exp = 0;
     const to = roles[level];
     stories.push({
       title: "职务晋升",

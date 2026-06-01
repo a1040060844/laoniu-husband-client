@@ -121,7 +121,9 @@ export function HusbandVerticalPager({
     >
       <div
         className="husband-pager__track"
-        style={{ transform: `translateY(-${currentPage * 100}dvh)` }}
+        style={{
+          transform: `translateY(calc(-${currentPage} * var(--app-height)))`,
+        }}
       >
         {children.map((child, index) => (
           <section

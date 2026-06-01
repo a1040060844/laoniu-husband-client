@@ -90,7 +90,7 @@ export const benefits: Benefit[] = [
     name: "cos时刻",
     frequency: "周1次",
     description: "可以申请一次指定主题互动时刻。",
-    status: "locked",
+    status: "available",
     icon: "mask",
   },
   {
@@ -108,7 +108,7 @@ export const benefits: Benefit[] = [
     name: "恩爱奖励(升级)",
     frequency: "月1次",
     description: "恩爱奖励升级版，可与特定权益组合使用。",
-    status: "locked",
+    status: "available",
     icon: "badge-plus",
   },
   {
@@ -117,7 +117,7 @@ export const benefits: Benefit[] = [
     name: "反向任务权",
     frequency: "周1次",
     description: "可向老妞大人发起一次轻量反向任务。",
-    status: "locked",
+    status: "available",
     icon: "clipboard-check",
   },
   {
@@ -126,7 +126,7 @@ export const benefits: Benefit[] = [
     name: "自定义权益",
     frequency: "月1次",
     description: "可协商创建一个专属权益条目。",
-    status: "locked",
+    status: "available",
     icon: "settings",
   },
 ];

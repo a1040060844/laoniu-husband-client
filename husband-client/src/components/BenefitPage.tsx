@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { Coins } from "lucide-react";
 import { BenefitBubble } from "./BenefitBubble";
 import { BenefitModal } from "./BenefitModal";
@@ -22,17 +23,14 @@ interface BenefitPageProps {
 }
 
 function getStatus(
-  role: Role,
+  currentLevel: number,
   benefit: Benefit,
 ): { status: BenefitStatus; text: string } {
-  if (role.level < benefit.levelRequired) {
+  if (currentLevel < benefit.levelRequired) {
     return {
       status: "locked",
-      text: `Lv.${String(benefit.levelRequired).padStart(2, "0")}解锁`,
+      text: "未解锁",
     };
-  }
-  if (benefit.status === "locked") {
-    return { status: "locked", text: "尚未解锁" };
   }
   if (benefit.status === "cooldown") {
     return { status: "cooldown", text: benefit.cooldownText ?? "冷却中" };
@@ -45,6 +43,51 @@ function isVisibleForRole(role: Role, benefit: Benefit): boolean {
     return benefit.levelRequired === 0;
   }
   return benefit.levelRequired > 0 && role.level >= benefit.levelRequired;
+}
+
+function getBubblePosition(
+  index: number,
+  total: number,
+): { x: number; y: number } {
+  if (total <= 5) {
+    const sparseLayouts = [
+      [{ x: 195, y: 78 }],
+      [
+        { x: 128, y: 64 },
+        { x: 262, y: 122 },
+      ],
+      [
+        { x: 94, y: 118 },
+        { x: 195, y: 54 },
+        { x: 296, y: 118 },
+      ],
+      [
+        { x: 82, y: 70 },
+        { x: 170, y: 128 },
+        { x: 258, y: 62 },
+        { x: 340, y: 124 },
+      ],
+      [
+        { x: 64, y: 114 },
+        { x: 132, y: 56 },
+        { x: 204, y: 128 },
+        { x: 282, y: 62 },
+        { x: 354, y: 118 },
+      ],
+    ];
+
+    return sparseLayouts[Math.max(total - 1, 0)][index];
+  }
+
+  const staggerX = [0, 12, -8, 6, -12][index % 5];
+  const rowOffset = Math.floor(index / 5) % 2 === 0 ? 0 : 8;
+  const yBase = index % 2 === 0 ? 54 : 118;
+  const yDrift = [0, 8, -4, 10, -8][index % 5];
+
+  return {
+    x: 60 + index * 82 + staggerX,
+    y: Math.min(140, yBase + yDrift + rowOffset),
+  };
 }
 
 export function BenefitPage({
@@ -71,14 +114,18 @@ export function BenefitPage({
   const visibleBenefits = benefits.filter((benefit) =>
     isVisibleForRole(role, benefit),
   );
-  const orbitClassName = `benefit-orbit${visibleBenefits.length > 8 ? " benefit-orbit--dense" : ""}`;
+  const cloudWidth =
+    visibleBenefits.length <= 5
+      ? 390
+      : Math.max(520, visibleBenefits.length * 86 + 120);
+  const cloudViewportClassName = "benefit-cloud-viewport";
   const visibleSelectedBenefit =
     selectedBenefit &&
     visibleBenefits.some((benefit) => benefit.id === selectedBenefit.id)
       ? selectedBenefit
       : null;
   const selectedStatus = visibleSelectedBenefit
-    ? getStatus(role, visibleSelectedBenefit)
+    ? getStatus(currentLevel, visibleSelectedBenefit)
     : { status: "locked" as BenefitStatus, text: "" };
   const isLightCurtainActive = Boolean(visibleSelectedBenefit);
 
@@ -110,7 +157,7 @@ export function BenefitPage({
     >
       <img
         className="cinema-image"
-        src={role.benefitImage}
+        src={role.roleImage}
         alt={`${role.title}权益背景`}
       />
       <div className="image-scrim image-scrim--benefit" />
@@ -130,21 +177,36 @@ export function BenefitPage({
         <h1>{role.title}</h1>
       </header>
 
-      <div className={orbitClassName} aria-label="权益列表">
-        {visibleBenefits.map((benefit, index) => {
-          const { status, text } = getStatus(role, benefit);
-          return (
-            <BenefitBubble
-              key={benefit.id}
-              benefit={benefit}
-              computedStatus={status}
-              statusText={text}
-              index={index}
-              isBursting={burstingBenefitId === benefit.id}
-              onOpen={handleOpenBenefit}
-            />
-          );
-        })}
+      <div className={cloudViewportClassName} aria-label="权益列表">
+        <div
+          className="benefit-cloud-track"
+          style={{ "--cloud-width": `${cloudWidth}px` } as CSSProperties}
+          onTouchStart={(event) => event.stopPropagation()}
+          onTouchEnd={(event) => event.stopPropagation()}
+        >
+          {visibleBenefits.map((benefit, index) => {
+            const { status, text } = getStatus(currentLevel, benefit);
+            const { x, y } = getBubblePosition(index, visibleBenefits.length);
+            return (
+              <BenefitBubble
+                key={benefit.id}
+                benefit={benefit}
+                computedStatus={status}
+                statusText={text}
+                index={index}
+                isBursting={burstingBenefitId === benefit.id}
+                style={
+                  {
+                    "--bubble-x": `${x}px`,
+                    "--bubble-y": `${y}px`,
+                    "--bubble-delay": `${index * 0.18}s`,
+                  } as CSSProperties
+                }
+                onOpen={handleOpenBenefit}
+              />
+            );
+          })}
+        </div>
       </div>
 
       <RoleNavigator

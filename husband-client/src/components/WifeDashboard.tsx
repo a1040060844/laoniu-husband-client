@@ -4,7 +4,6 @@ import {
   ArrowUp,
   BadgeDollarSign,
   BookOpen,
-  ChevronLeft,
   ClipboardCheck,
   ClipboardList,
   Crown,
@@ -28,6 +27,7 @@ import {
   type WheelEvent,
 } from "react";
 import { expRequiredForLevel, type GameProgress } from "../game/progression";
+import { publicAsset } from "../lib/assets";
 import type { Benefit, Role, Task, TaskType } from "../types/domain";
 
 type WifeSheet = "task" | "review" | "benefit" | null;
@@ -125,6 +125,7 @@ export function WifeDashboard({
   onLevelDelta,
   onPunishStatus,
 }: WifeDashboardProps) {
+  const wifeImage = publicAsset("/assets/wife/wife-main.png");
   const [sheet, setSheet] = useState<WifeSheet>(null);
   const [activePage, setActivePage] = useState<WifePage>("main");
   const [subPage, setSubPage] = useState<WifeSubPage | null>(null);
@@ -261,13 +262,13 @@ export function WifeDashboard({
   }
 
   function handleTouchStart(event: TouchEvent<HTMLElement>) {
-    if (sheet || subPage) return;
+    if (sheet) return;
     const touch = event.touches[0];
     touchStart.current = touch ? { x: touch.clientX, y: touch.clientY } : null;
   }
 
   function handleTouchEnd(event: TouchEvent<HTMLElement>) {
-    if (sheet || subPage) return;
+    if (sheet) return;
     if (!touchStart.current) return;
     const touch = event.changedTouches[0];
     const deltaX =
@@ -283,8 +284,18 @@ export function WifeDashboard({
       return;
 
     const activeScroller = (event.target as HTMLElement | null)?.closest(
-      ".wife-growth, .wife-today",
+      ".wife-growth, .wife-today, .wife-subpage",
     );
+    if (subPage) {
+      if (activeScroller instanceof HTMLElement && activeScroller.scrollTop > 2) {
+        return;
+      }
+      if (deltaY <= 0) return;
+      event.preventDefault();
+      setWifePage("main");
+      return;
+    }
+
     if (activeScroller instanceof HTMLElement && activePage !== "main") {
       const canScrollDown =
         activeScroller.scrollTop + activeScroller.clientHeight <
@@ -300,11 +311,25 @@ export function WifeDashboard({
   }
 
   function handleWheel(event: WheelEvent<HTMLElement>) {
-    if (sheet || subPage) return;
+    if (sheet) return;
     if (wheelLocked.current || Math.abs(event.deltaY) < WHEEL_THRESHOLD) return;
     const activeScroller = (event.target as HTMLElement | null)?.closest(
-      ".wife-growth, .wife-today",
+      ".wife-growth, .wife-today, .wife-subpage",
     );
+    if (subPage) {
+      if (activeScroller instanceof HTMLElement && activeScroller.scrollTop > 2) {
+        return;
+      }
+      if (event.deltaY >= 0) return;
+      event.preventDefault();
+      wheelLocked.current = true;
+      setWifePage("main");
+      window.setTimeout(() => {
+        wheelLocked.current = false;
+      }, 620);
+      return;
+    }
+
     if (activeScroller instanceof HTMLElement && activePage !== "main") {
       const canScrollDown =
         activeScroller.scrollTop + activeScroller.clientHeight <
@@ -378,13 +403,13 @@ export function WifeDashboard({
       <div
         className="wife-pager-track"
         style={{
-          transform: `translateY(-${WIFE_PAGE_INDEX[activePage] * 100}dvh)`,
+          transform: `translateY(calc(-${WIFE_PAGE_INDEX[activePage]} * var(--app-height)))`,
         }}
       >
         <section className="wife-growth" id="wife-growth" aria-label="成长裁定">
           <img
             className="wife-growth__portrait"
-            src="/assets/wife/wife-main.png"
+            src={wifeImage}
             alt=""
           />
           <div className="wife-growth__shade" />
@@ -577,7 +602,7 @@ export function WifeDashboard({
         <section className="wife-hero" id="wife-main" aria-label="老婆端主控台">
           <img
             className="wife-portrait"
-            src="/assets/wife/wife-main.png"
+            src={wifeImage}
             alt=""
           />
           <div className="wife-hero__shade" />
@@ -663,7 +688,7 @@ export function WifeDashboard({
         <section className="wife-today" id="wife-today" aria-label="今日事务">
           <img
             className="wife-today__portrait"
-            src="/assets/wife/wife-main.png"
+            src={wifeImage}
             alt=""
           />
           <div className="wife-today__shade" />
@@ -807,18 +832,18 @@ export function WifeDashboard({
         <section className="wife-subpage" aria-label="老婆端子页面">
           <img
             className="wife-subpage__portrait"
-            src="/assets/wife/wife-main.png"
+            src={wifeImage}
             alt=""
           />
           <div className="wife-subpage__shade" />
-          <button
-            className="wife-subpage-back"
-            type="button"
-            onClick={closeSubPage}
+          <a
+            className="wife-today-back"
+            href="#wife-main"
+            onClick={handlePageLink("main")}
           >
-            <ChevronLeft size={20} />
-            返回
-          </button>
+            <span aria-hidden="true">{"\u2227"}</span>
+            <span>{"\u4E0B\u6ED1\u8FD4\u56DE\u4E3B\u9875"}</span>
+          </a>
 
           {subPage === "tasks" ? (
             <div className="wife-subpage-inner">

@@ -10,6 +10,7 @@ import { useMemo, useState } from "react";
 import { StatCard } from "./StatCard";
 import { TaskCard } from "./TaskCard";
 import type { GameProgress } from "../game/progression";
+import { publicAsset } from "../lib/assets";
 import type {
   Role,
   Task,
@@ -113,7 +114,11 @@ export function TaskPage({
 
   return (
     <section className="task-page">
-      <img className="task-backdrop" src="/assets/tasks/task-lv01.png" alt="" />
+      <img
+        className="task-backdrop"
+        src={publicAsset("/assets/tasks/task-lv01.png")}
+        alt=""
+      />
       <div className="task-scrim" />
 
       <div className="task-shell">

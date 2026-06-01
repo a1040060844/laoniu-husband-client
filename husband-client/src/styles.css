@@ -1,5 +1,6 @@
 :root {
   color-scheme: dark;
+  --app-height: 100vh;
   --bg: #080604;
   --bg-soft: rgba(18, 13, 8, 0.76);
   --panel: rgba(16, 12, 8, 0.72);
@@ -17,6 +18,12 @@
   --sans: "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
+@supports (height: 100dvh) {
+  :root {
+    --app-height: 100dvh;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -29,6 +36,7 @@ body,
   min-height: 100%;
   margin: 0;
   overflow: hidden;
+  overflow-x: hidden;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
@@ -59,9 +67,9 @@ button {
 }
 
 .app {
-  width: min(100vw, 430px);
-  height: 100dvh;
-  min-height: 100dvh;
+  width: min(100%, 430px);
+  height: var(--app-height);
+  min-height: var(--app-height);
   margin: 0 auto;
   overflow: hidden;
   background: var(--bg);
@@ -73,48 +81,48 @@ button {
 .husband-pager {
   position: fixed;
   inset: 0;
-  width: min(100vw, 430px);
-  height: 100dvh;
+  width: min(100%, 430px);
+  height: var(--app-height);
   margin: 0 auto;
   overflow: hidden;
   background: #050302;
-  touch-action: pan-y;
+  touch-action: pan-x pan-y;
 }
 
 .husband-pager__track {
   display: flex;
   flex-direction: column;
-  height: 300dvh;
+  height: calc(var(--app-height) * 3);
   transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform;
 }
 
 .husband-pager__screen {
   position: relative;
-  flex: 0 0 100dvh;
+  flex: 0 0 var(--app-height);
   width: 100%;
-  height: 100dvh;
-  min-height: 100dvh;
+  height: var(--app-height);
+  min-height: var(--app-height);
   overflow: hidden;
 }
 
 .husband-pager__screen > .page-screen,
 .husband-pager__screen > .task-page {
-  height: 100dvh;
-  min-height: 100dvh;
+  height: var(--app-height);
+  min-height: var(--app-height);
 }
 
 .page-screen {
   position: relative;
-  height: 100dvh;
-  min-height: 100dvh;
+  height: var(--app-height);
+  min-height: var(--app-height);
   overflow: hidden;
   isolation: isolate;
 }
 
 .role-page {
-  height: 100dvh;
-  min-height: 100dvh;
+  height: var(--app-height);
+  min-height: var(--app-height);
   overflow: hidden;
 }
 
@@ -751,18 +759,48 @@ button {
   font-size: 46px;
 }
 
-.benefit-orbit {
+.benefit-cloud-viewport {
   position: absolute;
-  top: 158px;
+  top: 150px;
   left: 0;
   right: 0;
-  height: 26dvh;
-  bottom: auto;
+  z-index: 3;
+  height: 230px;
+  padding: 0 28px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 12%,
+    #000 88%,
+    transparent
+  );
+  touch-action: pan-x;
+}
+
+.benefit-cloud-viewport::-webkit-scrollbar {
+  display: none;
+}
+
+.benefit-cloud-track {
+  position: relative;
+  width: var(--cloud-width);
+  min-width: 100%;
+  height: 100%;
+  touch-action: pan-x;
 }
 
 .benefit-bubble {
   --bubble-step: 0;
+  --bubble-x: 50%;
+  --bubble-y: 50%;
+  --bubble-delay: 0s;
   position: absolute;
+  left: var(--bubble-x);
+  top: var(--bubble-y);
   width: 78px;
   height: 78px;
   border-radius: 50%;
@@ -846,111 +884,6 @@ button {
   filter: blur(0.2px);
 }
 
-.benefit-bubble:nth-child(1) {
-  left: 19%;
-  top: 18%;
-}
-.benefit-bubble:nth-child(2) {
-  left: 81%;
-  top: 18%;
-}
-.benefit-bubble:nth-child(3) {
-  left: 50%;
-  top: 4%;
-}
-.benefit-bubble:nth-child(4) {
-  left: 13%;
-  top: 54%;
-}
-.benefit-bubble:nth-child(5) {
-  left: 87%;
-  top: 54%;
-}
-.benefit-bubble:nth-child(6) {
-  left: 16%;
-  top: 92%;
-}
-.benefit-bubble:nth-child(7) {
-  left: 84%;
-  top: 92%;
-}
-.benefit-bubble:nth-child(8) {
-  left: 50%;
-  top: 116%;
-}
-
-.benefit-orbit--dense {
-  top: 154px;
-  height: min(54dvh, 460px);
-}
-
-.benefit-orbit--dense .benefit-bubble {
-  width: 72px;
-  height: 72px;
-  padding: 7px 5px;
-}
-
-.benefit-orbit--dense .benefit-bubble strong {
-  font-size: 11px;
-}
-
-.benefit-orbit--dense .benefit-bubble small {
-  font-size: 8px;
-}
-
-.benefit-orbit--dense .benefit-bubble:nth-child(1) {
-  left: 25%;
-  top: 9%;
-}
-.benefit-orbit--dense .benefit-bubble:nth-child(2) {
-  left: 50%;
-  top: 7%;
-}
-.benefit-orbit--dense .benefit-bubble:nth-child(3) {
-  left: 75%;
-  top: 9%;
-}
-.benefit-orbit--dense .benefit-bubble:nth-child(4) {
-  left: 15%;
-  top: 31%;
-}
-.benefit-orbit--dense .benefit-bubble:nth-child(5) {
-  left: 39%;
-  top: 31%;
-}
-.benefit-orbit--dense .benefit-bubble:nth-child(6) {
-  left: 62%;
-  top: 31%;
-}
-.benefit-orbit--dense .benefit-bubble:nth-child(7) {
-  left: 85%;
-  top: 31%;
-}
-.benefit-orbit--dense .benefit-bubble:nth-child(8) {
-  left: 15%;
-  top: 57%;
-}
-.benefit-orbit--dense .benefit-bubble:nth-child(9) {
-  left: 39%;
-  top: 57%;
-}
-.benefit-orbit--dense .benefit-bubble:nth-child(10) {
-  left: 62%;
-  top: 57%;
-}
-.benefit-orbit--dense .benefit-bubble:nth-child(11) {
-  left: 85%;
-  top: 57%;
-}
-.benefit-orbit--dense .benefit-bubble:nth-child(12) {
-  left: 32%;
-  top: 83%;
-}
-.benefit-orbit--dense .benefit-bubble:nth-child(13) {
-  left: 68%;
-  top: 83%;
-}
-
 .benefit-bubble__icon {
   display: grid;
   place-items: center;
@@ -988,7 +921,7 @@ button {
   animation: benefitBubbleDust 240ms ease-out 120ms both;
 }
 
-.benefit-page--light-curtain .benefit-orbit .benefit-bubble {
+.benefit-page--light-curtain .benefit-cloud-viewport .benefit-bubble {
   opacity: 0.34;
   filter: blur(1.2px) brightness(0.58) saturate(0.8);
 }
@@ -1052,8 +985,8 @@ button {
 
 .task-page {
   position: relative;
-  height: 100dvh;
-  min-height: 100dvh;
+  height: var(--app-height);
+  min-height: var(--app-height);
   overflow-y: auto;
   overflow-x: hidden;
   background: #080604;
@@ -1383,9 +1316,9 @@ button {
   z-index: 20;
   display: grid;
   place-items: end center;
-  width: min(100vw, 430px);
+  width: min(100%, 430px);
   margin: 0 auto;
-  padding: 18px;
+  padding: 18px 18px max(18px, env(safe-area-inset-bottom));
   background: rgba(0, 0, 0, 0.72);
   backdrop-filter: blur(6px);
 }
@@ -2201,7 +2134,7 @@ button {
 
 .husband-pager__screen--active .benefit-bubble {
   animation: benefit-bubble-enter 360ms cubic-bezier(0.22, 1, 0.36, 1)
-    calc(120ms + var(--bubble-step) * 55ms) both;
+    calc(120ms + var(--bubble-delay)) both;
   will-change: opacity, transform, translate;
 }
 
@@ -2209,15 +2142,15 @@ button {
   .benefit-bubble:not(.benefit-bubble--locked):not(.benefit-bubble--cooldown) {
   animation:
     benefit-bubble-enter 360ms cubic-bezier(0.22, 1, 0.36, 1)
-      calc(120ms + var(--bubble-step) * 55ms) both,
+      calc(120ms + var(--bubble-delay)) both,
     benefit-bubble-float 4200ms ease-in-out
-      calc(900ms + var(--bubble-step) * 120ms) infinite alternate;
+      calc(900ms + var(--bubble-delay)) infinite alternate;
 }
 
 .husband-pager__screen--active .benefit-bubble--locked,
 .husband-pager__screen--active .benefit-bubble--cooldown {
   animation: benefit-bubble-muted-enter 360ms cubic-bezier(0.22, 1, 0.36, 1)
-    calc(120ms + var(--bubble-step) * 55ms) both;
+    calc(120ms + var(--bubble-delay)) both;
 }
 
 .benefit-bubble:not(.benefit-bubble--locked):not(
@@ -2390,8 +2323,8 @@ button {
 
 .wife-console {
   position: relative;
-  height: 100dvh;
-  min-height: 100dvh;
+  height: var(--app-height);
+  min-height: var(--app-height);
   overflow: hidden;
   overscroll-behavior: none;
   touch-action: pan-y;
@@ -2403,15 +2336,15 @@ button {
   top: 0;
   right: 0;
   left: 0;
-  height: 300dvh;
+  height: calc(var(--app-height) * 3);
   transition: transform 620ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform;
 }
 
 .wife-hero {
   position: relative;
-  height: 100dvh;
-  min-height: 100dvh;
+  height: var(--app-height);
+  min-height: var(--app-height);
   padding: 0;
   overflow: hidden;
   isolation: isolate;
@@ -2795,8 +2728,8 @@ button {
 
 .wife-growth {
   position: relative;
-  height: 100dvh;
-  min-height: 100dvh;
+  height: var(--app-height);
+  min-height: var(--app-height);
   padding: max(22px, env(safe-area-inset-top)) 18px
     max(24px, env(safe-area-inset-bottom));
   overflow-x: hidden;
@@ -3342,9 +3275,9 @@ button {
 
 .wife-today {
   position: relative;
-  height: 100dvh;
-  min-height: 100dvh;
-  padding: 58px 18px 112px;
+  height: var(--app-height);
+  min-height: var(--app-height);
+  padding: 58px 18px max(112px, calc(env(safe-area-inset-bottom) + 96px));
   overflow-x: hidden;
   overflow-y: auto;
   isolation: isolate;
@@ -3476,6 +3409,36 @@ button {
   font-family: Georgia, serif;
   font-size: 18px;
   line-height: 0.85;
+}
+
+.wife-subpage-cue {
+  position: fixed;
+  top: max(8px, env(safe-area-inset-top));
+  color: transparent;
+  font-size: 0;
+}
+
+.wife-subpage-cue::before {
+  content: "鈭?";
+  color: rgba(248, 223, 172, 0.82);
+  font-family: Georgia, serif;
+  font-size: 18px;
+  line-height: 0.85;
+}
+
+.wife-subpage-cue::after {
+  content: "涓嬫粦杩斿洖涓婚〉";
+  color: rgba(231, 199, 141, 0.72);
+  font-family: var(--serif);
+  font-size: 15px;
+}
+
+.wife-subpage-cue::before {
+  content: "\2304";
+}
+
+.wife-subpage-cue::after {
+  content: "\4E0B\6ED1\8FD4\56DE\4E3B\9875";
 }
 
 .wife-today-card {
@@ -3727,8 +3690,9 @@ button {
   position: absolute;
   inset: 0;
   z-index: 20;
-  min-height: 100dvh;
-  padding: 72px 18px 112px;
+  min-height: var(--app-height);
+  padding: max(72px, calc(env(safe-area-inset-top) + 56px)) 18px
+    max(112px, calc(env(safe-area-inset-bottom) + 96px));
   overflow-x: hidden;
   overflow-y: auto;
   background: #030201;
@@ -3781,31 +3745,6 @@ button {
       rgba(231, 199, 141, 0.18),
       transparent 16rem
     );
-}
-
-.wife-subpage-back {
-  position: fixed;
-  top: 18px;
-  left: max(18px, calc(50vw - 198px));
-  z-index: 34;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 36px;
-  padding: 0 12px 0 9px;
-  border: 1px solid rgba(231, 199, 141, 0.34);
-  border-radius: 999px;
-  color: rgba(248, 223, 172, 0.9);
-  background:
-    linear-gradient(180deg, rgba(231, 199, 141, 0.1), transparent 54%),
-    rgba(5, 4, 3, 0.72);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 244, 212, 0.04),
-    0 12px 34px rgba(0, 0, 0, 0.42);
-  font-family: var(--serif);
-  font-size: 14px;
-  letter-spacing: 1px;
-  backdrop-filter: blur(8px);
 }
 
 .wife-subpage-inner {
@@ -4156,7 +4095,7 @@ button {
   z-index: 32;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  width: min(100vw, 430px);
+  width: min(100%, 430px);
   max-width: 430px;
   margin: 0;
   border: 1px solid rgba(231, 199, 141, 0.36);
@@ -4169,6 +4108,7 @@ button {
     inset 0 0 0 1px rgba(255, 244, 212, 0.04);
   backdrop-filter: blur(10px);
   transform: translateX(-50%);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .wife-today-tabs a,
@@ -4325,8 +4265,8 @@ button {
   }
 
   .benefit-bubble {
-    width: 96px;
-    height: 96px;
+    width: 72px;
+    height: 72px;
   }
 
   .task-header h1 {
@@ -4439,9 +4379,10 @@ button {
     font-size: 22px;
   }
 
-  .benefit-orbit {
-    top: 132px;
-    height: 24dvh;
+  .benefit-cloud-viewport {
+    top: 128px;
+    height: 218px;
+    padding: 0 24px;
   }
 
   .benefit-bubble {
@@ -4456,25 +4397,6 @@ button {
 
   .benefit-bubble small {
     font-size: 8px;
-  }
-
-  .benefit-orbit--dense {
-    top: 124px;
-    height: 52dvh;
-  }
-
-  .benefit-orbit--dense .benefit-bubble {
-    width: 62px;
-    height: 62px;
-    padding: 6px 4px;
-  }
-
-  .benefit-orbit--dense .benefit-bubble strong {
-    font-size: 10px;
-  }
-
-  .benefit-orbit--dense .benefit-bubble small {
-    font-size: 7px;
   }
 
   .benefit-commission {

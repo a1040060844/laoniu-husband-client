@@ -13,6 +13,10 @@ export interface TaskSystemState {
 
 export const PROGRESS_STORAGE_KEY = "laoniu-husband-progress-v1";
 export const TASKS_STORAGE_KEY = "laoniu-husband-tasks-v1";
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(
+  /\/$/,
+  "",
+);
 
 const typeMap: Record<string, TaskType> = {
   custom: "custom",
@@ -37,6 +41,10 @@ const statusMap: Record<string, TaskStatus> = {
 };
 
 let lastStateExtras: Record<string, unknown> = {};
+
+function apiUrl(path: string) {
+  return `${API_BASE_URL}${path}`;
+}
 
 function readJson<T>(key: string): T | null {
   try {
@@ -154,7 +162,7 @@ function serializeTaskSystem(state: TaskSystemState) {
 }
 
 export async function loadTaskSystem(): Promise<TaskSystemState> {
-  const response = await fetch("/api/state", { cache: "no-store" });
+  const response = await fetch(apiUrl("/api/state"), { cache: "no-store" });
   if (!response.ok) {
     throw new Error(`任务状态读取失败：${response.status}`);
   }
@@ -163,7 +171,7 @@ export async function loadTaskSystem(): Promise<TaskSystemState> {
 }
 
 export async function saveTaskSystem(state: TaskSystemState): Promise<void> {
-  const response = await fetch("/api/state", {
+  const response = await fetch(apiUrl("/api/state"), {
     body: JSON.stringify({ state: serializeTaskSystem(state) }),
     headers: { "Content-Type": "application/json" },
     method: "PUT",
