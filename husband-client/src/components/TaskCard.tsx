@@ -8,6 +8,7 @@ import {
   Play,
   Send,
 } from "lucide-react";
+import { taskRewardChips } from "../lib/taskRewards";
 import type { Task } from "../types/domain";
 
 const typeLabel = {
@@ -44,6 +45,7 @@ interface TaskCardProps {
 
 export function TaskCard({ task, index, onStart, onSubmit }: TaskCardProps) {
   const StatusIcon = statusIcon[task.status];
+  const rewardChips = taskRewardChips(task);
   const primary =
     task.status === "todo"
       ? { label: "开始执行", action: () => onStart(task.id), disabled: false }
@@ -67,21 +69,25 @@ export function TaskCard({ task, index, onStart, onSubmit }: TaskCardProps) {
       </div>
       <div className="task-card__content">
         <div className="task-card__head">
-          <span className="task-type">{typeLabel[task.type]}</span>
+          <span className="task-type">
+            {task.moduleLabel || typeLabel[task.type]}
+            {task.source === "wife" ? " / 老婆发布" : ""}
+          </span>
           <span className="task-status">{statusLabel[task.status]}</span>
         </div>
         <h3>{task.title}</h3>
         <p>{task.description}</p>
         <div className="task-rewards">
-          <span>
-            <Gift size={14} /> +{task.rewardExp} EXP
-          </span>
-          {task.rewardMoney ? <span>+{task.rewardMoney} 零花钱</span> : null}
-          {task.rewardBenefit ? <span>{task.rewardBenefit}</span> : null}
+          {rewardChips.map((chip, chipIndex) => (
+            <span key={`${task.id}-${chipIndex}`}>
+              {chipIndex === 0 ? <Gift size={14} /> : null}
+              {chip}
+            </span>
+          ))}
         </div>
         <div className="task-deadline">
           <FileText size={14} />
-          <span>{task.deadline}</span>
+          <span>{task.timeConfig?.label || task.deadline}</span>
         </div>
         {task.resultText ? (
           <p className="task-result">{task.resultText}</p>

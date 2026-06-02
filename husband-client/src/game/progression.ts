@@ -1,4 +1,4 @@
-import type { Role, StoryEvent, Task } from "../types/domain";
+import type { Role, StoryEvent, Task, TaskReward } from "../types/domain";
 
 export const MIN_LEVEL = 0;
 export const MAX_LEVEL = 11;
@@ -125,25 +125,126 @@ export function settleTaskReward(
     return { progress: current, stories: [] };
   }
 
-  const expResult = grantExperience(
-    current,
-    task.rewardExp,
-    roles,
-    `完成「${task.title}」`,
-  );
-  const progress = {
-    ...expResult.progress,
-    wallet: expResult.progress.wallet + task.rewardMoney,
-    rewardedTaskIds: [...expResult.progress.rewardedTaskIds, task.id],
+  const rewards: TaskReward[] = task.rewards?.length
+    ? task.rewards
+    : [
+        {
+          id: `${task.id}-legacy-exp`,
+          type: "experience",
+          label: `${task.rewardExp}经验`,
+          value: task.rewardExp,
+          unit: "经验",
+        },
+        ...(task.rewardMoney
+          ? [
+              {
+                id: `${task.id}-legacy-money`,
+                type: "allowance" as const,
+                label: `${task.rewardMoney}元`,
+                value: task.rewardMoney,
+                unit: "元",
+              },
+            ]
+          : []),
+        ...(task.rewardBenefit
+          ? [
+              {
+                id: `${task.id}-legacy-benefit`,
+                type: "benefit" as const,
+                label: task.rewardBenefit,
+                benefitName: task.rewardBenefit,
+                value: 1,
+                unit: "次",
+              },
+            ]
+          : []),
+      ];
+
+  let progress = current;
+  const stories: StoryEvent[] = [];
+  const resultTexts: string[] = [];
+
+  rewards.forEach((reward) => {
+    if (reward.type === "experience") {
+      const amount = Math.max(0, Math.trunc(reward.value ?? 0));
+      const expResult = grantExperience(progress, amount, roles, `完成「${task.title}」`);
+      progress = expResult.progress;
+      stories.push(...expResult.stories);
+      if (amount > 0) resultTexts.push(`获得 ${amount} EXP`);
+      return;
+    }
+
+    if (reward.type === "allowance") {
+      const amount = Math.max(0, Math.trunc(reward.value ?? 0));
+      progress = { ...progress, wallet: progress.wallet + amount };
+      if (amount > 0) resultTexts.push(`获得 ¥${amount} 零花钱`);
+      return;
+    }
+
+    if (reward.type === "level_up") {
+      const amount = Math.max(1, Math.trunc(reward.value ?? 1));
+      const fromLevel = progress.level;
+      const level = clampLevel(progress.level + amount);
+      progress = {
+        ...progress,
+        level,
+        exp: Math.min(progress.exp, expRequiredForLevel(level)),
+      };
+      if (level !== fromLevel) {
+        stories.push({
+          title: "老妞大人直接赐予晋升",
+          text: `「${task.title}」已确认，老妞大人直接赐予晋升：Lv.${String(fromLevel).padStart(2, "0")} → Lv.${String(level).padStart(2, "0")}。`,
+          tone: "upgrade",
+        });
+      }
+      resultTexts.push(`直接升级 ${level - fromLevel} 级`);
+      return;
+    }
+
+    if (reward.type === "benefit") {
+      const name = reward.benefitName || reward.label || "权益";
+      const amount = Math.max(1, Math.trunc(reward.value ?? 1));
+      resultTexts.push(`获得权益奖励：${name} ${amount} 次`);
+      stories.push({
+        title: "权益奖励",
+        text: `获得权益奖励：${name} ${amount} 次。`,
+        tone: "normal",
+      });
+      return;
+    }
+
+    if (reward.type === "custom") {
+      const name = reward.customName || reward.label || "自定义奖励";
+      resultTexts.push(`获得自定义奖励：${name}`);
+      stories.push({
+        title: "自定义奖励",
+        text: `获得自定义奖励：${name}${reward.customDescription ? `。${reward.customDescription}` : "。"}`,
+        tone: "normal",
+      });
+    }
+  });
+
+  progress = {
+    ...progress,
+    rewardedTaskIds: [...progress.rewardedTaskIds, task.id],
   };
 
   const rewardStory: StoryEvent = {
     title: "奖励入账",
-    text: `「${task.title}」已确认，获得 ${task.rewardExp} EXP${task.rewardMoney ? ` 和 ¥${task.rewardMoney} 零花钱` : ""}。`,
-    tone: expResult.stories.length ? "upgrade" : "normal",
+    text: resultTexts.length
+      ? `「${task.title}」已确认，${resultTexts.join("，")}。`
+      : `「${task.title}」已确认，本次无额外奖励。`,
+    tone: stories.some((story) => story.tone === "upgrade") ? "upgrade" : "normal",
   };
 
-  return { progress, stories: [rewardStory, ...expResult.stories] };
+  return {
+    progress,
+    stories: [
+      rewardStory,
+      ...stories.filter((story) => story.title !== "权益奖励" && story.title !== "自定义奖励"),
+      ...stories.filter((story) => story.title === "权益奖励" || story.title === "自定义奖励"),
+    ],
+  };
 }
 
 export function settleConfirmedTasks(

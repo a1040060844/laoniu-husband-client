@@ -11,6 +11,7 @@ import { StatCard } from "./StatCard";
 import { TaskCard } from "./TaskCard";
 import type { GameProgress } from "../game/progression";
 import { publicAsset } from "../lib/assets";
+import { taskRewardExp, taskRewardMoney } from "../lib/taskRewards";
 import type {
   Role,
   Task,
@@ -48,9 +49,19 @@ const filters: Array<{ key: FilterKey; label: string }> = [
   { key: "completed", label: "已完成" },
 ];
 
+function isCurrentMonth(value?: string) {
+  if (!value) return false;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+  const now = new Date();
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth()
+  );
+}
+
 export function TaskPage({
   role,
-  progress,
   tasks,
   backdropImage,
   levelLabel,
@@ -79,26 +90,29 @@ export function TaskPage({
     ).length;
     const todayExp = tasks
       .filter((task) => task.status === "todo" || task.status === "doing")
-      .reduce((sum, task) => sum + task.rewardExp, 0);
+      .reduce((sum, task) => sum + taskRewardExp(task), 0);
 
     return { pending, doing, submitted, todayExp };
   }, [tasks]);
 
   const month = useMemo(() => {
-    const done = tasks.filter(
-      (task) => task.status === "completed" || task.status === "confirmed",
+    const currentMonthTasks = tasks.filter(
+      (task) =>
+        (task.status === "completed" || task.status === "confirmed") &&
+        isCurrentMonth(task.rewardedAt ?? task.confirmedAt),
     );
     return {
-      money: progress.wallet,
-      count: Math.max(done.length, progress.rewardedTaskIds.length),
-      exp: progress.totalExp,
+      money: currentMonthTasks.reduce(
+        (sum, task) => sum + taskRewardMoney(task),
+        0,
+      ),
+      count: currentMonthTasks.length,
+      exp: currentMonthTasks.reduce(
+        (sum, task) => sum + taskRewardExp(task),
+        0,
+      ),
     };
-  }, [
-    progress.rewardedTaskIds.length,
-    progress.totalExp,
-    progress.wallet,
-    tasks,
-  ]);
+  }, [tasks]);
 
   function submitCurrentTask() {
     if (!submittingTask) return;

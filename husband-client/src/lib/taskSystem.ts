@@ -4,16 +4,30 @@ import {
   initialProgress,
   type GameProgress,
 } from "../game/progression";
-import type { Task, TaskSource, TaskStatus, TaskType } from "../types/domain";
+import type {
+  EventLog,
+  EventLogType,
+  Task,
+  TaskModuleId,
+  TaskReward,
+  TaskRewardType,
+  TaskSource,
+  TaskStatus,
+  TaskTimeConfig,
+  TaskTimeType,
+  TaskType,
+} from "../types/domain";
 
 export interface TaskSystemState {
   progress: GameProgress;
   tasks: Task[];
+  logs: EventLog[];
   punishmentStatus: PunishmentStatus;
 }
 
 export const PROGRESS_STORAGE_KEY = "laoniu-husband-progress-v1";
 export const TASKS_STORAGE_KEY = "laoniu-husband-tasks-v1";
+export const LOGS_STORAGE_KEY = "laoniu-husband-logs-v1";
 export const PUNISHMENT_STORAGE_KEY = "laoniu-husband-punishment-v1";
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(
   /\/$/,
@@ -44,6 +58,51 @@ const statusMap: Record<string, TaskStatus> = {
   todo: "todo",
 };
 
+const eventTypeMap: Record<string, EventLogType> = {
+  benefit_approved: "benefit_approved",
+  benefit_requested: "benefit_requested",
+  level_changed: "level_changed",
+  punishment_status_changed: "punishment_status_changed",
+  task_approved: "task_approved",
+  task_created: "task_created",
+  task_rejected: "task_rejected",
+  task_submitted: "task_submitted",
+};
+
+const moduleIdMap: Record<string, TaskModuleId> = {
+  care: "care",
+  cats: "cats",
+  cleaning: "cleaning",
+  company: "company",
+  custom: "custom",
+  errand: "errand",
+  kitchen: "kitchen",
+  laundry: "laundry",
+  report: "report",
+};
+
+const timeTypeMap: Record<string, TaskTimeType> = {
+  custom: "custom",
+  immediate: "immediate",
+  repeat: "repeat",
+  this_month: "this_month",
+  this_week: "this_week",
+  today: "today",
+  tomorrow: "tomorrow",
+  within_24h: "within_24h",
+  within_3d: "within_3d",
+  within_7d: "within_7d",
+};
+
+const rewardTypeMap: Record<string, TaskRewardType> = {
+  allowance: "allowance",
+  benefit: "benefit",
+  custom: "custom",
+  experience: "experience",
+  level_up: "level_up",
+  none: "none",
+};
+
 let lastStateExtras: Record<string, unknown> = {};
 
 function apiUrl(path: string) {
@@ -58,6 +117,74 @@ function readJson<T>(key: string): T | null {
   }
 }
 
+function normalizeTimeConfig(raw: unknown): TaskTimeConfig | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const value = raw as Record<string, unknown>;
+  const type = timeTypeMap[String(value.type || "")];
+  const label = String(value.label || "").trim();
+  if (!type || !label) return undefined;
+
+  const repeatFrequency =
+    value.repeatFrequency === "daily" ||
+    value.repeatFrequency === "weekly" ||
+    value.repeatFrequency === "monthly" ||
+    value.repeatFrequency === "custom"
+      ? value.repeatFrequency
+      : undefined;
+
+  return {
+    type,
+    label,
+    deadlineAt:
+      typeof value.deadlineAt === "string" ? value.deadlineAt : undefined,
+    repeatFrequency,
+    repeatCount:
+      typeof value.repeatCount === "number"
+        ? Math.max(1, Math.trunc(value.repeatCount))
+        : undefined,
+    completedCount:
+      typeof value.completedCount === "number"
+        ? Math.max(0, Math.trunc(value.completedCount))
+        : undefined,
+  };
+}
+
+function normalizeReward(raw: unknown): TaskReward | null {
+  if (!raw || typeof raw !== "object") return null;
+  const value = raw as Record<string, unknown>;
+  const type = rewardTypeMap[String(value.type || "")];
+  if (!type) return null;
+  const amount = Number(value.value);
+  const label = String(value.label || "").trim();
+
+  return {
+    id: String(
+      value.id ||
+        `reward-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    ),
+    type,
+    label: label || type,
+    value: Number.isFinite(amount) ? Math.max(0, Math.trunc(amount)) : undefined,
+    unit: typeof value.unit === "string" ? value.unit : undefined,
+    benefitName:
+      typeof value.benefitName === "string" ? value.benefitName : undefined,
+    customName:
+      typeof value.customName === "string" ? value.customName : undefined,
+    customDescription:
+      typeof value.customDescription === "string"
+        ? value.customDescription
+        : undefined,
+  };
+}
+
+function normalizeRewards(raw: unknown): TaskReward[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const rewards = raw
+    .map(normalizeReward)
+    .filter((reward): reward is TaskReward => Boolean(reward));
+  return rewards.length ? rewards : undefined;
+}
+
 function normalizeTask(raw: unknown): Task | null {
   if (!raw || typeof raw !== "object") return null;
   const value = raw as Record<string, unknown>;
@@ -70,6 +197,7 @@ function normalizeTask(raw: unknown): Task | null {
     typeMap[String(value.type || value.urgency || "custom")] ?? "custom";
   const rewardExp = Number(value.rewardExp ?? value.exp ?? 0);
   const rewardMoney = Number(value.rewardMoney ?? value.money ?? 0);
+  const moduleId = moduleIdMap[String(value.moduleId || "")];
 
   return {
     id: String(
@@ -82,6 +210,14 @@ function normalizeTask(raw: unknown): Task | null {
     ),
     type: value.urgency === "urgent" ? "urgent" : type,
     source,
+    moduleId,
+    moduleLabel:
+      typeof value.moduleLabel === "string" ? value.moduleLabel : undefined,
+    target: typeof value.target === "string" ? value.target : undefined,
+    action: typeof value.action === "string" ? value.action : undefined,
+    standard: typeof value.standard === "string" ? value.standard : undefined,
+    timeConfig: normalizeTimeConfig(value.timeConfig),
+    rewards: normalizeRewards(value.rewards),
     rewardExp: Number.isFinite(rewardExp)
       ? Math.max(0, Math.trunc(rewardExp))
       : 0,
@@ -92,6 +228,14 @@ function normalizeTask(raw: unknown): Task | null {
       typeof value.rewardBenefit === "string" ? value.rewardBenefit : undefined,
     deadline: String(value.deadline || "今日完成"),
     status: statusMap[String(value.status || "todo")] ?? "todo",
+    createdAt:
+      typeof value.createdAt === "string" ? value.createdAt : undefined,
+    submittedAt:
+      typeof value.submittedAt === "string" ? value.submittedAt : undefined,
+    confirmedAt:
+      typeof value.confirmedAt === "string" ? value.confirmedAt : undefined,
+    rewardedAt:
+      typeof value.rewardedAt === "string" ? value.rewardedAt : undefined,
     submitNote:
       typeof value.submitNote === "string" ? value.submitNote : undefined,
     resultText:
@@ -107,6 +251,50 @@ function hydrateTasks(raw: unknown): Task[] {
   return tasks.length ? tasks : initialTasks;
 }
 
+function normalizeEventLog(raw: unknown): EventLog | null {
+  if (!raw || typeof raw !== "object") return null;
+  const value = raw as Record<string, unknown>;
+  const type = eventTypeMap[String(value.type || "")];
+  if (!type) return null;
+
+  const title = String(value.title || "").trim();
+
+  return {
+    id: String(
+      value.id ||
+        `log-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    ),
+    type,
+    createdAt:
+      typeof value.createdAt === "string"
+        ? value.createdAt
+        : new Date().toISOString(),
+    title: title || type,
+    description:
+      typeof value.description === "string" ? value.description : undefined,
+    taskId: typeof value.taskId === "string" ? value.taskId : undefined,
+    taskTitle:
+      typeof value.taskTitle === "string" ? value.taskTitle : undefined,
+    benefitId:
+      typeof value.benefitId === "string" ? value.benefitId : undefined,
+    benefitName:
+      typeof value.benefitName === "string" ? value.benefitName : undefined,
+    fromLevel:
+      typeof value.fromLevel === "number" ? value.fromLevel : undefined,
+    toLevel: typeof value.toLevel === "number" ? value.toLevel : undefined,
+    fromStatus:
+      typeof value.fromStatus === "string" ? value.fromStatus : undefined,
+    toStatus: typeof value.toStatus === "string" ? value.toStatus : undefined,
+  };
+}
+
+function hydrateEventLogs(raw: unknown): EventLog[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map(normalizeEventLog)
+    .filter((log): log is EventLog => Boolean(log));
+}
+
 function hydratePunishmentStatus(raw: unknown): PunishmentStatus {
   return raw === "slave" ? "slave" : "normal";
 }
@@ -119,6 +307,7 @@ function stateFromUnknown(raw: unknown): TaskSystemState {
         readJson(PROGRESS_STORAGE_KEY) ?? initialProgress,
       ),
       tasks: hydrateTasks(readJson(TASKS_STORAGE_KEY)),
+      logs: hydrateEventLogs(readJson(LOGS_STORAGE_KEY)),
       punishmentStatus: hydratePunishmentStatus(
         readJson(PUNISHMENT_STORAGE_KEY),
       ),
@@ -134,6 +323,7 @@ function stateFromUnknown(raw: unknown): TaskSystemState {
     rewardedTaskIds,
     slaveStatus,
     tasks,
+    logs,
     totalExp,
     wallet,
     ...extras
@@ -153,6 +343,7 @@ function stateFromUnknown(raw: unknown): TaskSystemState {
   return {
     progress: hydrateProgress(progressSource),
     tasks: hydrateTasks(tasks),
+    logs: hydrateEventLogs(logs),
     punishmentStatus: hydratePunishmentStatus(punishmentStatus ?? slaveStatus),
   };
 }
@@ -164,6 +355,7 @@ export function readLocalTaskSystem(): TaskSystemState {
 export function persistLocalTaskSystem(state: TaskSystemState) {
   localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(state.progress));
   localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(state.tasks));
+  localStorage.setItem(LOGS_STORAGE_KEY, JSON.stringify(state.logs));
   localStorage.setItem(
     PUNISHMENT_STORAGE_KEY,
     JSON.stringify(state.punishmentStatus),
@@ -177,6 +369,7 @@ function serializeTaskSystem(state: TaskSystemState) {
     progress: state.progress,
     punishmentStatus: state.punishmentStatus,
     tasks: state.tasks,
+    logs: state.logs,
   };
 }
 

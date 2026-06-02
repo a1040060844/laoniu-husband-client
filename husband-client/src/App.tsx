@@ -26,7 +26,14 @@ import {
   saveTaskSystem,
 } from "./lib/taskSystem";
 import { publicAsset } from "./lib/assets";
-import type { Benefit, StoryEvent, Task, ViewKey } from "./types/domain";
+import { taskRewardText } from "./lib/taskRewards";
+import type {
+  Benefit,
+  EventLog,
+  StoryEvent,
+  Task,
+  ViewKey,
+} from "./types/domain";
 import "./styles.css";
 
 export type PreviewDirection = "none" | "next" | "prev";
@@ -51,6 +58,7 @@ export default function App() {
   const [previewDirection, setPreviewDirection] =
     useState<PreviewDirection>("none");
   const [tasks, setTasks] = useState<Task[]>(initialState.tasks);
+  const [logs, setLogs] = useState<EventLog[]>(initialState.logs);
   const [punishmentStatus, setPunishmentStatus] = useState(
     initialState.punishmentStatus,
   );
@@ -65,6 +73,20 @@ export default function App() {
     return [...benefitData].sort((a, b) => a.levelRequired - b.levelRequired);
   }, []);
 
+  function addLog(
+    log: Omit<EventLog, "id" | "createdAt"> & { createdAt?: string },
+  ) {
+    const createdAt = log.createdAt ?? new Date().toISOString();
+    setLogs((current) => [
+      {
+        ...log,
+        id: `log-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+        createdAt,
+      },
+      ...current,
+    ]);
+  }
+
   useEffect(() => {
     setPreviewLevel(progress.level);
   }, [progress.level]);
@@ -77,6 +99,7 @@ export default function App() {
         hasLoadedServerState.current = true;
         setProgress(serverState.progress);
         setTasks(serverState.tasks);
+        setLogs(serverState.logs);
         setPunishmentStatus(serverState.punishmentStatus);
       })
       .catch(() => {
@@ -89,7 +112,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const state = { progress, punishmentStatus, tasks };
+    const state = { progress, punishmentStatus, tasks, logs };
     persistLocalTaskSystem(state);
 
     if (!hasLoadedServerState.current) return;
@@ -98,13 +121,29 @@ export default function App() {
     }, 250);
 
     return () => window.clearTimeout(timeout);
-  }, [progress, punishmentStatus, tasks]);
+  }, [logs, progress, punishmentStatus, tasks]);
 
   useEffect(() => {
     if (punishmentStatus === "slave") return;
+    const rewardedAt = new Date().toISOString();
+    const newlyRewardedTasks = tasks.filter(
+      (task) =>
+        (task.status === "confirmed" || task.status === "completed") &&
+        !progress.rewardedTaskIds.includes(task.id),
+    );
     const settled = settleConfirmedTasks(progress, tasks, roles);
     if (settled.stories.length === 0) return;
     setProgress(settled.progress);
+    if (newlyRewardedTasks.some((task) => !task.rewardedAt)) {
+      const rewardedTaskIds = new Set(newlyRewardedTasks.map((task) => task.id));
+      setTasks((current) =>
+        current.map((task) =>
+          rewardedTaskIds.has(task.id)
+            ? { ...task, rewardedAt: task.rewardedAt ?? rewardedAt }
+            : task,
+        ),
+      );
+    }
     setStory(settled.stories[settled.stories.length - 1]);
   }, [progress, punishmentStatus, tasks]);
 
@@ -146,13 +185,31 @@ export default function App() {
   }
 
   function handleSubmitTask(id: string, submitNote: string) {
+    const submittedAt = new Date().toISOString();
+    const target = tasks.find((task) => task.id === id);
     setTasks((current) =>
       current.map((task) =>
         task.id === id
-          ? { ...task, status: "submitted", submitNote, deadline: "刚刚提交" }
+          ? {
+              ...task,
+              status: "submitted",
+              submitNote,
+              submittedAt,
+              deadline: "刚刚提交",
+            }
           : task,
       ),
     );
+    if (target) {
+      addLog({
+        type: "task_submitted",
+        title: target.title,
+        description: submitNote,
+        taskId: target.id,
+        taskTitle: target.title,
+        createdAt: submittedAt,
+      });
+    }
     setStory({
       title: "任务已提交",
       text: "你把结果递到老妞大人案前，经验和零花钱会在她确认后正式入账。",
@@ -161,29 +218,54 @@ export default function App() {
   }
 
   function handleCreateTask(task: Task) {
-    setTasks((current) => [task, ...current]);
+    const createdAt = task.createdAt ?? new Date().toISOString();
+    const nextTask = { ...task, createdAt };
+    setTasks((current) => [nextTask, ...current]);
+    addLog({
+      type: "task_created",
+      title: nextTask.title,
+      description: nextTask.description,
+      taskId: nextTask.id,
+      taskTitle: nextTask.title,
+      createdAt,
+    });
     setStory({
       title: "任务已下达",
-      text: `老妞大人发布了「${task.title}」，老哥即刻进入待命状态。`,
-      tone: task.type === "urgent" ? "punish" : "normal",
+      text: `老妞大人发布了「${nextTask.title}」，老哥即刻进入待命状态。`,
+      tone: nextTask.type === "urgent" ? "punish" : "normal",
     });
   }
 
   function handleApproveTask(id: string) {
+    const confirmedAt = new Date().toISOString();
+    const target = tasks.find((task) => task.id === id);
     setTasks((current) =>
       current.map((task) =>
         task.id === id
           ? {
               ...task,
               status: "confirmed",
-              resultText: `老妞大人已确认：+${task.rewardExp} EXP${task.rewardMoney ? `，+${task.rewardMoney} 零花钱` : ""}`,
+              confirmedAt,
+              resultText: `老妞大人已确认：${taskRewardText(task)}`,
             }
           : task,
       ),
     );
+    if (target) {
+      addLog({
+        type: "task_approved",
+        title: target.title,
+        description: `奖励：${taskRewardText(target)}`,
+        taskId: target.id,
+        taskTitle: target.title,
+        createdAt: confirmedAt,
+      });
+    }
   }
 
   function handleRejectTask(id: string) {
+    const rejectedAt = new Date().toISOString();
+    const target = tasks.find((task) => task.id === id);
     setTasks((current) =>
       current.map((task) =>
         task.id === id
@@ -195,6 +277,16 @@ export default function App() {
           : task,
       ),
     );
+    if (target) {
+      addLog({
+        type: "task_rejected",
+        title: target.title,
+        description: "老妞大人裁定未通过，需要重新表现。",
+        taskId: target.id,
+        taskTitle: target.title,
+        createdAt: rejectedAt,
+      });
+    }
     setStory({
       title: "任务被打回",
       text: "老妞大人轻轻敲了敲桌面：这次不算，重新来过。",
@@ -203,6 +295,13 @@ export default function App() {
   }
 
   function handleUseBenefit(benefit: Benefit) {
+    addLog({
+      type: "benefit_requested",
+      title: benefit.name,
+      description: benefit.description,
+      benefitId: benefit.id,
+      benefitName: benefit.name,
+    });
     setSelectedBenefit(null);
     setStory({
       title: `申请：${benefit.name}`,
@@ -212,6 +311,13 @@ export default function App() {
   }
 
   function handleApproveBenefit(benefit: Benefit) {
+    addLog({
+      type: "benefit_approved",
+      title: benefit.name,
+      description: benefit.description,
+      benefitId: benefit.id,
+      benefitName: benefit.name,
+    });
     setStory({
       title: `恩准：${benefit.name}`,
       text: `老妞大人准许本次「${benefit.name}」申请。${benefit.description}`,
@@ -231,6 +337,15 @@ export default function App() {
         if (result.stories.length) {
           setStory(result.stories[result.stories.length - 1]);
         }
+        if (result.progress.level !== current.level) {
+          addLog({
+            type: "level_changed",
+            title: roles[result.progress.level].title,
+            description: "经验奖励触发等级变化",
+            fromLevel: current.level,
+            toLevel: result.progress.level,
+          });
+        }
         return result.progress;
       });
       return;
@@ -249,6 +364,8 @@ export default function App() {
 
   function handleSetLevel(level: number, reason: string) {
     const safeLevel = clampLevel(level);
+    const previousLevel = progress.level;
+    const previousPunishmentStatus = punishmentStatus;
     setPunishmentStatus("normal");
     setProgress((current) => ({
       ...current,
@@ -256,6 +373,24 @@ export default function App() {
       exp: Math.min(current.exp, expRequiredForLevel(safeLevel)),
     }));
     setPreviewLevel(safeLevel);
+    if (safeLevel !== previousLevel) {
+      addLog({
+        type: "level_changed",
+        title: roles[safeLevel].title,
+        description: reason,
+        fromLevel: previousLevel,
+        toLevel: safeLevel,
+      });
+    }
+    if (previousPunishmentStatus !== "normal") {
+      addLog({
+        type: "punishment_status_changed",
+        title: "恢复正常状态",
+        description: reason,
+        fromStatus: previousPunishmentStatus,
+        toStatus: "normal",
+      });
+    }
     setStory({
       title: "职务裁定",
       text: `老妞大人已${reason}，当前职务定为「${roles[safeLevel].title}」。`,
@@ -269,6 +404,7 @@ export default function App() {
   }
 
   function handlePunishStatus() {
+    const previousPunishmentStatus = punishmentStatus;
     setPunishmentStatus("slave");
     setSlaveActivePage(SLAVE_PAGES.STATUS);
     setProgress((current) => ({
@@ -278,6 +414,22 @@ export default function App() {
       wallet: 0,
     }));
     setPreviewLevel(MIN_LEVEL);
+    addLog({
+      type: "punishment_status_changed",
+      title: "卖身奴隶状态",
+      description: "冻结权益与零花钱，职务降至流落街头。",
+      fromStatus: previousPunishmentStatus,
+      toStatus: "slave",
+    });
+    if (progress.level !== MIN_LEVEL) {
+      addLog({
+        type: "level_changed",
+        title: roles[MIN_LEVEL].title,
+        description: "最终裁定",
+        fromLevel: progress.level,
+        toLevel: MIN_LEVEL,
+      });
+    }
     setStory({
       title: "最终裁定",
       text: "老妞大人执行卖身奴隶状态：冻结权益与零花钱，职务降至流落街头。",
@@ -292,6 +444,7 @@ export default function App() {
           role={currentRole}
           progress={progress}
           tasks={tasks}
+          logs={logs}
           benefits={sortedBenefits}
           roles={roles}
           onCreateTask={handleCreateTask}

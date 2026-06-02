@@ -4,6 +4,7 @@ import {
   ArrowUp,
   BadgeDollarSign,
   BookOpen,
+  CalendarClock,
   ClipboardCheck,
   ClipboardList,
   Crown,
@@ -26,9 +27,31 @@ import {
   type TouchEvent,
   type WheelEvent,
 } from "react";
+import {
+  benefitRewardNames,
+  buildTaskDescription,
+  buildTaskTitle,
+  createRewardLabel,
+  createTaskTimeConfig,
+  findTaskModule,
+  taskModules,
+  taskRewardOptions,
+  taskTimeOptions,
+} from "../data/taskModules";
 import { expRequiredForLevel, type GameProgress } from "../game/progression";
 import { publicAsset } from "../lib/assets";
-import type { Benefit, Role, Task, TaskType } from "../types/domain";
+import { taskRewardChips, taskRewardText } from "../lib/taskRewards";
+import type {
+  Benefit,
+  EventLog,
+  Role,
+  Task,
+  TaskModuleId,
+  TaskReward,
+  TaskRewardType,
+  TaskTimeConfig,
+  TaskTimeType,
+} from "../types/domain";
 
 type WifeSheet = "task" | "review" | "benefit" | "exp" | "level" | null;
 type WifePage = "today" | "main" | "growth";
@@ -38,6 +61,7 @@ interface WifeDashboardProps {
   role: Role;
   progress: GameProgress;
   tasks: Task[];
+  logs: EventLog[];
   benefits: Benefit[];
   roles: Role[];
   onCreateTask: (task: Task) => void;
@@ -54,27 +78,43 @@ interface WifeDashboardProps {
 interface TaskDraft {
   title: string;
   description: string;
-  type: TaskType;
-  rewardExp: number;
-  rewardMoney: number;
-  deadline: string;
+  moduleId: TaskModuleId;
+  target: string;
+  action: string;
+  customTarget: string;
+  customAction: string;
+  standard: string;
+  timeType: TaskTimeType;
+  customDeadlineAt: string;
+  repeatFrequency: NonNullable<TaskTimeConfig["repeatFrequency"]>;
+  repeatCount: number;
+  rewards: TaskReward[];
 }
 
 const initialDraft: TaskDraft = {
-  title: "整理房间",
-  description: "今晚睡前把房间整理干净，不许拖延。",
-  type: "daily",
-  rewardExp: 20,
-  rewardMoney: 5,
-  deadline: "今日 23:00 前",
+  action: "标准清洁",
+  customAction: "",
+  customDeadlineAt: "",
+  customTarget: "",
+  description:
+    "请完成客厅标准清洁，包括明显杂物归位、地面清理和桌面简单擦拭。完成后提交给老妞大人确认。",
+  moduleId: "cleaning",
+  repeatCount: 1,
+  repeatFrequency: "daily",
+  rewards: [
+    {
+      id: "draft-reward-exp",
+      label: "15经验",
+      type: "experience",
+      unit: "经验",
+      value: 15,
+    },
+  ],
+  standard: "",
+  target: "客厅",
+  timeType: "today",
+  title: "打扫客厅",
 };
-
-const typeOptions: Array<{ value: TaskType; label: string }> = [
-  { value: "daily", label: "日任务" },
-  { value: "weekly", label: "周任务" },
-  { value: "custom", label: "自定义" },
-  { value: "urgent", label: "紧急" },
-];
 
 const WIFE_PAGE_INDEX: Record<WifePage, number> = {
   growth: 0,
@@ -97,6 +137,17 @@ const orderOptions = [
   { name: "甜点赏赐", desc: "适合任务完成后的轻量奖励", cost: "经验 -3" },
 ];
 
+const eventLogTypeLabel: Record<EventLog["type"], string> = {
+  benefit_approved: "权益恩准",
+  benefit_requested: "权益申请",
+  level_changed: "等级变化",
+  punishment_status_changed: "惩罚状态",
+  task_approved: "任务确认",
+  task_created: "任务发布",
+  task_rejected: "任务打回",
+  task_submitted: "任务提交",
+};
+
 const SWIPE_THRESHOLD = 60;
 const WHEEL_THRESHOLD = 42;
 
@@ -109,10 +160,52 @@ function taskId() {
   return `wife-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 }
 
+function rewardId() {
+  return `reward-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+}
+
+function createDraftReward(type: TaskRewardType): TaskReward {
+  const base: TaskReward = { id: rewardId(), label: "", type };
+  if (type === "experience") {
+    return { ...base, label: "15经验", unit: "经验", value: 15 };
+  }
+  if (type === "allowance") {
+    return { ...base, label: "5元", unit: "元", value: 5 };
+  }
+  if (type === "level_up") {
+    return { ...base, label: "直接升级1级", unit: "级", value: 1 };
+  }
+  if (type === "benefit") {
+    return {
+      ...base,
+      benefitName: "奶茶",
+      label: "奶茶 1次",
+      unit: "次",
+      value: 1,
+    };
+  }
+  if (type === "custom") {
+    return { ...base, customName: "今晚免骂券", label: "今晚免骂券" };
+  }
+  return { ...base, label: "无奖励" };
+}
+
+function finalizeReward(reward: TaskReward): TaskReward {
+  return {
+    ...reward,
+    label: createRewardLabel(reward),
+    value:
+      typeof reward.value === "number"
+        ? Math.max(0, Math.trunc(reward.value))
+        : undefined,
+  };
+}
+
 export function WifeDashboard({
   role,
   progress,
   tasks,
+  logs,
   benefits,
   roles,
   onCreateTask,
@@ -130,6 +223,8 @@ export function WifeDashboard({
   const [activePage, setActivePage] = useState<WifePage>("main");
   const [subPage, setSubPage] = useState<WifeSubPage | null>(null);
   const [draft, setDraft] = useState<TaskDraft>(initialDraft);
+  const [rewardTypeToAdd, setRewardTypeToAdd] =
+    useState<TaskRewardType>("experience");
   const [customExpValue, setCustomExpValue] = useState("");
   const [targetLevel, setTargetLevel] = useState(progress.level);
   const touchStart = useRef<TouchPoint | null>(null);
@@ -147,6 +242,43 @@ export function WifeDashboard({
     () => tasks.filter((task) => task.status === "submitted"),
     [tasks],
   );
+  const selectedModule = useMemo(
+    () => findTaskModule(draft.moduleId),
+    [draft.moduleId],
+  );
+  const draftTarget =
+    draft.moduleId === "custom" ? draft.customTarget.trim() : draft.target;
+  const draftAction =
+    draft.moduleId === "custom" ? draft.customAction.trim() : draft.action;
+  const draftTimeConfig = createTaskTimeConfig(
+    draft.timeType,
+    draft.customDeadlineAt,
+    draft.repeatFrequency,
+    draft.repeatCount,
+  );
+  const draftRewards = draft.rewards.map(finalizeReward);
+  const previewTask: Task = {
+    id: "preview-task",
+    action: draftAction,
+    deadline: draftTimeConfig.label,
+    description: draft.description,
+    moduleId: draft.moduleId,
+    moduleLabel: selectedModule.label,
+    rewardExp: draftRewards
+      .filter((reward) => reward.type === "experience")
+      .reduce((sum, reward) => sum + Math.max(0, Math.trunc(reward.value ?? 0)), 0),
+    rewardMoney: draftRewards
+      .filter((reward) => reward.type === "allowance")
+      .reduce((sum, reward) => sum + Math.max(0, Math.trunc(reward.value ?? 0)), 0),
+    rewards: draftRewards,
+    source: "wife",
+    standard: draft.standard.trim() || undefined,
+    status: "todo",
+    target: draftTarget,
+    timeConfig: draftTimeConfig,
+    title: draft.title,
+    type: draft.timeType === "repeat" ? "weekly" : "daily",
+  };
   const recentTask =
     submittedTasks[0] ??
     tasks.find((task) => task.status === "doing" || task.status === "todo") ??
@@ -169,6 +301,17 @@ export function WifeDashboard({
     submitted: "待审核",
     todo: "待执行",
   };
+
+  function formatLogTime(createdAt: string) {
+    const date = new Date(createdAt);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toLocaleString("zh-CN", {
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      month: "2-digit",
+    });
+  }
 
   useEffect(() => {
     function pageFromHash(): WifePage {
@@ -211,6 +354,34 @@ export function WifeDashboard({
   useEffect(() => {
     setTargetLevel(progress.level);
   }, [progress.level]);
+
+  useEffect(() => {
+    const module = findTaskModule(draft.moduleId);
+    const target =
+      draft.moduleId === "custom" ? draft.customTarget.trim() : draft.target;
+    const action =
+      draft.moduleId === "custom" ? draft.customAction.trim() : draft.action;
+    const title = buildTaskTitle(draft.moduleId, target, action);
+    const description = buildTaskDescription(
+      module.label,
+      target,
+      action,
+      draft.standard,
+    );
+    setDraft((current) => {
+      if (current.title === title && current.description === description) {
+        return current;
+      }
+      return { ...current, description, title };
+    });
+  }, [
+    draft.action,
+    draft.customAction,
+    draft.customTarget,
+    draft.moduleId,
+    draft.standard,
+    draft.target,
+  ]);
 
   function setWifePage(page: WifePage) {
     setSubPage(null);
@@ -370,9 +541,77 @@ export function WifeDashboard({
     setDraft((current) => ({ ...current, [key]: value }));
   }
 
+  function selectModule(moduleId: TaskModuleId) {
+    const module = findTaskModule(moduleId);
+    setDraft((current) => ({
+      ...current,
+      action: module.actions[0] ?? "",
+      customAction: "",
+      customTarget: "",
+      moduleId,
+      target: module.targets[0] ?? "",
+    }));
+  }
+
+  function addReward() {
+    setDraft((current) => ({
+      ...current,
+      rewards: [...current.rewards, createDraftReward(rewardTypeToAdd)],
+    }));
+  }
+
+  function updateReward(
+    rewardIdToUpdate: string,
+    updater: (reward: TaskReward) => TaskReward,
+  ) {
+    setDraft((current) => ({
+      ...current,
+      rewards: current.rewards.map((reward) =>
+        reward.id === rewardIdToUpdate ? finalizeReward(updater(reward)) : reward,
+      ),
+    }));
+  }
+
+  function changeRewardType(rewardIdToUpdate: string, type: TaskRewardType) {
+    setDraft((current) => ({
+      ...current,
+      rewards: current.rewards.map((reward) =>
+        reward.id === rewardIdToUpdate
+          ? { ...createDraftReward(type), id: reward.id }
+          : reward,
+      ),
+    }));
+  }
+
+  function removeReward(rewardIdToRemove: string) {
+    setDraft((current) => ({
+      ...current,
+      rewards: current.rewards.filter((reward) => reward.id !== rewardIdToRemove),
+    }));
+  }
+
   function submitTask() {
     const title = draft.title.trim();
     if (!title) return;
+    const timeConfig = createTaskTimeConfig(
+      draft.timeType,
+      draft.customDeadlineAt,
+      draft.repeatFrequency,
+      draft.repeatCount,
+    );
+    const rewards = draft.rewards.length
+      ? draft.rewards.map(finalizeReward)
+      : [createDraftReward("none")];
+    const rewardExp = rewards
+      .filter((reward) => reward.type === "experience")
+      .reduce((sum, reward) => sum + Math.max(0, Math.trunc(reward.value ?? 0)), 0);
+    const rewardMoney = rewards
+      .filter((reward) => reward.type === "allowance")
+      .reduce((sum, reward) => sum + Math.max(0, Math.trunc(reward.value ?? 0)), 0);
+    const rewardBenefit = rewards
+      .filter((reward) => reward.type === "benefit")
+      .map((reward) => createRewardLabel(reward))
+      .join(" + ");
 
     onCreateTask({
       id: taskId(),
@@ -380,11 +619,19 @@ export function WifeDashboard({
       description:
         draft.description.trim() ||
         "由老妞大人亲自发布，验收标准以老妞大人裁定为准。",
-      type: draft.type,
+      type: draft.timeType === "repeat" ? "weekly" : "daily",
       source: "wife",
-      rewardExp: Math.max(0, Math.trunc(draft.rewardExp)),
-      rewardMoney: Math.max(0, Math.trunc(draft.rewardMoney)),
-      deadline: draft.deadline.trim() || "今日完成",
+      moduleId: draft.moduleId,
+      moduleLabel: selectedModule.label,
+      target: draftTarget,
+      action: draftAction,
+      standard: draft.standard.trim() || undefined,
+      timeConfig,
+      rewards,
+      rewardExp,
+      rewardMoney,
+      rewardBenefit: rewardBenefit || undefined,
+      deadline: timeConfig.label,
       status: "todo",
     });
     setDraft(initialDraft);
@@ -835,7 +1082,9 @@ export function WifeDashboard({
               <div>
                 <h3>{recentTask?.title || "早点休息"}</h3>
                 <p>老哥已提交，等待确认</p>
-                <strong>奖励：经验 +{recentTask?.rewardExp ?? 10}</strong>
+                <strong>
+                  奖励：{recentTask ? taskRewardText(recentTask) : "+10 EXP"}
+                </strong>
               </div>
               <button type="button" onClick={() => openSubPage("review")}>
                 审核
@@ -892,10 +1141,8 @@ export function WifeDashboard({
                       <h2>{task.title}</h2>
                       <p>{task.description}</p>
                       <small>
-                        {task.deadline} · 经验 +{task.rewardExp}
-                        {task.rewardMoney
-                          ? ` · 零花钱 +${task.rewardMoney}`
-                          : ""}
+                        {task.timeConfig?.label || task.deadline} ·{" "}
+                        {taskRewardText(task)}
                       </small>
                     </div>
                     <span>{taskStatusLabel[task.status]}</span>
@@ -938,10 +1185,7 @@ export function WifeDashboard({
                             "老哥已提交完成结果，等待老妞大人裁定。"}
                         </p>
                         <small>
-                          奖励：经验 +{task.rewardExp}
-                          {task.rewardMoney
-                            ? ` · 零花钱 +${task.rewardMoney}`
-                            : ""}
+                          奖励：{taskRewardText(task)}
                         </small>
                       </div>
                       <div className="wife-subpage-actions">
@@ -1030,15 +1274,17 @@ export function WifeDashboard({
                     </p>
                   </div>
                 </article>
-                {tasks.slice(0, 8).map((task) => (
-                  <article key={task.id}>
+                {logs.slice(0, 8).map((log) => (
+                  <article key={log.id}>
                     <span />
                     <div>
                       <h2>
-                        {taskStatusLabel[task.status]} · {task.title}
+                        {eventLogTypeLabel[log.type]} · {log.title}
                       </h2>
                       <p>
-                        {task.resultText || task.submitNote || task.description}
+                        {[formatLogTime(log.createdAt), log.description]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </p>
                     </div>
                   </article>
@@ -1145,80 +1391,390 @@ export function WifeDashboard({
             {sheet === "task" ? (
               <>
                 <p className="kicker">发布任务</p>
-                <h2>下达新的差事</h2>
-                <label>
-                  任务标题
-                  <input
-                    value={draft.title}
-                    onChange={(event) =>
-                      updateDraft("title", event.target.value)
-                    }
-                  />
-                </label>
-                <label>
-                  验收标准
-                  <textarea
-                    value={draft.description}
-                    onChange={(event) =>
-                      updateDraft("description", event.target.value)
-                    }
-                  />
-                </label>
-                <div className="wife-form-grid">
-                  <label>
-                    类型
-                    <select
-                      value={draft.type}
-                      onChange={(event) =>
-                        updateDraft("type", event.target.value as TaskType)
-                      }
-                    >
-                      {typeOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
+                <h2>模块化下达</h2>
+                <div className="task-publisher">
+                  <section className="task-publisher-section">
+                    <h3>选择任务内容</h3>
+                    <div className="task-module-grid">
+                      {taskModules.map((module) => (
+                        <button
+                          className={
+                            draft.moduleId === module.id ? "active" : undefined
+                          }
+                          key={module.id}
+                          type="button"
+                          onClick={() => selectModule(module.id)}
+                        >
+                          {module.label}
+                        </button>
                       ))}
-                    </select>
-                  </label>
-                  <label>
-                    截止时间
-                    <input
-                      value={draft.deadline}
-                      onChange={(event) =>
-                        updateDraft("deadline", event.target.value)
-                      }
-                    />
-                  </label>
-                  <label>
-                    经验
-                    <input
-                      type="number"
-                      min="0"
-                      value={draft.rewardExp}
-                      onChange={(event) =>
-                        updateDraft("rewardExp", Number(event.target.value))
-                      }
-                    />
-                  </label>
-                  <label>
-                    零花钱
-                    <input
-                      type="number"
-                      min="0"
-                      value={draft.rewardMoney}
-                      onChange={(event) =>
-                        updateDraft("rewardMoney", Number(event.target.value))
-                      }
-                    />
-                  </label>
+                    </div>
+
+                    {draft.moduleId === "custom" ? (
+                      <div className="wife-form-grid">
+                        <label>
+                          任务对象
+                          <input
+                            value={draft.customTarget}
+                            onChange={(event) =>
+                              updateDraft("customTarget", event.target.value)
+                            }
+                          />
+                        </label>
+                        <label>
+                          任务动作
+                          <input
+                            value={draft.customAction}
+                            onChange={(event) =>
+                              updateDraft("customAction", event.target.value)
+                            }
+                          />
+                        </label>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="task-publisher-label">对象</p>
+                        <div className="task-choice-row">
+                          {selectedModule.targets.map((target) => (
+                            <button
+                              className={
+                                draft.target === target ? "active" : undefined
+                              }
+                              key={target}
+                              type="button"
+                              onClick={() => updateDraft("target", target)}
+                            >
+                              {target}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="task-publisher-label">动作</p>
+                        <div className="task-choice-row">
+                          {selectedModule.actions.map((action) => (
+                            <button
+                              className={
+                                draft.action === action ? "active" : undefined
+                              }
+                              key={action}
+                              type="button"
+                              onClick={() => updateDraft("action", action)}
+                            >
+                              {action}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+
+                    <label>
+                      任务标题
+                      <input
+                        value={draft.title}
+                        onChange={(event) =>
+                          updateDraft("title", event.target.value)
+                        }
+                      />
+                    </label>
+                    <label>
+                      任务说明
+                      <textarea
+                        value={draft.description}
+                        onChange={(event) =>
+                          updateDraft("description", event.target.value)
+                        }
+                      />
+                    </label>
+                    <label>
+                      补充标准
+                      <input
+                        placeholder="例如：10分钟、老妞现场验收"
+                        value={draft.standard}
+                        onChange={(event) =>
+                          updateDraft("standard", event.target.value)
+                        }
+                      />
+                    </label>
+                  </section>
+
+                  <section className="task-publisher-section">
+                    <h3>选择完成时间</h3>
+                    <div className="task-choice-row">
+                      {taskTimeOptions.map((option) => (
+                        <button
+                          className={
+                            draft.timeType === option.type ? "active" : undefined
+                          }
+                          key={option.type}
+                          type="button"
+                          onClick={() => updateDraft("timeType", option.type)}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                    {draft.timeType === "custom" ? (
+                      <label>
+                        自定义截止时间
+                        <input
+                          type="datetime-local"
+                          value={draft.customDeadlineAt}
+                          onChange={(event) =>
+                            updateDraft("customDeadlineAt", event.target.value)
+                          }
+                        />
+                      </label>
+                    ) : null}
+                    {draft.timeType === "repeat" ? (
+                      <div className="wife-form-grid">
+                        <label>
+                          重复频率
+                          <select
+                            value={draft.repeatFrequency}
+                            onChange={(event) =>
+                              updateDraft(
+                                "repeatFrequency",
+                                event.target
+                                  .value as NonNullable<
+                                  TaskTimeConfig["repeatFrequency"]
+                                >,
+                              )
+                            }
+                          >
+                            <option value="daily">每天</option>
+                            <option value="weekly">每周</option>
+                            <option value="monthly">每月</option>
+                            <option value="custom">自定义</option>
+                          </select>
+                        </label>
+                        <label>
+                          完成次数
+                          <input
+                            min="1"
+                            type="number"
+                            value={draft.repeatCount}
+                            onChange={(event) =>
+                              updateDraft(
+                                "repeatCount",
+                                Number(event.target.value),
+                              )
+                            }
+                          />
+                        </label>
+                      </div>
+                    ) : null}
+                    <p className="task-time-preview">
+                      <CalendarClock size={15} />
+                      {draftTimeConfig.label}
+                    </p>
+                  </section>
+
+                  <section className="task-publisher-section">
+                    <h3>设置完成奖励</h3>
+                    <div className="reward-add-row">
+                      <select
+                        value={rewardTypeToAdd}
+                        onChange={(event) =>
+                          setRewardTypeToAdd(
+                            event.target.value as TaskRewardType,
+                          )
+                        }
+                      >
+                        {taskRewardOptions.map((option) => (
+                          <option key={option.type} value={option.type}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <button type="button" onClick={addReward}>
+                        添加奖励
+                      </button>
+                    </div>
+
+                    <div className="reward-editor-list">
+                      {draft.rewards.map((reward, rewardIndex) => (
+                        <article key={reward.id}>
+                          <div className="reward-editor-head">
+                            <strong>奖励 {rewardIndex + 1}</strong>
+                            <button
+                              type="button"
+                              onClick={() => removeReward(reward.id)}
+                            >
+                              删除
+                            </button>
+                          </div>
+                          <select
+                            value={reward.type}
+                            onChange={(event) =>
+                              changeRewardType(
+                                reward.id,
+                                event.target.value as TaskRewardType,
+                              )
+                            }
+                          >
+                            {taskRewardOptions.map((option) => (
+                              <option key={option.type} value={option.type}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+
+                          {reward.type === "experience" ? (
+                            <label>
+                              奖励经验
+                              <input
+                                min="0"
+                                type="number"
+                                value={reward.value ?? 0}
+                                onChange={(event) =>
+                                  updateReward(reward.id, (current) => ({
+                                    ...current,
+                                    label: `${event.target.value}经验`,
+                                    unit: "经验",
+                                    value: Number(event.target.value),
+                                  }))
+                                }
+                              />
+                            </label>
+                          ) : null}
+                          {reward.type === "allowance" ? (
+                            <label>
+                              奖励金额
+                              <input
+                                min="0"
+                                type="number"
+                                value={reward.value ?? 0}
+                                onChange={(event) =>
+                                  updateReward(reward.id, (current) => ({
+                                    ...current,
+                                    label: `${event.target.value}元`,
+                                    unit: "元",
+                                    value: Number(event.target.value),
+                                  }))
+                                }
+                              />
+                            </label>
+                          ) : null}
+                          {reward.type === "level_up" ? (
+                            <>
+                              <label>
+                                升级数量
+                                <input
+                                  min="1"
+                                  type="number"
+                                  value={reward.value ?? 1}
+                                  onChange={(event) =>
+                                    updateReward(reward.id, (current) => ({
+                                      ...current,
+                                      label: `直接升级${event.target.value}级`,
+                                      unit: "级",
+                                      value: Number(event.target.value),
+                                    }))
+                                  }
+                                />
+                              </label>
+                              <p className="wife-sheet-note">
+                                建议最多 1 级；超过 1 级请再次确认老妞裁定。
+                              </p>
+                            </>
+                          ) : null}
+                          {reward.type === "benefit" ? (
+                            <div className="wife-form-grid">
+                              <label>
+                                权益名称
+                                <input
+                                  list="benefit-reward-names"
+                                  value={reward.benefitName ?? ""}
+                                  onChange={(event) =>
+                                    updateReward(reward.id, (current) => ({
+                                      ...current,
+                                      benefitName: event.target.value,
+                                      label: `${event.target.value} ${current.value ?? 1}次`,
+                                    }))
+                                  }
+                                />
+                              </label>
+                              <label>
+                                数量
+                                <input
+                                  min="1"
+                                  type="number"
+                                  value={reward.value ?? 1}
+                                  onChange={(event) =>
+                                    updateReward(reward.id, (current) => ({
+                                      ...current,
+                                      label: `${current.benefitName || "权益"} ${event.target.value}次`,
+                                      unit: "次",
+                                      value: Number(event.target.value),
+                                    }))
+                                  }
+                                />
+                              </label>
+                            </div>
+                          ) : null}
+                          {reward.type === "custom" ? (
+                            <>
+                              <label>
+                                奖励名称
+                                <input
+                                  value={reward.customName ?? ""}
+                                  onChange={(event) =>
+                                    updateReward(reward.id, (current) => ({
+                                      ...current,
+                                      customName: event.target.value,
+                                      label: event.target.value,
+                                    }))
+                                  }
+                                />
+                              </label>
+                              <label>
+                                奖励说明
+                                <input
+                                  value={reward.customDescription ?? ""}
+                                  onChange={(event) =>
+                                    updateReward(reward.id, (current) => ({
+                                      ...current,
+                                      customDescription: event.target.value,
+                                    }))
+                                  }
+                                />
+                              </label>
+                            </>
+                          ) : null}
+                        </article>
+                      ))}
+                    </div>
+                    <datalist id="benefit-reward-names">
+                      {benefitRewardNames.map((name) => (
+                        <option key={name} value={name} />
+                      ))}
+                    </datalist>
+                  </section>
+
+                  <section className="task-publisher-section task-publisher-preview">
+                    <h3>确认发布</h3>
+                    <article>
+                      <span>{selectedModule.label} / 老婆发布</span>
+                      <h4>{previewTask.title || "老妞指定任务"}</h4>
+                      <p>{previewTask.description}</p>
+                      <small>{draftTimeConfig.label}</small>
+                      <div className="task-rewards">
+                        {taskRewardChips(previewTask).map((chip) => (
+                          <span key={chip}>{chip}</span>
+                        ))}
+                      </div>
+                      <em>提交方式：老公完成后提交说明，老妞确认后结算奖励。</em>
+                    </article>
+                  </section>
                 </div>
-                <button
-                  className="primary-button"
-                  type="button"
-                  onClick={submitTask}
-                >
-                  发布给老哥
-                </button>
+                <div className="task-publisher-footer">
+                  <button
+                    className="primary-button"
+                    type="button"
+                    onClick={submitTask}
+                  >
+                    发布给老哥
+                  </button>
+                </div>
               </>
             ) : null}
 
@@ -1312,7 +1868,7 @@ export function WifeDashboard({
                   {submittedTasks.length ? (
                     submittedTasks.map((task) => (
                       <article key={task.id}>
-                        <span>+{task.rewardExp} EXP</span>
+                        <span>{taskRewardText(task)}</span>
                         <h3>{task.title}</h3>
                         <p>
                           {task.submitNote ||
