@@ -25,6 +25,8 @@ interface TaskPageProps {
   role: Role;
   progress: GameProgress;
   tasks: Task[];
+  backdropImage?: string;
+  levelLabel?: string;
   onStartTask: (id: string) => void;
   onSubmitTask: (id: string, note: string) => void;
   onSelectView: (view: ViewKey) => void;
@@ -50,6 +52,8 @@ export function TaskPage({
   role,
   progress,
   tasks,
+  backdropImage,
+  levelLabel,
   onStartTask,
   onSubmitTask,
   onSelectView,
@@ -116,7 +120,7 @@ export function TaskPage({
     <section className="task-page">
       <img
         className="task-backdrop"
-        src={publicAsset("/assets/tasks/task-lv01.png")}
+        src={backdropImage ?? publicAsset("/assets/tasks/task-lv01.png")}
         alt=""
       />
       <div className="task-scrim" />
@@ -134,7 +138,7 @@ export function TaskPage({
         <header className="task-header">
           <div>
             <p className="level-line level-line--small">
-              Lv. {String(role.level).padStart(2, "0")}
+              {levelLabel ?? `Lv. ${String(role.level).padStart(2, "0")}`}
             </p>
             <h1>{role.title}</h1>
             <span>老哥任务簿 · 今日待执行</span>

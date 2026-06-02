@@ -30,7 +30,7 @@ import { expRequiredForLevel, type GameProgress } from "../game/progression";
 import { publicAsset } from "../lib/assets";
 import type { Benefit, Role, Task, TaskType } from "../types/domain";
 
-type WifeSheet = "task" | "review" | "benefit" | null;
+type WifeSheet = "task" | "review" | "benefit" | "exp" | "level" | null;
 type WifePage = "today" | "main" | "growth";
 type WifeSubPage = "tasks" | "review" | "benefits" | "records" | "order";
 
@@ -130,6 +130,8 @@ export function WifeDashboard({
   const [activePage, setActivePage] = useState<WifePage>("main");
   const [subPage, setSubPage] = useState<WifeSubPage | null>(null);
   const [draft, setDraft] = useState<TaskDraft>(initialDraft);
+  const [customExpValue, setCustomExpValue] = useState("");
+  const [targetLevel, setTargetLevel] = useState(progress.level);
   const touchStart = useRef<TouchPoint | null>(null);
   const wheelLocked = useRef(false);
 
@@ -205,6 +207,10 @@ export function WifeDashboard({
     window.addEventListener("hashchange", syncHash);
     return () => window.removeEventListener("hashchange", syncHash);
   }, []);
+
+  useEffect(() => {
+    setTargetLevel(progress.level);
+  }, [progress.level]);
 
   function setWifePage(page: WifePage) {
     setSubPage(null);
@@ -386,11 +392,21 @@ export function WifeDashboard({
   }
 
   function customAdjust() {
-    const value = window.prompt("请输入要调整的经验值，例如 +8 或 -6");
-    if (!value) return;
-    const amount = Number(value.trim());
+    const amount = Number(customExpValue.trim());
     if (!Number.isFinite(amount) || amount === 0) return;
     onCustomExperience(amount);
+    setCustomExpValue("");
+    setSheet(null);
+  }
+
+  function openLevelSheet() {
+    setTargetLevel(progress.level);
+    setSheet("level");
+  }
+
+  function confirmTargetLevel() {
+    onSetLevel(targetLevel);
+    setSheet(null);
   }
 
   return (
@@ -518,7 +534,7 @@ export function WifeDashboard({
             <button
               className="wife-custom-adjust"
               type="button"
-              onClick={customAdjust}
+              onClick={() => setSheet("exp")}
             >
               <Edit3 size={18} />
               自定义调整
@@ -535,12 +551,14 @@ export function WifeDashboard({
             </div>
             <div className="wife-level-strip">
               <span>
-                当前： Lv.{String(role.level).padStart(2, "0")} {role.title}
+                {"\u5F53\u524D\uFF1A"} Lv.
+                {String(role.level).padStart(2, "0")} {role.title}
               </span>
-              <i aria-hidden="true">›</i>
+              <i aria-hidden="true">{"\u2192"}</i>
               <span>
-                下一： Lv.{String(nextRole.level).padStart(2, "0")}{" "}
-                {nextRole.title}
+                {"\u76EE\u6807\uFF1A"} Lv.
+                {String(targetLevel).padStart(2, "0")} {" "}
+                {roles[targetLevel]?.title}
               </span>
             </div>
             <div className="wife-level-actions">
@@ -554,7 +572,7 @@ export function WifeDashboard({
                 <span>降一级</span>
                 <em>收回当前职务</em>
               </button>
-              <button type="button" onClick={() => onSetLevel(nextRole.level)}>
+              <button type="button" onClick={openLevelSheet}>
                 <Crown size={27} />
                 <span>指定等级</span>
                 <em>直接裁定职务</em>
@@ -1200,6 +1218,88 @@ export function WifeDashboard({
                   onClick={submitTask}
                 >
                   发布给老哥
+                </button>
+              </>
+            ) : null}
+
+
+            {sheet === "exp" ? (
+              <>
+                <p className="kicker">{"\u7ECF\u9A8C\u8C03\u6574"}</p>
+                <h2>{"\u81EA\u5B9A\u4E49\u8C03\u6574\u7ECF\u9A8C"}</h2>
+                <label>
+                  {"\u8C03\u6574\u6570\u503C"}
+                  <input
+                    inputMode="text"
+                    placeholder="+8 / -6"
+                    value={customExpValue}
+                    onChange={(event) => setCustomExpValue(event.target.value)}
+                  />
+                </label>
+                <p className="wife-sheet-note">
+                  {"\u8F93\u5165\u6B63\u6570\u4E3A\u8D4F\u8D50\u7ECF\u9A8C\uFF0C\u8F93\u5165\u8D1F\u6570\u4E3A\u6263\u9664\u7ECF\u9A8C\u3002"}
+                </p>
+                <button
+                  className="primary-button"
+                  type="button"
+                  onClick={customAdjust}
+                >
+                  {"\u786E\u5B9A\u8C03\u6574"}
+                </button>
+              </>
+            ) : null}
+
+            {sheet === "level" ? (
+              <>
+                <p className="kicker">{"\u7B49\u7EA7\u88C1\u5B9A"}</p>
+                <h2>{"\u6307\u5B9A\u76EE\u6807\u7B49\u7EA7"}</h2>
+                <div className="wife-level-sheet-current">
+                  <span>
+                    {"\u5F53\u524D"} Lv.
+                    {String(role.level).padStart(2, "0")} {role.title}
+                  </span>
+                  <strong>
+                    {"\u76EE\u6807"} Lv.
+                    {String(targetLevel).padStart(2, "0")} {" "}
+                    {roles[targetLevel]?.title}
+                  </strong>
+                </div>
+                <input
+                  className="wife-level-range"
+                  type="range"
+                  min={0}
+                  max={roles.length - 1}
+                  step={1}
+                  value={targetLevel}
+                  onChange={(event) => setTargetLevel(Number(event.target.value))}
+                  aria-label={"\u6307\u5B9A\u7B49\u7EA7"}
+                />
+                <div
+                  className="wife-level-module"
+                  aria-label={"\u7B49\u7EA7\u9009\u62E9"}
+                >
+                  {roles.map((targetRole) => (
+                    <button
+                      className={
+                        targetRole.level === targetLevel ? "active" : undefined
+                      }
+                      key={targetRole.level}
+                      type="button"
+                      onClick={() => setTargetLevel(targetRole.level)}
+                    >
+                      <span>
+                        Lv.{String(targetRole.level).padStart(2, "0")}
+                      </span>
+                      <strong>{targetRole.title}</strong>
+                    </button>
+                  ))}
+                </div>
+                <button
+                  className="primary-button"
+                  type="button"
+                  onClick={confirmTargetLevel}
+                >
+                  {"\u786E\u5B9A\u6307\u5B9A"}
                 </button>
               </>
             ) : null}

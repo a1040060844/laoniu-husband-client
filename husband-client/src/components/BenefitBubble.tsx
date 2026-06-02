@@ -40,6 +40,7 @@ interface BenefitBubbleProps {
   statusText: string;
   index: number;
   isBursting?: boolean;
+  disabled?: boolean;
   style?: CSSProperties;
   onOpen: (benefit: Benefit) => void;
 }
@@ -50,6 +51,7 @@ export function BenefitBubble({
   statusText,
   index,
   isBursting = false,
+  disabled = false,
   style,
   onOpen,
 }: BenefitBubbleProps) {
@@ -60,7 +62,10 @@ export function BenefitBubble({
       className={`benefit-bubble benefit-bubble--${computedStatus}${isBursting ? " benefit-bubble--bursting" : ""}`}
       style={{ "--bubble-step": index, ...style } as CSSProperties}
       type="button"
-      onClick={() => onOpen(benefit)}
+      disabled={disabled}
+      onClick={() => {
+        if (!disabled) onOpen(benefit);
+      }}
     >
       <span className="benefit-bubble__icon">
         <Icon size={26} strokeWidth={1.8} />

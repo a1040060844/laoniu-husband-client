@@ -9,14 +9,18 @@ import type { Task, TaskSource, TaskStatus, TaskType } from "../types/domain";
 export interface TaskSystemState {
   progress: GameProgress;
   tasks: Task[];
+  punishmentStatus: PunishmentStatus;
 }
 
 export const PROGRESS_STORAGE_KEY = "laoniu-husband-progress-v1";
 export const TASKS_STORAGE_KEY = "laoniu-husband-tasks-v1";
+export const PUNISHMENT_STORAGE_KEY = "laoniu-husband-punishment-v1";
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(
   /\/$/,
   "",
 );
+
+export type PunishmentStatus = "normal" | "slave";
 
 const typeMap: Record<string, TaskType> = {
   custom: "custom",
@@ -103,6 +107,10 @@ function hydrateTasks(raw: unknown): Task[] {
   return tasks.length ? tasks : initialTasks;
 }
 
+function hydratePunishmentStatus(raw: unknown): PunishmentStatus {
+  return raw === "slave" ? "slave" : "normal";
+}
+
 function stateFromUnknown(raw: unknown): TaskSystemState {
   if (!raw || typeof raw !== "object") {
     lastStateExtras = {};
@@ -111,6 +119,9 @@ function stateFromUnknown(raw: unknown): TaskSystemState {
         readJson(PROGRESS_STORAGE_KEY) ?? initialProgress,
       ),
       tasks: hydrateTasks(readJson(TASKS_STORAGE_KEY)),
+      punishmentStatus: hydratePunishmentStatus(
+        readJson(PUNISHMENT_STORAGE_KEY),
+      ),
     };
   }
 
@@ -119,7 +130,9 @@ function stateFromUnknown(raw: unknown): TaskSystemState {
     exp,
     level,
     progress,
+    punishmentStatus,
     rewardedTaskIds,
+    slaveStatus,
     tasks,
     totalExp,
     wallet,
@@ -140,6 +153,7 @@ function stateFromUnknown(raw: unknown): TaskSystemState {
   return {
     progress: hydrateProgress(progressSource),
     tasks: hydrateTasks(tasks),
+    punishmentStatus: hydratePunishmentStatus(punishmentStatus ?? slaveStatus),
   };
 }
 
@@ -150,6 +164,10 @@ export function readLocalTaskSystem(): TaskSystemState {
 export function persistLocalTaskSystem(state: TaskSystemState) {
   localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(state.progress));
   localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(state.tasks));
+  localStorage.setItem(
+    PUNISHMENT_STORAGE_KEY,
+    JSON.stringify(state.punishmentStatus),
+  );
 }
 
 function serializeTaskSystem(state: TaskSystemState) {
@@ -157,6 +175,7 @@ function serializeTaskSystem(state: TaskSystemState) {
     ...lastStateExtras,
     ...state.progress,
     progress: state.progress,
+    punishmentStatus: state.punishmentStatus,
     tasks: state.tasks,
   };
 }

@@ -14,6 +14,9 @@ interface BenefitPageProps {
   canPrev: boolean;
   canNext: boolean;
   selectedBenefit: Benefit | null;
+  forceFrozen?: boolean;
+  levelLabel?: string;
+  showAllBenefits?: boolean;
   onPreviewPrev: () => void;
   onPreviewNext: () => void;
   onOpenBenefit: (benefit: Benefit) => void;
@@ -98,6 +101,9 @@ export function BenefitPage({
   canPrev,
   canNext,
   selectedBenefit,
+  forceFrozen = false,
+  levelLabel,
+  showAllBenefits = false,
   onPreviewPrev,
   onPreviewNext,
   onOpenBenefit,
@@ -111,15 +117,16 @@ export function BenefitPage({
   const openTimerRef = useRef<number | null>(null);
   const isLockedPreview = role.level > currentLevel;
   const directionClass = `benefit-page--dir-${previewDirection}`;
-  const visibleBenefits = benefits.filter((benefit) =>
-    isVisibleForRole(role, benefit),
-  );
+  const visibleBenefits = showAllBenefits
+    ? benefits
+    : benefits.filter((benefit) => isVisibleForRole(role, benefit));
   const cloudWidth =
     visibleBenefits.length <= 5
       ? 390
       : Math.max(520, visibleBenefits.length * 86 + 120);
   const cloudViewportClassName = "benefit-cloud-viewport";
   const visibleSelectedBenefit =
+    !forceFrozen &&
     selectedBenefit &&
     visibleBenefits.some((benefit) => benefit.id === selectedBenefit.id)
       ? selectedBenefit
@@ -153,7 +160,7 @@ export function BenefitPage({
     <section
       className={`benefit-page page-screen ${directionClass}${isLockedPreview ? " page-screen--locked-role" : ""}${
         isLightCurtainActive ? " benefit-page--light-curtain" : ""
-      }`}
+      }${forceFrozen ? " benefit-page--frozen" : ""}`}
     >
       <img
         className="cinema-image"
@@ -171,7 +178,7 @@ export function BenefitPage({
       >
         <div className="level-line">
           <span />
-          <strong>Lv. {String(role.level).padStart(2, "0")}</strong>
+          <strong>{levelLabel ?? `Lv. ${String(role.level).padStart(2, "0")}`}</strong>
           <span />
         </div>
         <h1>{role.title}</h1>
@@ -185,16 +192,19 @@ export function BenefitPage({
           onTouchEnd={(event) => event.stopPropagation()}
         >
           {visibleBenefits.map((benefit, index) => {
-            const { status, text } = getStatus(currentLevel, benefit);
+            const computed = forceFrozen
+              ? { status: "locked" as BenefitStatus, text: "已冻结" }
+              : getStatus(currentLevel, benefit);
             const { x, y } = getBubblePosition(index, visibleBenefits.length);
             return (
               <BenefitBubble
                 key={benefit.id}
                 benefit={benefit}
-                computedStatus={status}
-                statusText={text}
+                computedStatus={computed.status}
+                statusText={computed.text}
                 index={index}
                 isBursting={burstingBenefitId === benefit.id}
+                disabled={forceFrozen}
                 style={
                   {
                     "--bubble-x": `${x}px`,

@@ -1,6 +1,7 @@
 import {
   useRef,
   useState,
+  type CSSProperties,
   type ReactNode,
   type TouchEvent,
   type WheelEvent,
@@ -17,7 +18,10 @@ interface HusbandVerticalPagerProps {
   onPageChange?: (page: number) => void;
   onSwipeLeft?: () => void;
   onSwipeRight?: () => void;
-  children: [ReactNode, ReactNode, ReactNode];
+  minPage?: number;
+  maxPage?: number;
+  initialPage?: number;
+  children: ReactNode[];
 }
 
 const MIN_PAGE = HUSBAND_PAGES.BENEFIT;
@@ -30,8 +34,8 @@ interface TouchPoint {
   y: number;
 }
 
-function clampPage(page: number) {
-  return Math.max(MIN_PAGE, Math.min(MAX_PAGE, page));
+function clampPage(page: number, minPage: number, maxPage: number) {
+  return Math.max(minPage, Math.min(maxPage, page));
 }
 
 export function HusbandVerticalPager({
@@ -39,15 +43,22 @@ export function HusbandVerticalPager({
   onPageChange,
   onSwipeLeft,
   onSwipeRight,
+  minPage = MIN_PAGE,
+  maxPage = MAX_PAGE,
+  initialPage = HUSBAND_PAGES.ROLE,
   children,
 }: HusbandVerticalPagerProps) {
-  const [internalPage, setInternalPage] = useState<number>(HUSBAND_PAGES.ROLE);
+  const [internalPage, setInternalPage] = useState<number>(initialPage);
   const touchStart = useRef<TouchPoint | null>(null);
   const wheelLocked = useRef(false);
-  const currentPage = activePage ?? internalPage;
+  const currentPage = clampPage(activePage ?? internalPage, minPage, maxPage);
+  const trackStyle = {
+    "--pager-page-count": children.length,
+    transform: `translateY(calc(-${currentPage} * var(--app-height)))`,
+  } as CSSProperties;
 
   function setPage(page: number) {
-    const next = clampPage(page);
+    const next = clampPage(page, minPage, maxPage);
     if (next === currentPage) return;
     if (onPageChange) {
       onPageChange(next);
@@ -121,9 +132,7 @@ export function HusbandVerticalPager({
     >
       <div
         className="husband-pager__track"
-        style={{
-          transform: `translateY(calc(-${currentPage} * var(--app-height)))`,
-        }}
+        style={trackStyle}
       >
         {children.map((child, index) => (
           <section

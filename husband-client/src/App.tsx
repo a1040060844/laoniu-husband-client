@@ -5,6 +5,7 @@ import {
   HusbandVerticalPager,
 } from "./components/HusbandVerticalPager";
 import { RolePage } from "./components/RolePage";
+import { SlavePage } from "./components/SlavePage";
 import { StoryModal } from "./components/StoryModal";
 import { TaskPage } from "./components/TaskPage";
 import { WifeDashboard } from "./components/WifeDashboard";
@@ -24,10 +25,17 @@ import {
   readLocalTaskSystem,
   saveTaskSystem,
 } from "./lib/taskSystem";
+import { publicAsset } from "./lib/assets";
 import type { Benefit, StoryEvent, Task, ViewKey } from "./types/domain";
 import "./styles.css";
 
 export type PreviewDirection = "none" | "next" | "prev";
+
+const SLAVE_PAGES = {
+  BENEFIT: 0,
+  STATUS: 1,
+  TASK: 2,
+} as const;
 
 export default function App() {
   const initialState = useMemo(readLocalTaskSystem, []);
@@ -35,11 +43,17 @@ export default function App() {
     window.location.pathname.startsWith("/wife") ? "wife" : "husband",
   );
   const [activePage, setActivePage] = useState<number>(HUSBAND_PAGES.ROLE);
+  const [slaveActivePage, setSlaveActivePage] = useState<number>(
+    SLAVE_PAGES.STATUS,
+  );
   const [progress, setProgress] = useState(initialState.progress);
   const [previewLevel, setPreviewLevel] = useState(initialState.progress.level);
   const [previewDirection, setPreviewDirection] =
     useState<PreviewDirection>("none");
   const [tasks, setTasks] = useState<Task[]>(initialState.tasks);
+  const [punishmentStatus, setPunishmentStatus] = useState(
+    initialState.punishmentStatus,
+  );
   const [selectedBenefit, setSelectedBenefit] = useState<Benefit | null>(null);
   const [story, setStory] = useState<StoryEvent | null>(null);
   const hasLoadedServerState = useRef(false);
@@ -63,6 +77,7 @@ export default function App() {
         hasLoadedServerState.current = true;
         setProgress(serverState.progress);
         setTasks(serverState.tasks);
+        setPunishmentStatus(serverState.punishmentStatus);
       })
       .catch(() => {
         hasLoadedServerState.current = true;
@@ -74,7 +89,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const state = { progress, tasks };
+    const state = { progress, punishmentStatus, tasks };
     persistLocalTaskSystem(state);
 
     if (!hasLoadedServerState.current) return;
@@ -83,14 +98,15 @@ export default function App() {
     }, 250);
 
     return () => window.clearTimeout(timeout);
-  }, [progress, tasks]);
+  }, [progress, punishmentStatus, tasks]);
 
   useEffect(() => {
+    if (punishmentStatus === "slave") return;
     const settled = settleConfirmedTasks(progress, tasks, roles);
     if (settled.stories.length === 0) return;
     setProgress(settled.progress);
     setStory(settled.stories[settled.stories.length - 1]);
-  }, [progress, tasks]);
+  }, [progress, punishmentStatus, tasks]);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -233,6 +249,7 @@ export default function App() {
 
   function handleSetLevel(level: number, reason: string) {
     const safeLevel = clampLevel(level);
+    setPunishmentStatus("normal");
     setProgress((current) => ({
       ...current,
       level: safeLevel,
@@ -252,6 +269,8 @@ export default function App() {
   }
 
   function handlePunishStatus() {
+    setPunishmentStatus("slave");
+    setSlaveActivePage(SLAVE_PAGES.STATUS);
     setProgress((current) => ({
       ...current,
       level: MIN_LEVEL,
@@ -295,6 +314,76 @@ export default function App() {
           }
           onPunishStatus={handlePunishStatus}
         />
+        <StoryModal story={story} onClose={() => setStory(null)} />
+      </main>
+    );
+  }
+
+  if (punishmentStatus === "slave") {
+    const slaveImage = publicAsset("/assets/slave/slave-market.png");
+    const slaveRole = {
+      ...roleWithProgress(roles[MIN_LEVEL], {
+        ...progress,
+        level: MIN_LEVEL,
+        exp: 0,
+      }),
+      title: "卖身奴隶",
+      biography: "表现太糟糕了，奴隶市场又新增了一个奴隶。",
+      roleImage: slaveImage,
+      benefitImage: slaveImage,
+    };
+
+    return (
+      <main className="app">
+        <HusbandVerticalPager
+          activePage={slaveActivePage}
+          initialPage={SLAVE_PAGES.STATUS}
+          onPageChange={setSlaveActivePage}
+        >
+          <BenefitPage
+            key="slave-benefit-page"
+            role={slaveRole}
+            previewDirection="none"
+            currentLevel={MIN_LEVEL}
+            benefits={sortedBenefits}
+            canPrev={false}
+            canNext={false}
+            forceFrozen
+            levelLabel="FINAL"
+            showAllBenefits
+            selectedBenefit={null}
+            onPreviewPrev={() => undefined}
+            onPreviewNext={() => undefined}
+            onOpenBenefit={() => undefined}
+            onCloseBenefit={() => undefined}
+            onUseBenefit={() => undefined}
+            onSelectView={(view) => {
+              if (view === "role") setSlaveActivePage(SLAVE_PAGES.STATUS);
+            }}
+          />
+
+          <SlavePage
+            role={slaveRole}
+            onSelectView={(view) => {
+              if (view === "benefits") setSlaveActivePage(SLAVE_PAGES.BENEFIT);
+              if (view === "tasks") setSlaveActivePage(SLAVE_PAGES.TASK);
+            }}
+          />
+
+          <TaskPage
+            role={slaveRole}
+            progress={{ ...progress, level: MIN_LEVEL, exp: 0 }}
+            tasks={tasks}
+            backdropImage={slaveRole.roleImage}
+            levelLabel="FINAL"
+            onStartTask={handleStartTask}
+            onSubmitTask={handleSubmitTask}
+            onSelectView={(view) => {
+              if (view === "role") setSlaveActivePage(SLAVE_PAGES.STATUS);
+            }}
+          />
+        </HusbandVerticalPager>
+
         <StoryModal story={story} onClose={() => setStory(null)} />
       </main>
     );
