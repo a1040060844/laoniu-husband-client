@@ -7,6 +7,8 @@ import {
 import type {
   EventLog,
   EventLogType,
+  Punishment,
+  PunishmentStatus,
   Task,
   TaskModuleId,
   TaskReward,
@@ -22,19 +24,27 @@ export interface TaskSystemState {
   progress: GameProgress;
   tasks: Task[];
   logs: EventLog[];
-  punishmentStatus: PunishmentStatus;
+  punishment: Punishment;
 }
 
 export const PROGRESS_STORAGE_KEY = "laoniu-husband-progress-v1";
 export const TASKS_STORAGE_KEY = "laoniu-husband-tasks-v1";
 export const LOGS_STORAGE_KEY = "laoniu-husband-logs-v1";
 export const PUNISHMENT_STORAGE_KEY = "laoniu-husband-punishment-v1";
+export const DEFAULT_PUNISHMENT_DURATION_DAYS = 7;
+export const DEFAULT_REQUIRED_RECOVERY_EXP = 100;
+const DAY_MS = 24 * 60 * 60 * 1000;
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(
   /\/$/,
   "",
 );
 
-export type PunishmentStatus = "normal" | "slave";
+export const initialPunishment: Punishment = {
+  status: "normal",
+  durationDays: DEFAULT_PUNISHMENT_DURATION_DAYS,
+  recoveryExp: 0,
+  requiredRecoveryExp: DEFAULT_REQUIRED_RECOVERY_EXP,
+};
 
 const typeMap: Record<string, TaskType> = {
   custom: "custom",
@@ -307,8 +317,91 @@ function hydrateEventLogs(raw: unknown): EventLog[] {
     .filter((log): log is EventLog => Boolean(log));
 }
 
-function hydratePunishmentStatus(raw: unknown): PunishmentStatus {
-  return raw === "slave" ? "slave" : "normal";
+function safePositiveInt(value: unknown, fallback: number) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(1, Math.trunc(number));
+}
+
+function safeNonNegativeInt(value: unknown, fallback = 0) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(0, Math.trunc(number));
+}
+
+export function createSlavePunishment(startedAt = new Date().toISOString()): Punishment {
+  return {
+    ...initialPunishment,
+    status: "slave",
+    startedAt,
+  };
+}
+
+export function createNormalPunishment(): Punishment {
+  return { ...initialPunishment };
+}
+
+export function hydratePunishment(raw: unknown): Punishment {
+  if (raw === "slave") return createSlavePunishment();
+  if (!raw || typeof raw !== "object") return createNormalPunishment();
+
+  const value = raw as Record<string, unknown>;
+  const status: PunishmentStatus = value.status === "slave" ? "slave" : "normal";
+  const durationDays = safePositiveInt(
+    value.durationDays,
+    DEFAULT_PUNISHMENT_DURATION_DAYS,
+  );
+  const requiredRecoveryExp = safePositiveInt(
+    value.requiredRecoveryExp,
+    DEFAULT_REQUIRED_RECOVERY_EXP,
+  );
+  const recoveryExp = Math.min(
+    requiredRecoveryExp,
+    safeNonNegativeInt(value.recoveryExp),
+  );
+  const startedAt =
+    typeof value.startedAt === "string" && !Number.isNaN(Date.parse(value.startedAt))
+      ? value.startedAt
+      : status === "slave"
+        ? new Date().toISOString()
+        : undefined;
+
+  return {
+    status,
+    startedAt,
+    durationDays,
+    recoveryExp: status === "slave" ? recoveryExp : 0,
+    requiredRecoveryExp,
+  };
+}
+
+export function getPunishmentRemainingDays(
+  punishment: Punishment,
+  now = Date.now(),
+) {
+  if (punishment.status !== "slave") return 0;
+  const startedAt = Date.parse(punishment.startedAt || "");
+  if (Number.isNaN(startedAt)) return punishment.durationDays;
+  const endsAt = startedAt + punishment.durationDays * DAY_MS;
+  return Math.max(0, Math.ceil((endsAt - now) / DAY_MS));
+}
+
+export function isPunishmentDurationComplete(
+  punishment: Punishment,
+  now = Date.now(),
+) {
+  return punishment.status === "slave" && getPunishmentRemainingDays(punishment, now) <= 0;
+}
+
+export function isPunishmentRecoverable(
+  punishment: Punishment,
+  now = Date.now(),
+) {
+  return (
+    punishment.status === "slave" &&
+    punishment.recoveryExp >= punishment.requiredRecoveryExp &&
+    isPunishmentDurationComplete(punishment, now)
+  );
 }
 
 function stateFromUnknown(raw: unknown): TaskSystemState {
@@ -320,9 +413,7 @@ function stateFromUnknown(raw: unknown): TaskSystemState {
       ),
       tasks: hydrateTasks(readJson(TASKS_STORAGE_KEY)),
       logs: hydrateEventLogs(readJson(LOGS_STORAGE_KEY)),
-      punishmentStatus: hydratePunishmentStatus(
-        readJson(PUNISHMENT_STORAGE_KEY),
-      ),
+      punishment: hydratePunishment(readJson(PUNISHMENT_STORAGE_KEY)),
     };
   }
 
@@ -331,6 +422,7 @@ function stateFromUnknown(raw: unknown): TaskSystemState {
     exp,
     level,
     progress,
+    punishment,
     punishmentStatus,
     rewardedTaskIds,
     slaveStatus,
@@ -356,7 +448,7 @@ function stateFromUnknown(raw: unknown): TaskSystemState {
     progress: hydrateProgress(progressSource),
     tasks: hydrateTasks(tasks),
     logs: hydrateEventLogs(logs),
-    punishmentStatus: hydratePunishmentStatus(punishmentStatus ?? slaveStatus),
+    punishment: hydratePunishment(punishment ?? punishmentStatus ?? slaveStatus),
   };
 }
 
@@ -370,7 +462,7 @@ export function persistLocalTaskSystem(state: TaskSystemState) {
   localStorage.setItem(LOGS_STORAGE_KEY, JSON.stringify(state.logs));
   localStorage.setItem(
     PUNISHMENT_STORAGE_KEY,
-    JSON.stringify(state.punishmentStatus),
+    JSON.stringify(state.punishment),
   );
 }
 
@@ -379,7 +471,8 @@ function serializeTaskSystem(state: TaskSystemState) {
     ...lastStateExtras,
     ...state.progress,
     progress: state.progress,
-    punishmentStatus: state.punishmentStatus,
+    punishment: state.punishment,
+    punishmentStatus: state.punishment.status,
     tasks: state.tasks,
     logs: state.logs,
   };

@@ -1,36 +1,27 @@
 import { ShieldAlert } from "lucide-react";
 import { publicAsset } from "../lib/assets";
-import type { Role, ViewKey } from "../types/domain";
+import { getPunishmentRemainingDays } from "../lib/taskSystem";
+import type { Punishment, Role, ViewKey } from "../types/domain";
 
 interface SlavePageProps {
   role: Role;
-  punishmentRemainingDays?: number;
-  punishmentTotalDays?: number;
+  punishment: Punishment;
   onSelectView: (view: ViewKey) => void;
 }
 
-export function SlavePage({
-  role,
-  punishmentRemainingDays = 7,
-  punishmentTotalDays = 7,
-  onSelectView,
-}: SlavePageProps) {
+export function SlavePage({ role, punishment, onSelectView }: SlavePageProps) {
   const slaveImage = publicAsset("/assets/slave/slave-market.png");
-  const punishmentPercent =
-    punishmentTotalDays <= 0
-      ? 0
-      : Math.min(
-          100,
-          Math.round((punishmentRemainingDays / punishmentTotalDays) * 100),
-        );
+  const punishmentRemainingDays = getPunishmentRemainingDays(punishment);
+  const recoveryPercent = Math.min(
+    100,
+    Math.round(
+      (punishment.recoveryExp / punishment.requiredRecoveryExp) * 100,
+    ),
+  );
 
   return (
     <section className="slave-page role-page page-screen">
-      <img
-        className="cinema-image"
-        src={slaveImage}
-        alt="卖身奴隶状态形象"
-      />
+      <img className="cinema-image" src={slaveImage} alt="卖身奴隶状态形象" />
       <div className="image-scrim" />
       <div className="locked-character-mask" aria-hidden="true" />
 
@@ -55,17 +46,19 @@ export function SlavePage({
             <span /> 人物小传 <span />
           </p>
           <div className="slave-bio-copy">
-            <strong>表现太糟糕了</strong>
-            <span>奴隶市场又新增了一个奴隶。</span>
+            <strong>{role.title}</strong>
+            <span>{role.biography}</span>
           </div>
         </article>
 
         <div className="exp-block exp-block--role exp-block--slave">
-          <strong>0 / {role.expRequired}</strong>
-          <div className="slave-progress" aria-label="惩罚剩余进度">
-            <i style={{ width: `${punishmentPercent}%` }} />
+          <strong>
+            {punishment.recoveryExp} / {punishment.requiredRecoveryExp}
+          </strong>
+          <div className="slave-progress" aria-label="恢复经验进度">
+            <i style={{ width: `${recoveryPercent}%` }} />
           </div>
-          <p>惩罚剩余 {punishmentRemainingDays} 天</p>
+          <p>惩罚剩余 {punishmentRemainingDays} 天 · 恢复进度</p>
         </div>
 
         <div className="role-dots role-dots--slave" aria-hidden="true">
@@ -77,7 +70,7 @@ export function SlavePage({
           type="button"
           onClick={() => onSelectView("tasks")}
         >
-          <span>⌃</span>
+          <span>∧</span>
           上滑查看任务
         </button>
       </div>

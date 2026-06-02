@@ -32,16 +32,22 @@ html,
 body,
 #root {
   width: 100%;
-  height: 100%;
   min-height: 100%;
   margin: 0;
+  background: #050302;
   overflow: hidden;
   overflow-x: hidden;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
 
+html {
+  height: -webkit-fill-available;
+}
+
 body {
+  min-height: -webkit-fill-available;
+  min-height: 100dvh;
   background:
     radial-gradient(
       circle at 50% 0%,
@@ -53,6 +59,11 @@ body {
   font-family: var(--sans);
   -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
+}
+
+#root {
+  min-height: -webkit-fill-available;
+  min-height: 100dvh;
 }
 
 button,
@@ -70,6 +81,8 @@ button {
   width: min(100%, 430px);
   height: var(--app-height);
   min-height: var(--app-height);
+  min-height: -webkit-fill-available;
+  min-height: 100dvh;
   margin: 0 auto;
   overflow: hidden;
   background: var(--bg);
@@ -83,6 +96,9 @@ button {
   inset: 0;
   width: min(100%, 430px);
   height: var(--app-height);
+  min-height: var(--app-height);
+  min-height: -webkit-fill-available;
+  min-height: 100dvh;
   margin: 0 auto;
   overflow: hidden;
   background: #050302;
@@ -103,6 +119,8 @@ button {
   width: 100%;
   height: var(--app-height);
   min-height: var(--app-height);
+  min-height: -webkit-fill-available;
+  min-height: 100dvh;
   overflow: hidden;
 }
 
@@ -110,12 +128,16 @@ button {
 .husband-pager__screen > .task-page {
   height: var(--app-height);
   min-height: var(--app-height);
+  min-height: -webkit-fill-available;
+  min-height: 100dvh;
 }
 
 .page-screen {
   position: relative;
   height: var(--app-height);
   min-height: var(--app-height);
+  min-height: -webkit-fill-available;
+  min-height: 100dvh;
   overflow: hidden;
   isolation: isolate;
 }
@@ -123,10 +145,13 @@ button {
 .role-page {
   height: var(--app-height);
   min-height: var(--app-height);
+  min-height: -webkit-fill-available;
+  min-height: 100dvh;
   overflow: hidden;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  background: #050302;
 }
 
-.role-page::after,
 .benefit-page::after {
   content: "";
   position: absolute;
@@ -142,6 +167,25 @@ button {
     rgba(0, 0, 0, 0.66) 42%,
     rgba(5, 3, 2, 0.92) 100%
   );
+}
+
+.role-page::after {
+  content: "";
+  position: fixed;
+  left: 50%;
+  right: auto;
+  bottom: 0;
+  z-index: 0;
+  width: min(100%, 430px);
+  height: calc(88px + env(safe-area-inset-bottom));
+  pointer-events: none;
+  background: linear-gradient(
+    to top,
+    rgba(5, 3, 2, 1),
+    rgba(5, 3, 2, 0.78),
+    rgba(5, 3, 2, 0)
+  );
+  transform: translateX(-50%);
 }
 
 .cinema-image,
@@ -436,8 +480,15 @@ button {
 }
 
 .bottom-panel--role {
-  bottom: max(12px, env(safe-area-inset-bottom));
+  bottom: calc(24px + env(safe-area-inset-bottom));
   gap: 9px;
+}
+
+.role-page .hero-title,
+.role-page .side-guide,
+.role-page .role-navigator,
+.role-page .bottom-panel {
+  z-index: 2;
 }
 
 .role-switcher {
@@ -2619,6 +2670,22 @@ button {
   white-space: nowrap;
 }
 
+.wife-punishment-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.wife-punishment-tags span {
+  padding: 5px 8px;
+  border: 1px solid rgba(231, 199, 141, 0.28);
+  color: var(--gold);
+  background: rgba(0, 0, 0, 0.24);
+  font-size: 12px;
+}
+
 .wife-next-line {
   margin: 7px 0 0;
   color: rgba(231, 199, 141, 0.82);
@@ -3274,6 +3341,25 @@ button {
   font-size: 10px;
   font-style: normal;
   letter-spacing: 1px;
+}
+
+.wife-restore-button {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 10px;
+  border: 1px solid rgba(115, 214, 161, 0.62);
+  border-radius: 9px;
+  color: #eafff2;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.36), rgba(8, 60, 37, 0.76));
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+.wife-punish-progress {
+  margin: 9px 0 0;
+  color: rgba(255, 206, 188, 0.78);
+  font-size: 12px;
+  text-align: center;
 }
 
 .wife-growth-cue {
@@ -4757,6 +4843,10 @@ button {
   .bottom-panel {
     gap: 8px;
     bottom: max(8px, env(safe-area-inset-bottom));
+  }
+
+  .bottom-panel--role {
+    bottom: calc(20px + env(safe-area-inset-bottom));
   }
 
   .bio-panel--role {

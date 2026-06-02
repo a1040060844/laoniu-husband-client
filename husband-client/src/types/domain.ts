@@ -86,6 +86,16 @@ export interface Benefit {
   icon: string;
 }
 
+export type PunishmentStatus = "normal" | "slave";
+
+export interface Punishment {
+  status: PunishmentStatus;
+  startedAt?: string;
+  durationDays: number;
+  recoveryExp: number;
+  requiredRecoveryExp: number;
+}
+
 export interface Task {
   id: string;
   title: string;
