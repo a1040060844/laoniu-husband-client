@@ -479,7 +479,11 @@ button {
   gap: 12px;
 }
 
-.bottom-panel--role {
+  .bottom-panel--role {
+    bottom: calc(20px + env(safe-area-inset-bottom));
+  }
+
+  .bio-panel--role {
   bottom: calc(24px + env(safe-area-inset-bottom));
   gap: 9px;
 }
@@ -2392,11 +2396,29 @@ button {
   will-change: transform;
 }
 
+.wife-console--growth .wife-growth,
+.wife-console--main .wife-hero,
+.wife-console--today .wife-today {
+  z-index: 5;
+}
+
+.wife-console--growth .wife-hero,
+.wife-console--growth .wife-today,
+.wife-console--main .wife-growth,
+.wife-console--main .wife-today,
+.wife-console--today .wife-growth,
+.wife-console--today .wife-hero {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .wife-hero {
   position: relative;
+  z-index: 1;
   height: var(--app-height);
   min-height: var(--app-height);
   padding: 0;
+  clip-path: inset(0);
   overflow: hidden;
   isolation: isolate;
 }
@@ -2409,7 +2431,7 @@ button {
 }
 
 .wife-portrait {
-  z-index: -4;
+  z-index: 0;
   width: 100%;
   height: 62dvh;
   object-fit: cover;
@@ -2418,7 +2440,7 @@ button {
 }
 
 .wife-hero__shade {
-  z-index: -2;
+  z-index: 1;
   background:
     linear-gradient(
       180deg,
@@ -2795,10 +2817,12 @@ button {
 
 .wife-growth {
   position: relative;
+  z-index: 1;
   height: var(--app-height);
   min-height: var(--app-height);
   padding: max(22px, env(safe-area-inset-top)) 18px
     max(24px, env(safe-area-inset-bottom));
+  clip-path: inset(0);
   overflow-x: hidden;
   overflow-y: auto;
   isolation: isolate;
@@ -2817,7 +2841,7 @@ button {
 }
 
 .wife-growth__portrait {
-  z-index: -4;
+  z-index: 0;
   bottom: auto;
   top: -30px;
   right: -44px;
@@ -2831,7 +2855,7 @@ button {
 }
 
 .wife-growth__shade {
-  z-index: -2;
+  z-index: 1;
   background:
     linear-gradient(
       180deg,
@@ -3397,9 +3421,11 @@ button {
 
 .wife-today {
   position: relative;
+  z-index: 1;
   height: var(--app-height);
   min-height: var(--app-height);
   padding: 58px 18px max(112px, calc(env(safe-area-inset-bottom) + 96px));
+  clip-path: inset(0);
   overflow-x: hidden;
   overflow-y: auto;
   isolation: isolate;
@@ -3418,7 +3444,7 @@ button {
 }
 
 .wife-today__portrait {
-  z-index: -4;
+  z-index: 0;
   bottom: auto;
   top: -18px;
   right: -42px;
@@ -3432,7 +3458,7 @@ button {
 }
 
 .wife-today__shade {
-  z-index: -2;
+  z-index: 1;
   background:
     linear-gradient(
       180deg,
@@ -4843,10 +4869,6 @@ button {
   .bottom-panel {
     gap: 8px;
     bottom: max(8px, env(safe-area-inset-bottom));
-  }
-
-  .bottom-panel--role {
-    bottom: calc(20px + env(safe-area-inset-bottom));
   }
 
   .bio-panel--role {

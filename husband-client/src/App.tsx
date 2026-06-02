@@ -377,7 +377,7 @@ export default function App() {
           current,
           amount,
           roles,
-          "鑰佸澶т汉浜茶嚜璧忚祼",
+          "老妞大人亲自赏赐",
         );
         if (result.stories.length) {
           setStory(result.stories[result.stories.length - 1]);
@@ -386,7 +386,7 @@ export default function App() {
           addLog({
             type: "level_changed",
             title: roles[result.progress.level].title,
-            description: "缁忛獙濂栧姳瑙﹀彂绛夌骇鍙樺寲",
+            description: "经验奖励触发等级变化",
             fromLevel: current.level,
             toLevel: result.progress.level,
           });
@@ -437,7 +437,7 @@ export default function App() {
       });
     }
     setStory({
-      title: "鑱屽姟瑁佸畾",
+      title: "职务裁定",
       text: `老婆大人已${reason}，当前职务定为「${roles[safeLevel].title}」。`,
       tone:
         safeLevel > progress.level
@@ -520,7 +520,7 @@ export default function App() {
           onSetLevel={(level) =>
             handleSetLevel(
               level,
-              level === MIN_LEVEL ? "鎵撳叆娴佽惤琛楀ご" : "閲嶆柊鎸囧畾绛夌骇",
+              level === MIN_LEVEL ? "打入流落街头" : "重新指定等级",
             )
           }
           onLevelDelta={(delta) =>
