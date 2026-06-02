@@ -166,7 +166,7 @@ export function settleTaskReward(
 
   rewards.forEach((reward) => {
     if (reward.type === "experience") {
-      const amount = Math.max(0, Math.trunc(reward.value ?? 0));
+      const amount = Math.min(30, Math.max(0, Math.trunc(reward.value ?? 0)));
       const expResult = grantExperience(progress, amount, roles, `完成「${task.title}」`);
       progress = expResult.progress;
       stories.push(...expResult.stories);
@@ -182,7 +182,7 @@ export function settleTaskReward(
     }
 
     if (reward.type === "level_up") {
-      const amount = Math.max(1, Math.trunc(reward.value ?? 1));
+      const amount = Math.min(1, Math.max(1, Math.trunc(reward.value ?? 1)));
       const fromLevel = progress.level;
       const level = clampLevel(progress.level + amount);
       progress = {
@@ -197,7 +197,7 @@ export function settleTaskReward(
           tone: "upgrade",
         });
       }
-      resultTexts.push(`直接升级 ${level - fromLevel} 级`);
+      if (level > fromLevel) resultTexts.push(`直接升级 ${level - fromLevel} 级`);
       return;
     }
 

@@ -70,15 +70,25 @@ const eventTypeMap: Record<string, EventLogType> = {
 };
 
 const moduleIdMap: Record<string, TaskModuleId> = {
-  care: "care",
-  cats: "cats",
   cleaning: "cleaning",
-  company: "company",
+  cooking: "cooking",
   custom: "custom",
-  errand: "errand",
-  kitchen: "kitchen",
+  game: "game",
   laundry: "laundry",
-  report: "report",
+  movie: "movie",
+  photo: "photo",
+  shopping: "shopping",
+};
+
+const moduleLabelMap: Record<TaskModuleId, string> = {
+  cleaning: "打扫卫生",
+  cooking: "做饭",
+  custom: "自定义任务",
+  game: "打游戏",
+  laundry: "洗衣整理",
+  movie: "看电影",
+  photo: "拍照",
+  shopping: "买东西",
 };
 
 const timeTypeMap: Record<string, TaskTimeType> = {
@@ -197,7 +207,9 @@ function normalizeTask(raw: unknown): Task | null {
     typeMap[String(value.type || value.urgency || "custom")] ?? "custom";
   const rewardExp = Number(value.rewardExp ?? value.exp ?? 0);
   const rewardMoney = Number(value.rewardMoney ?? value.money ?? 0);
-  const moduleId = moduleIdMap[String(value.moduleId || "")];
+  const rawModuleId = String(value.moduleId || "");
+  const moduleId = moduleIdMap[rawModuleId];
+  if (rawModuleId && !moduleId) return null;
 
   return {
     id: String(
@@ -212,7 +224,7 @@ function normalizeTask(raw: unknown): Task | null {
     source,
     moduleId,
     moduleLabel:
-      typeof value.moduleLabel === "string" ? value.moduleLabel : undefined,
+      moduleId ? moduleLabelMap[moduleId] : undefined,
     target: typeof value.target === "string" ? value.target : undefined,
     action: typeof value.action === "string" ? value.action : undefined,
     standard: typeof value.standard === "string" ? value.standard : undefined,

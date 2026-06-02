@@ -6,14 +6,20 @@ import type {
   TaskTimeType,
 } from "../types/domain";
 
-export interface TaskModule {
+export interface TaskModuleOption {
   id: TaskModuleId;
   label: string;
-  targets: string[];
-  actions: string[];
+  targets?: string[];
+  actions?: string[];
+  freeTarget?: boolean;
+  freeAction?: boolean;
+  targetLabel?: string;
+  actionLabel?: string;
+  targetPlaceholder?: string;
+  actionPlaceholder?: string;
 }
 
-export const taskModules: TaskModule[] = [
+export const taskModules: TaskModuleOption[] = [
   {
     id: "cleaning",
     label: "打扫卫生",
@@ -24,7 +30,6 @@ export const taskModules: TaskModule[] = [
       "卫生间",
       "阳台",
       "玄关",
-      "猫咪活动区",
       "全屋局部",
       "自定义区域",
     ],
@@ -37,143 +42,90 @@ export const taskModules: TaskModule[] = [
       "深度清洁",
       "老妞指定标准",
     ],
+    targetLabel: "选择打扫区域",
+    actionLabel: "选择打扫标准",
   },
   {
     id: "laundry",
     label: "洗衣整理",
-    targets: [
-      "日常衣物",
-      "袜子内衣",
-      "床单被套",
-      "外套",
-      "毛巾",
-      "老妞指定衣物",
-      "自定义衣物",
-    ],
-    actions: [
-      "放入洗衣机",
-      "晾衣服",
-      "收衣服",
-      "叠衣服",
-      "分类归位",
-      "完整洗晒收流程",
-      "老妞指定标准",
-    ],
+    freeTarget: true,
+    freeAction: true,
+    targetLabel: "洗衣内容",
+    actionLabel: "具体要求",
+    targetPlaceholder:
+      "请输入要洗/整理的内容，例如：床单被套、今天的衣服、毛巾",
+    actionPlaceholder:
+      "请输入具体要求，例如：洗完晾好、收衣服并叠好、完整洗晒收",
   },
   {
-    id: "kitchen",
-    label: "厨房事务",
-    targets: [
-      "碗筷",
-      "锅具",
-      "厨房台面",
-      "灶台",
-      "餐桌",
-      "冰箱",
-      "外卖垃圾",
-      "饭后残局",
-      "自定义区域",
-    ],
-    actions: [
-      "洗碗",
-      "擦台面",
-      "清理餐桌",
-      "倒厨余垃圾",
-      "收拾外卖盒",
-      "整理冰箱",
-      "饭后完整收拾",
-      "厨房深度清洁",
-    ],
+    id: "cooking",
+    label: "做饭",
+    freeTarget: true,
+    freeAction: true,
+    targetLabel: "做饭内容",
+    actionLabel: "具体要求",
+    targetPlaceholder:
+      "请输入要做什么，例如：煮面、炒菜、做晚饭、准备早餐",
+    actionPlaceholder:
+      "请输入老妞要求，例如：做完收拾厨房、不要太油、按老妞口味来",
   },
   {
-    id: "cats",
-    label: "猫咪照顾",
-    targets: [
-      "两只猫",
-      "英短蓝猫",
-      "白英短",
-      "猫砂盆",
-      "猫碗水碗",
-      "猫窝",
-      "猫咪活动区",
-    ],
-    actions: [
-      "添粮",
-      "换水",
-      "添粮换水",
-      "铲屎",
-      "清理猫砂周边",
-      "擦猫碗",
-      "梳毛",
-      "陪玩",
-      "观察猫咪状态",
-    ],
+    id: "shopping",
+    label: "买东西",
+    freeTarget: true,
+    freeAction: true,
+    targetLabel: "要买什么",
+    actionLabel: "购买要求",
+    targetPlaceholder:
+      "请输入要买的东西，例如：饮料、零食、日用品、水果",
+    actionPlaceholder:
+      "请输入具体要求，例如：买指定品牌、买便宜的、买老妞喜欢的、送到家",
   },
   {
-    id: "errand",
-    label: "跑腿采购",
-    targets: [
-      "快递",
-      "外卖",
-      "饮料",
-      "零食",
-      "日用品",
-      "猫咪用品",
-      "老妞指定物品",
-      "临时跑腿",
-    ],
-    actions: [
-      "拿取",
-      "购买",
-      "送达",
-      "排队处理",
-      "沟通处理",
-      "对比挑选",
-      "老妞指定标准",
-    ],
+    id: "movie",
+    label: "看电影",
+    freeTarget: true,
+    freeAction: true,
+    targetLabel: "电影内容",
+    actionLabel: "陪看要求",
+    targetPlaceholder:
+      "请输入电影名称或类型，例如：恐怖片、爱情片、老妞指定电影",
+    actionPlaceholder:
+      "请输入具体要求，例如：不许玩手机、认真陪看、看完一起讨论",
   },
   {
-    id: "care",
-    label: "老妞照顾",
-    targets: [
-      "倒水",
-      "拿东西",
-      "准备水果",
-      "准备小零食",
-      "按摩",
-      "吹头发",
-      "帮忙找东西",
-      "处理小麻烦",
-      "情绪安抚",
-    ],
-    actions: ["随手照顾", "认真完成", "持续照顾", "老妞指定标准"],
+    id: "game",
+    label: "打游戏",
+    freeTarget: true,
+    freeAction: true,
+    targetLabel: "游戏内容",
+    actionLabel: "陪玩要求",
+    targetPlaceholder:
+      "请输入游戏名称或类型，例如：双人成行、王者荣耀、老妞指定游戏",
+    actionPlaceholder:
+      "请输入具体要求，例如：不许摆烂、不许嫌弃、认真配合老妞",
   },
   {
-    id: "company",
-    label: "陪伴互动",
-    targets: ["聊天", "吃饭", "散步", "看剧", "玩游戏", "逛街", "拍照", "约会计划"],
-    actions: ["认真陪伴", "不看手机", "主动安排", "全程不敷衍", "老妞满意"],
-  },
-  {
-    id: "report",
-    label: "日常报备",
-    targets: [
-      "早安",
-      "晚安",
-      "到家",
-      "出门",
-      "今日安排",
-      "吃饭情况",
-      "工作进度",
-      "情绪状态",
-    ],
-    actions: ["一句话报备", "认真说明", "主动报备", "连续完成", "老妞指定标准"],
+    id: "photo",
+    label: "拍照",
+    freeTarget: true,
+    freeAction: true,
+    targetLabel: "拍照内容",
+    actionLabel: "拍照要求",
+    targetPlaceholder:
+      "请输入拍什么，例如：帮老妞拍照、拍穿搭、拍产品图",
+    actionPlaceholder:
+      "请输入具体要求，例如：拍到老妞满意、帮忙选图、简单修图",
   },
   {
     id: "custom",
     label: "自定义任务",
-    targets: [],
-    actions: [],
+    freeTarget: true,
+    freeAction: true,
+    targetLabel: "任务对象，可选",
+    actionLabel: "执行要求，可选",
+    targetPlaceholder: "请输入任务对象，可留空",
+    actionPlaceholder: "请输入执行要求，可留空",
   },
 ];
 
@@ -227,19 +179,23 @@ export function createTaskTimeConfig(
   if (type === "custom") {
     return {
       type,
-      label: customDeadlineAt ? `${customDeadlineAt.replace("T", " ")} 前` : "自定义截止时间",
+      label: customDeadlineAt
+        ? `${customDeadlineAt.replace("T", " ")} 前`
+        : "自定义截止时间",
       deadlineAt: customDeadlineAt || undefined,
     };
   }
 
   if (type === "repeat") {
-    const frequencyLabel: Record<NonNullable<TaskTimeConfig["repeatFrequency"]>, string> =
-      {
-        custom: "自定义",
-        daily: "每天",
-        monthly: "每月",
-        weekly: "每周",
-      };
+    const frequencyLabel: Record<
+      NonNullable<TaskTimeConfig["repeatFrequency"]>,
+      string
+    > = {
+      custom: "自定义",
+      daily: "每天",
+      monthly: "每月",
+      weekly: "每周",
+    };
     return {
       type,
       label: `${frequencyLabel[repeatFrequency]} ${Math.max(1, Math.trunc(repeatCount))} 次`,
@@ -266,35 +222,123 @@ export function createTaskTimeConfig(
 export function buildTaskTitle(
   moduleId: TaskModuleId,
   target: string,
-  action: string,
+  _action: string,
   customTitle?: string,
 ) {
-  if (customTitle?.trim()) return customTitle.trim();
-  if (moduleId === "cleaning") return `打扫${target || "指定区域"}`;
-  if (moduleId === "care" && target === "按摩") return action ? `${target} ${action}` : "按摩";
-  if (moduleId === "report") return `${target || "日常"}报备`;
-  return [target, action].filter(Boolean).join(" · ") || "老妞指定任务";
+  const safeTarget = target.trim();
+  if (moduleId === "custom") return customTitle?.trim() || "自定义任务";
+  if (moduleId === "cleaning") return `打扫${safeTarget || "指定区域"}`;
+  if (moduleId === "laundry") {
+    return safeTarget ? `整理${safeTarget}` : "洗衣整理";
+  }
+  if (moduleId === "cooking") {
+    if (!safeTarget) return "做饭";
+    return /[做煮炒]/.test(safeTarget) ? safeTarget : `做${safeTarget}`;
+  }
+  if (moduleId === "shopping") {
+    return safeTarget ? `买${safeTarget}` : "买东西";
+  }
+  if (moduleId === "movie") {
+    return safeTarget ? `看${safeTarget}` : "看电影";
+  }
+  if (moduleId === "game") {
+    return safeTarget ? `陪老妞打${safeTarget}` : "打游戏";
+  }
+  if (moduleId === "photo") {
+    return safeTarget || "拍照";
+  }
+  return "老妞指定任务";
 }
 
 export function buildTaskDescription(
-  moduleLabel: string,
+  moduleId: TaskModuleId,
   target: string,
   action: string,
-  standard?: string,
+  _standard?: string,
   customDescription?: string,
 ) {
-  if (customDescription?.trim()) return customDescription.trim();
-  if (moduleLabel === "打扫卫生" && target === "客厅" && action === "标准清洁") {
-    return "请完成客厅标准清洁，包括明显杂物归位、地面清理和桌面简单擦拭。完成后提交给老妞大人确认。";
+  const safeTarget = target.trim();
+  const safeAction = action.trim();
+
+  if (moduleId === "custom") {
+    return (
+      customDescription?.trim() ||
+      "由老妞大人亲自发布，验收标准以老妞大人最终裁定为准。"
+    );
   }
-  const extra = standard?.trim() ? `额外标准：${standard.trim()}。` : "";
-  return `请完成${moduleLabel}任务：${target || "老妞指定对象"}${action ? `，要求${action}` : ""}。${extra}完成后提交给老妞大人确认。`;
+
+  if (moduleId === "cleaning") {
+    if (safeTarget === "客厅" && safeAction === "标准清洁") {
+      return "请完成客厅标准清洁，包括明显杂物归位、地面清理和桌面简单擦拭。完成后提交给老妞大人确认。";
+    }
+    if (safeTarget === "卫生间" && safeAction === "深度清洁") {
+      return "请完成卫生间深度清洁，包括地面、台面、明显污渍和死角清理。完成后提交给老妞大人确认。";
+    }
+    return `请完成「${safeTarget || "指定区域"}」的「${safeAction || "老妞指定标准"}」，验收标准以老妞大人最终裁定为准。`;
+  }
+
+  if (moduleId === "laundry") {
+    if (!safeTarget) {
+      return "请按老妞大人的要求完成洗衣整理任务。完成后提交确认。";
+    }
+    return safeAction
+      ? `请完成洗衣整理任务，内容为「${safeTarget}」。具体要求：「${safeAction}」。完成后提交给老妞大人确认。`
+      : `请完成洗衣整理任务，内容为「${safeTarget}」。完成后提交给老妞大人确认。`;
+  }
+
+  if (moduleId === "cooking") {
+    if (!safeTarget) {
+      return "请按老妞大人的要求完成做饭任务。完成后提交确认。";
+    }
+    const extra = safeAction ? `具体要求：「${safeAction}」。` : "";
+    return `请按老妞大人的要求完成做饭任务，具体内容为「${safeTarget}」。${extra}完成后提交给老妞大人确认。`;
+  }
+
+  if (moduleId === "shopping") {
+    if (!safeTarget) {
+      return "请按老妞大人的要求完成买东西任务。完成后提交确认。";
+    }
+    const extra = safeAction ? `购买要求：「${safeAction}」。` : "";
+    return `请按老妞大人的要求完成购买任务，购买内容为「${safeTarget}」。${extra}完成后提交给老妞大人确认。`;
+  }
+
+  if (moduleId === "movie") {
+    if (!safeTarget) {
+      return "请陪老妞大人完成看电影任务，期间不许敷衍。";
+    }
+    const extra = safeAction ? `陪看要求：「${safeAction}」。` : "";
+    return `请陪老妞大人完成看电影任务，电影内容为「${safeTarget}」。期间按老妞要求执行，不许敷衍。${extra}`;
+  }
+
+  if (moduleId === "game") {
+    if (!safeTarget) {
+      return "请陪老妞大人完成打游戏任务，过程里要认真配合。";
+    }
+    const extra = safeAction ? `陪玩要求：「${safeAction}」。` : "";
+    return `请陪老妞大人完成打游戏任务，游戏内容为「${safeTarget}」。过程里要认真配合，不许敷衍。${extra}`;
+  }
+
+  if (moduleId === "photo") {
+    if (!safeTarget) {
+      return "请按老妞大人的要求完成拍照任务，以老妞大人满意为准。";
+    }
+    const extra = safeAction ? `拍照要求：「${safeAction}」。` : "";
+    return `请按老妞大人的要求完成拍照任务，拍照内容为「${safeTarget}」。以老妞大人满意为准。${extra}`;
+  }
+
+  return "由老妞大人亲自发布，验收标准以老妞大人最终裁定为准。";
 }
 
 export function createRewardLabel(reward: TaskReward) {
-  if (reward.type === "experience") return `${Math.max(0, Math.trunc(reward.value ?? 0))}经验`;
-  if (reward.type === "allowance") return `${Math.max(0, Math.trunc(reward.value ?? 0))}元`;
-  if (reward.type === "level_up") return `直接升级${Math.max(1, Math.trunc(reward.value ?? 1))}级`;
+  if (reward.type === "experience") {
+    return `${Math.min(30, Math.max(0, Math.trunc(reward.value ?? 0)))}经验`;
+  }
+  if (reward.type === "allowance") {
+    return `${Math.max(0, Math.trunc(reward.value ?? 0))}元`;
+  }
+  if (reward.type === "level_up") {
+    return `直接升级${Math.min(1, Math.max(1, Math.trunc(reward.value ?? 1)))}级`;
+  }
   if (reward.type === "benefit") {
     return `${reward.benefitName || "权益"} ${Math.max(1, Math.trunc(reward.value ?? 1))}次`;
   }

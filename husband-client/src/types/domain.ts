@@ -17,12 +17,11 @@ export type TaskSource = "wife" | "daily";
 export type TaskModuleId =
   | "cleaning"
   | "laundry"
-  | "kitchen"
-  | "cats"
-  | "errand"
-  | "care"
-  | "company"
-  | "report"
+  | "cooking"
+  | "shopping"
+  | "movie"
+  | "game"
+  | "photo"
   | "custom";
 
 export type TaskTimeType =
