@@ -1045,7 +1045,9 @@ export function WifeDashboard({
             <div className="wife-salary-line">
               <span>月薪</span>
               <strong>{role.salary}</strong>
-              <em>{isSlave ? "· 卖身奴隶状态" : "· 正常服役中"}</em>
+              <em className={isSlave ? "wife-salary-status--slave" : undefined}>
+                {isSlave ? "· 卖身奴隶状态" : "· 正常服役中"}
+              </em>
             </div>
             <p className="wife-next-line">
               {role.level >= 11

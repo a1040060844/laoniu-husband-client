@@ -538,7 +538,7 @@ export default function App() {
   }
 
   if (punishment.status === "slave") {
-    const slaveImage = publicAsset("/assets/slave/slave-market.png");
+    const slaveImage = publicAsset("/assets/slave/slave-page-latest.png");
     const slaveRole = {
       ...roleWithProgress(roles[MIN_LEVEL], {
         ...progress,

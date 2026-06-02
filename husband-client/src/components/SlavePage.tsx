@@ -10,7 +10,7 @@ interface SlavePageProps {
 }
 
 export function SlavePage({ role, punishment, onSelectView }: SlavePageProps) {
-  const slaveImage = publicAsset("/assets/slave/slave-market.png");
+  const slaveImage = publicAsset("/assets/slave/slave-page-latest.png");
   const punishmentRemainingDays = getPunishmentRemainingDays(punishment);
   const recoveryPercent = Math.min(
     100,
