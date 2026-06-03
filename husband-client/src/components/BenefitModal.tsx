@@ -74,6 +74,24 @@ function getUsageFallback(
     };
   }
 
+  if (computedStatus === "pending") {
+    return {
+      currentStatus: "待审批",
+      remainingThisRound: `${benefit.availableBonusCount ?? 0} 次奖励库存`,
+      lastUsedAt: benefit.lastRequestedAt ?? "已提交申请",
+      nextAvailableAt: "等待老婆审批",
+    };
+  }
+
+  if (computedStatus === "frozen") {
+    return {
+      currentStatus: "已冻结",
+      remainingThisRound: "不可使用",
+      lastUsedAt: "卖身奴隶状态",
+      nextAvailableAt: "恢复正常后开放",
+    };
+  }
+
   return {
     currentStatus: statusText,
     remainingThisRound: "1 次",
@@ -97,13 +115,21 @@ export function BenefitModal({
       ? "申请恩准"
       : computedStatus === "cooldown"
         ? "冷却中"
-        : "尚未解锁";
+        : computedStatus === "pending"
+          ? "待审批"
+          : computedStatus === "frozen"
+            ? "已冻结"
+            : "尚未解锁";
   const statusLabel =
     computedStatus === "available"
       ? "可申请"
       : computedStatus === "cooldown"
         ? "冷却中"
-        : "未解锁";
+        : computedStatus === "pending"
+          ? "待审批"
+          : computedStatus === "frozen"
+            ? "已冻结"
+            : "未解锁";
   const Icon = iconMap[benefit.icon as keyof typeof iconMap] ?? Gift;
   const usageSummary =
     usage ?? getUsageFallback(benefit, computedStatus, statusText);

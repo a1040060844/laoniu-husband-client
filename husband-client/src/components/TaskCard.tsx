@@ -14,6 +14,7 @@ import type { Task } from "../types/domain";
 const typeLabel = {
   daily: "日任务",
   weekly: "周任务",
+  repeat: "重复任务",
   custom: "自定义任务",
   urgent: "紧急任务",
 };
@@ -24,6 +25,8 @@ const statusLabel = {
   submitted: "待确认",
   confirmed: "已确认",
   failed: "未通过",
+  expired: "已过期",
+  failed_pending: "待裁定",
   completed: "已完成",
 };
 
@@ -33,6 +36,8 @@ const statusIcon = {
   submitted: Hourglass,
   confirmed: CheckCircle2,
   failed: AlertTriangle,
+  expired: AlertTriangle,
+  failed_pending: AlertTriangle,
   completed: CheckCircle2,
 };
 
@@ -46,6 +51,9 @@ interface TaskCardProps {
 export function TaskCard({ task, index, onStart, onSubmit }: TaskCardProps) {
   const StatusIcon = statusIcon[task.status];
   const rewardChips = taskRewardChips(task);
+  const repeatCount = task.repeatCount ?? task.timeConfig?.repeatCount ?? 1;
+  const completedCount =
+    task.completedCount ?? task.timeConfig?.completedCount ?? 0;
   const primary =
     task.status === "todo"
       ? { label: "开始执行", action: () => onStart(task.id), disabled: false }
@@ -89,6 +97,14 @@ export function TaskCard({ task, index, onStart, onSubmit }: TaskCardProps) {
           <FileText size={14} />
           <span>{task.timeConfig?.label || task.deadline}</span>
         </div>
+        {repeatCount > 1 ? (
+          <div className="task-deadline">
+            <Clock3 size={14} />
+            <span>
+              本周期进度 {completedCount}/{repeatCount}
+            </span>
+          </div>
+        ) : null}
         {task.resultText ? (
           <p className="task-result">{task.resultText}</p>
         ) : null}

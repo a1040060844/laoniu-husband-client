@@ -44,7 +44,12 @@ import {
   getPunishmentRemainingDays,
   isPunishmentRecoverable,
 } from "../lib/taskSystem";
-import { taskRewardChips, taskRewardText } from "../lib/taskRewards";
+import {
+  taskRewardChips,
+  taskRewardExp,
+  taskRewardMoney,
+  taskRewardText,
+} from "../lib/taskRewards";
 import type {
   Benefit,
   EventLog,
@@ -54,8 +59,10 @@ import type {
   TaskModuleId,
   TaskReward,
   TaskRewardType,
+  TaskReviewDecision,
   TaskTimeConfig,
   TaskTimeType,
+  WalletLedgerEntry,
 } from "../types/domain";
 
 type WifeSheet = "task" | "review" | "benefit" | "exp" | "level" | null;
@@ -68,13 +75,15 @@ interface WifeDashboardProps {
   progress: GameProgress;
   tasks: Task[];
   logs: EventLog[];
+  walletLedger: WalletLedgerEntry[];
   punishment: Punishment;
   benefits: Benefit[];
   roles: Role[];
   onCreateTask: (task: Task) => void;
-  onApproveTask: (taskId: string) => void;
-  onRejectTask: (taskId: string) => void;
+  onApproveTask: (taskId: string, decision?: TaskReviewDecision) => void;
+  onRejectTask: (taskId: string, reason?: string) => void;
   onApproveBenefit: (benefit: Benefit) => void;
+  onRejectBenefit: (benefit: Benefit, reason?: string) => void;
   onAdjustExperience: (amount: number) => void;
   onCustomExperience: (amount: number) => void;
   onSetLevel: (level: number) => void;
@@ -104,6 +113,14 @@ interface TaskDraft {
   benefitCount: number;
   customRewardName: string;
   customRewardDescription: string;
+}
+
+interface ReviewEdit {
+  exp: string;
+  money: string;
+  reason: string;
+  extraRewardName: string;
+  extraPunishment: string;
 }
 
 const initialDraft: TaskDraft = {
@@ -153,13 +170,16 @@ const orderOptions = [
 
 const eventLogTypeLabel: Record<EventLog["type"], string> = {
   benefit_approved: "权益恩准",
+  benefit_rejected: "权益驳回",
   benefit_requested: "权益申请",
   level_changed: "等级变化",
   punishment_status_changed: "惩罚状态",
   task_approved: "任务确认",
   task_created: "任务发布",
+  task_expired: "任务过期",
   task_rejected: "任务打回",
   task_submitted: "任务提交",
+  wallet_ledger: "钱包流水",
 };
 
 const SWIPE_THRESHOLD = 60;
@@ -176,6 +196,37 @@ function taskId() {
 
 function rewardId() {
   return `reward-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+}
+
+function taskTypeFromDraft(draft: TaskDraft): Task["type"] {
+  if (draft.timeType === "repeat") return "repeat";
+  if (draft.timeType === "this_week") return "weekly";
+  return "daily";
+}
+
+function cycleFieldsForDraft(draft: TaskDraft, timeConfig: TaskTimeConfig) {
+  const now = new Date();
+  const dayKey = now.toISOString().slice(0, 10);
+  const weekKey = `${now.getFullYear()}-W${Math.ceil((now.getDate() + 6) / 7)}`;
+  const endOfToday = new Date(now);
+  endOfToday.setHours(23, 59, 59, 999);
+  const endOfWeek = new Date(now);
+  endOfWeek.setDate(now.getDate() + (7 - (now.getDay() || 7)));
+  endOfWeek.setHours(23, 59, 59, 999);
+
+  if (draft.timeType === "repeat" && draft.repeatFrequency === "weekly") {
+    return { cycleId: weekKey, dueAt: endOfWeek.toISOString() };
+  }
+  if (draft.timeType === "this_week") {
+    return { cycleId: weekKey, dueAt: endOfWeek.toISOString() };
+  }
+  if (timeConfig.deadlineAt) {
+    const due = new Date(timeConfig.deadlineAt);
+    if (!Number.isNaN(due.getTime())) {
+      return { cycleId: dayKey, dueAt: due.toISOString() };
+    }
+  }
+  return { cycleId: dayKey, dueAt: endOfToday.toISOString() };
 }
 
 function createDraftReward(type: TaskRewardType): TaskReward {
@@ -322,6 +373,7 @@ export function WifeDashboard({
   progress,
   tasks,
   logs,
+  walletLedger,
   punishment,
   benefits,
   roles,
@@ -329,6 +381,7 @@ export function WifeDashboard({
   onApproveTask,
   onRejectTask,
   onApproveBenefit,
+  onRejectBenefit,
   onAdjustExperience,
   onCustomExperience,
   onSetLevel,
@@ -343,6 +396,8 @@ export function WifeDashboard({
   const [draft, setDraft] = useState<TaskDraft>(initialDraft);
   const [customExpValue, setCustomExpValue] = useState("");
   const [targetLevel, setTargetLevel] = useState(progress.level);
+  const [reviewEdits, setReviewEdits] = useState<Record<string, ReviewEdit>>({});
+  const [benefitRejectReasons, setBenefitRejectReasons] = useState<Record<string, string>>({});
   const touchStart = useRef<TouchPoint | null>(null);
   const wheelLocked = useRef(false);
 
@@ -373,8 +428,15 @@ export function WifeDashboard({
   const statusProgressPercent = isSlave ? recoveryPercent : expPercent;
 
   const submittedTasks = useMemo(
-    () => tasks.filter((task) => task.status === "submitted"),
+    () =>
+      tasks.filter(
+        (task) => task.status === "submitted" || task.status === "failed_pending",
+      ),
     [tasks],
+  );
+  const pendingBenefits = useMemo(
+    () => benefits.filter((benefit) => Boolean(benefit.pendingRequest)),
+    [benefits],
   );
   const selectedModule = useMemo(
     () => findTaskModule(draft.moduleId),
@@ -412,17 +474,22 @@ export function WifeDashboard({
     target: draftTarget,
     timeConfig: draftTimeConfig,
     title: draft.title,
-    type: draft.timeType === "repeat" ? "weekly" : "daily",
+    type: taskTypeFromDraft(draft),
   };
   const recentTask =
     submittedTasks[0] ??
     tasks.find((task) => task.status === "doing" || task.status === "todo") ??
     tasks[0];
-  const pendingRulingCount = Math.max(2, submittedTasks.length);
-  const pendingBenefitCount = 1;
+  const pendingRulingCount = submittedTasks.length;
+  const pendingBenefitCount = pendingBenefits.length;
   const abnormalCount = Math.max(
-    1,
-    tasks.filter((task) => task.status === "failed").length,
+    0,
+    tasks.filter(
+      (task) =>
+        task.status === "failed" ||
+        task.status === "expired" ||
+        task.status === "failed_pending",
+    ).length,
   );
   const unlockedBenefits = useMemo(
     () => benefits.filter((benefit) => benefit.levelRequired <= progress.level),
@@ -433,6 +500,8 @@ export function WifeDashboard({
     confirmed: "已确认",
     doing: "服役中",
     failed: "未通过",
+    expired: "已过期",
+    failed_pending: "待裁定",
     submitted: "待审核",
     todo: "待执行",
   };
@@ -446,6 +515,87 @@ export function WifeDashboard({
       minute: "2-digit",
       month: "2-digit",
     });
+  }
+
+  function updateReviewEdit(taskId: string, patch: Partial<ReviewEdit>) {
+    setReviewEdits((current) => ({
+      ...current,
+      [taskId]: {
+        ...(current[taskId] ?? {
+          exp: "",
+          extraPunishment: "",
+          extraRewardName: "",
+          money: "",
+          reason: "",
+        }),
+        ...patch,
+      },
+    }));
+  }
+
+  function rewardsForReview(task: Task, edit: ReviewEdit | undefined) {
+    const baseRewards = task.rewards?.length
+      ? task.rewards.filter(
+          (reward) => reward.type !== "experience" && reward.type !== "allowance",
+        )
+      : [];
+    const exp = edit?.exp.trim() ? Math.max(0, Math.trunc(Number(edit.exp))) : taskRewardExp(task);
+    const money = edit?.money.trim()
+      ? Math.max(0, Math.trunc(Number(edit.money)))
+      : taskRewardMoney(task);
+    const rewards: TaskReward[] = [...baseRewards];
+    if (exp > 0) {
+      rewards.unshift({
+        id: `${task.id}-review-exp`,
+        label: `${exp}经验`,
+        type: "experience",
+        unit: "经验",
+        value: exp,
+      });
+    }
+    if (money > 0) {
+      rewards.push({
+        id: `${task.id}-review-money`,
+        label: `${money}元`,
+        type: "allowance",
+        unit: "元",
+        value: money,
+      });
+    }
+    if (edit?.extraRewardName.trim()) {
+      rewards.push({
+        id: `${task.id}-review-custom`,
+        label: edit.extraRewardName.trim(),
+        customName: edit.extraRewardName.trim(),
+        type: "custom",
+      });
+    }
+    return rewards.length
+      ? rewards
+      : [{ id: `${task.id}-review-none`, label: "无奖励", type: "none" as const }];
+  }
+
+  function approveWithEdit(task: Task) {
+    const edit = reviewEdits[task.id];
+    onApproveTask(task.id, {
+      rewards: rewardsForReview(task, edit),
+      extraPunishment: edit?.extraPunishment.trim() || undefined,
+      extraRewardName: edit?.extraRewardName.trim() || undefined,
+    });
+  }
+
+  function rejectWithReason(task: Task) {
+    const edit = reviewEdits[task.id];
+    onRejectTask(task.id, edit?.reason.trim() || undefined);
+  }
+
+  function formatLedgerAmount(entry: WalletLedgerEntry) {
+    const sign = entry.amount > 0 ? "+" : "";
+    if (entry.unit === "CNY") return `${sign}¥${entry.amount}`;
+    if (entry.unit === "EXP") return `${sign}${entry.amount} EXP`;
+    if (entry.unit === "LEVEL") return `${sign}${entry.amount} 级`;
+    if (entry.unit === "BENEFIT") return `${sign}${entry.amount} 次`;
+    return `${sign}${entry.amount}`;
   }
 
   useEffect(() => {
@@ -708,6 +858,7 @@ export function WifeDashboard({
       draft.repeatCount,
     );
     const rewards = rewardsFromDraft(draft);
+    const cycleFields = cycleFieldsForDraft(draft, timeConfig);
     const rewardExp = rewards
       .filter((reward) => reward.type === "experience")
       .reduce((sum, reward) => sum + Math.max(0, Math.trunc(reward.value ?? 0)), 0);
@@ -730,7 +881,7 @@ export function WifeDashboard({
       description:
         draft.description.trim() ||
         buildTaskDescription(draft.moduleId, draftTarget, draftAction),
-      type: draft.timeType === "repeat" ? "weekly" : "daily",
+      type: taskTypeFromDraft(draft),
       source: "wife",
       moduleId: draft.moduleId,
       moduleLabel: selectedModule.label,
@@ -738,6 +889,10 @@ export function WifeDashboard({
       action: draftAction,
       standard: draft.standard.trim() || undefined,
       timeConfig,
+      cycleId: cycleFields.cycleId,
+      dueAt: cycleFields.dueAt,
+      completedCount: 0,
+      repeatCount: timeConfig.repeatCount,
       rewards,
       rewardExp,
       rewardMoney,
@@ -1161,7 +1316,11 @@ export function WifeDashboard({
                 </div>
                 <div>
                   <h3>权益申请</h3>
-                  <p>奶茶申请权待批准。</p>
+                  <p>
+                    {pendingBenefitCount
+                      ? `${pendingBenefitCount} 项权益申请待批准。`
+                      : "暂无权益申请待处理。"}
+                  </p>
                 </div>
                 <span>待批准</span>
                 <button type="button" onClick={() => openSubPage("benefits")}>
@@ -1323,17 +1482,66 @@ export function WifeDashboard({
                         <small>
                           奖励：{taskRewardText(task)}
                         </small>
+                        <div className="wife-review-editor">
+                          <input
+                            inputMode="numeric"
+                            placeholder={`经验 ${taskRewardExp(task)}`}
+                            value={reviewEdits[task.id]?.exp ?? ""}
+                            onChange={(event) =>
+                              updateReviewEdit(task.id, {
+                                exp: event.target.value,
+                              })
+                            }
+                          />
+                          <input
+                            inputMode="numeric"
+                            placeholder={`零花钱 ${taskRewardMoney(task)}`}
+                            value={reviewEdits[task.id]?.money ?? ""}
+                            onChange={(event) =>
+                              updateReviewEdit(task.id, {
+                                money: event.target.value,
+                              })
+                            }
+                          />
+                          <input
+                            placeholder="额外赏赐"
+                            value={reviewEdits[task.id]?.extraRewardName ?? ""}
+                            onChange={(event) =>
+                              updateReviewEdit(task.id, {
+                                extraRewardName: event.target.value,
+                              })
+                            }
+                          />
+                          <input
+                            placeholder="追加惩罚"
+                            value={reviewEdits[task.id]?.extraPunishment ?? ""}
+                            onChange={(event) =>
+                              updateReviewEdit(task.id, {
+                                extraPunishment: event.target.value,
+                              })
+                            }
+                          />
+                          <input
+                            placeholder="打回原因"
+                            value={reviewEdits[task.id]?.reason ?? ""}
+                            onChange={(event) =>
+                              updateReviewEdit(task.id, {
+                                reason: event.target.value,
+                              })
+                            }
+                          />
+                        </div>
                       </div>
                       <div className="wife-subpage-actions">
                         <button
                           type="button"
-                          onClick={() => onRejectTask(task.id)}
+                          onClick={() => rejectWithReason(task)}
                         >
                           打回
                         </button>
                         <button
                           type="button"
-                          onClick={() => onApproveTask(task.id)}
+                          onClick={() => approveWithEdit(task)}
                         >
                           确认
                         </button>
@@ -1357,6 +1565,7 @@ export function WifeDashboard({
               <div className="wife-subpage-list wife-subpage-list--benefits">
                 {benefits.map((benefit) => {
                   const locked = benefit.levelRequired > progress.level;
+                  const pending = Boolean(benefit.pendingRequest);
                   return (
                     <article
                       key={benefit.id}
@@ -1371,17 +1580,54 @@ export function WifeDashboard({
                         <small>
                           Lv.{String(benefit.levelRequired).padStart(2, "0")}{" "}
                           解锁 · {benefit.frequency}
+                          {pending && benefit.pendingRequest
+                            ? ` · 申请于 ${formatLogTime(benefit.pendingRequest.requestedAt)}`
+                            : ""}
                         </small>
+                        {pending ? (
+                          <input
+                            className="wife-benefit-reason"
+                            placeholder="拒绝原因"
+                            value={benefitRejectReasons[benefit.id] ?? ""}
+                            onChange={(event) =>
+                              setBenefitRejectReasons((current) => ({
+                                ...current,
+                                [benefit.id]: event.target.value,
+                              }))
+                            }
+                          />
+                        ) : null}
                       </div>
                       {locked ? (
                         <span>未解锁</span>
+                      ) : pending ? (
+                        <div className="wife-subpage-actions">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onRejectBenefit(
+                                benefit,
+                                benefitRejectReasons[benefit.id],
+                              )
+                            }
+                          >
+                            拒绝
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onApproveBenefit(benefit)}
+                          >
+                            批准
+                          </button>
+                        </div>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={() => onApproveBenefit(benefit)}
-                        >
-                          恩准
-                        </button>
+                        <span>
+                          {(benefit.availableBonusCount ?? 0) > 0
+                            ? `库存 ${benefit.availableBonusCount}`
+                            : benefit.cooldownUntil
+                              ? "冷却中"
+                              : "可申请"}
+                        </span>
                       )}
                     </article>
                   );
@@ -1410,6 +1656,26 @@ export function WifeDashboard({
                     </p>
                   </div>
                 </article>
+                {walletLedger.slice(0, 8).map((entry) => (
+                  <article key={entry.id}>
+                    <span />
+                    <div>
+                      <h2>
+                        钱包流水 · {entry.source} · {formatLedgerAmount(entry)}
+                      </h2>
+                      <p>
+                        {[
+                          formatLogTime(entry.createdAt),
+                          entry.taskTitle ? `任务：${entry.taskTitle}` : "",
+                          entry.benefitName ? `权益：${entry.benefitName}` : "",
+                          entry.note,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    </div>
+                  </article>
+                ))}
                 {logs.slice(0, 8).map((log) => (
                   <article key={log.id}>
                     <span />
@@ -2052,16 +2318,61 @@ export function WifeDashboard({
                           {task.submitNote ||
                             "老哥已提交完成结果，等待老妞大人裁定。"}
                         </p>
+                        <div className="wife-review-editor">
+                          <input
+                            inputMode="numeric"
+                            placeholder={`经验 ${taskRewardExp(task)}`}
+                            value={reviewEdits[task.id]?.exp ?? ""}
+                            onChange={(event) =>
+                              updateReviewEdit(task.id, { exp: event.target.value })
+                            }
+                          />
+                          <input
+                            inputMode="numeric"
+                            placeholder={`零花钱 ${taskRewardMoney(task)}`}
+                            value={reviewEdits[task.id]?.money ?? ""}
+                            onChange={(event) =>
+                              updateReviewEdit(task.id, { money: event.target.value })
+                            }
+                          />
+                          <input
+                            placeholder="额外赏赐"
+                            value={reviewEdits[task.id]?.extraRewardName ?? ""}
+                            onChange={(event) =>
+                              updateReviewEdit(task.id, {
+                                extraRewardName: event.target.value,
+                              })
+                            }
+                          />
+                          <input
+                            placeholder="追加惩罚"
+                            value={reviewEdits[task.id]?.extraPunishment ?? ""}
+                            onChange={(event) =>
+                              updateReviewEdit(task.id, {
+                                extraPunishment: event.target.value,
+                              })
+                            }
+                          />
+                          <input
+                            placeholder="打回原因"
+                            value={reviewEdits[task.id]?.reason ?? ""}
+                            onChange={(event) =>
+                              updateReviewEdit(task.id, {
+                                reason: event.target.value,
+                              })
+                            }
+                          />
+                        </div>
                         <div>
                           <button
                             type="button"
-                            onClick={() => onRejectTask(task.id)}
+                            onClick={() => rejectWithReason(task)}
                           >
                             打回
                           </button>
                           <button
                             type="button"
-                            onClick={() => onApproveTask(task.id)}
+                            onClick={() => approveWithEdit(task)}
                           >
                             确认
                           </button>
@@ -2080,24 +2391,46 @@ export function WifeDashboard({
                 <p className="kicker">权益审批</p>
                 <h2>恩准或暂缓</h2>
                 <div className="wife-review-list">
-                  {unlockedBenefits.map((benefit) => (
-                    <article key={benefit.id}>
-                      <span>{benefit.frequency}</span>
-                      <h3>{benefit.name}</h3>
-                      <p>{benefit.description}</p>
-                      <div>
-                        <button type="button" onClick={() => setSheet(null)}>
-                          暂缓
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onApproveBenefit(benefit)}
-                        >
-                          恩准
-                        </button>
-                      </div>
-                    </article>
-                  ))}
+                  {pendingBenefits.length ? (
+                    pendingBenefits.map((benefit) => (
+                      <article key={benefit.id}>
+                        <span>{benefit.frequency}</span>
+                        <h3>{benefit.name}</h3>
+                        <p>{benefit.description}</p>
+                        <input
+                          placeholder="拒绝原因"
+                          value={benefitRejectReasons[benefit.id] ?? ""}
+                          onChange={(event) =>
+                            setBenefitRejectReasons((current) => ({
+                              ...current,
+                              [benefit.id]: event.target.value,
+                            }))
+                          }
+                        />
+                        <div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onRejectBenefit(
+                                benefit,
+                                benefitRejectReasons[benefit.id],
+                              )
+                            }
+                          >
+                            拒绝
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onApproveBenefit(benefit)}
+                          >
+                            恩准
+                          </button>
+                        </div>
+                      </article>
+                    ))
+                  ) : (
+                    <p className="wife-empty">暂无待审批权益申请。</p>
+                  )}
                 </div>
               </>
             ) : null}

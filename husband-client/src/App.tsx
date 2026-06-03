@@ -9,7 +9,6 @@ import { SlavePage } from "./components/SlavePage";
 import { StoryModal } from "./components/StoryModal";
 import { TaskPage } from "./components/TaskPage";
 import { WifeDashboard } from "./components/WifeDashboard";
-import { benefits as benefitData } from "./data/benefits";
 import { roles } from "./data/roles";
 import {
   MIN_LEVEL,
@@ -18,6 +17,7 @@ import {
   grantExperience,
   roleWithProgress,
   settleConfirmedTasks,
+  taskRewardKey,
 } from "./game/progression";
 import {
   createNormalPunishment,
@@ -26,16 +26,20 @@ import {
   loadTaskSystem,
   persistLocalTaskSystem,
   readLocalTaskSystem,
+  refreshTaskCycles,
   saveTaskSystem,
 } from "./lib/taskSystem";
 import { publicAsset } from "./lib/assets";
-import { taskRewardExp, taskRewardText } from "./lib/taskRewards";
+import { taskRewardExp, taskRewardMoney, taskRewardText } from "./lib/taskRewards";
 import type {
   Benefit,
   EventLog,
   StoryEvent,
   Task,
+  TaskReward,
+  TaskReviewDecision,
   ViewKey,
+  WalletLedgerEntry,
 } from "./types/domain";
 import "./styles.css";
 
@@ -46,6 +50,153 @@ const SLAVE_PAGES = {
   STATUS: 1,
   TASK: 2,
 } as const;
+
+function ledgerId(prefix: string) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+}
+
+function formatDateTime(value?: string) {
+  if (!value) return "暂无记录";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "暂无记录";
+  return date.toLocaleString("zh-CN", {
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    month: "2-digit",
+  });
+}
+
+function getCurrentMonthKey() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function benefitCooldownMs(benefit: Benefit) {
+  if (benefit.frequency.includes("2周")) return 14 * 24 * 60 * 60 * 1000;
+  if (benefit.frequency.includes("周")) return 7 * 24 * 60 * 60 * 1000;
+  if (benefit.frequency.includes("季")) return 90 * 24 * 60 * 60 * 1000;
+  if (benefit.frequency.includes("月")) return 30 * 24 * 60 * 60 * 1000;
+  return 7 * 24 * 60 * 60 * 1000;
+}
+
+function benefitMatchesReward(benefit: Benefit, reward: TaskReward) {
+  const name = reward.benefitName || reward.label;
+  if (!name) return false;
+  return benefit.id === name || benefit.name.includes(name) || name.includes(benefit.name);
+}
+
+function taskRewards(task: Task): TaskReward[] {
+  if (task.rewards?.length) return task.rewards;
+  return [
+    {
+      id: `${task.id}-legacy-exp`,
+      type: "experience",
+      label: `${task.rewardExp}经验`,
+      value: task.rewardExp,
+      unit: "经验",
+    },
+    ...(task.rewardMoney
+      ? [
+          {
+            id: `${task.id}-legacy-money`,
+            type: "allowance" as const,
+            label: `${task.rewardMoney}元`,
+            value: task.rewardMoney,
+            unit: "元",
+          },
+        ]
+      : []),
+    ...(task.rewardBenefit
+      ? [
+          {
+            id: `${task.id}-legacy-benefit`,
+            type: "benefit" as const,
+            label: task.rewardBenefit,
+            benefitName: task.rewardBenefit,
+            value: 1,
+            unit: "次",
+          },
+        ]
+      : []),
+  ];
+}
+
+function ledgerEntriesFromTask(task: Task, createdAt: string): WalletLedgerEntry[] {
+  return taskRewards(task)
+    .map((reward): WalletLedgerEntry | null => {
+      const amount = Math.max(0, Math.trunc(reward.value ?? 0));
+      if (reward.type === "experience" && amount > 0) {
+        return {
+          id: ledgerId("ledger-exp"),
+          type: "experience",
+          source: "任务奖励",
+          amount,
+          unit: "EXP",
+          createdAt,
+          taskId: task.id,
+          taskTitle: task.title,
+          note: reward.label,
+        };
+      }
+      if (reward.type === "allowance" && amount > 0) {
+        return {
+          id: ledgerId("ledger-money"),
+          type: "allowance",
+          source: "任务奖励",
+          amount,
+          unit: "CNY",
+          createdAt,
+          taskId: task.id,
+          taskTitle: task.title,
+          note: reward.label,
+        };
+      }
+      if (reward.type === "level_up") {
+        return {
+          id: ledgerId("ledger-level"),
+          type: "level_up",
+          source: "任务奖励",
+          amount: Math.max(1, amount || 1),
+          unit: "LEVEL",
+          createdAt,
+          taskId: task.id,
+          taskTitle: task.title,
+          note: reward.label,
+        };
+      }
+      if (reward.type === "benefit") {
+        const count = Math.max(1, amount || 1);
+        return {
+          id: ledgerId("ledger-benefit"),
+          type: "benefit",
+          source: "任务奖励",
+          amount: count,
+          unit: "BENEFIT",
+          createdAt,
+          taskId: task.id,
+          taskTitle: task.title,
+          benefitName: reward.benefitName || reward.label,
+          note: reward.label,
+        };
+      }
+      if (reward.type === "custom") {
+        return {
+          id: ledgerId("ledger-custom"),
+          type: "custom",
+          source: "任务奖励",
+          amount: 1,
+          unit: "COUNT",
+          createdAt,
+          taskId: task.id,
+          taskTitle: task.title,
+          note: reward.customName || reward.label,
+        };
+      }
+      return null;
+    })
+    .filter((entry): entry is WalletLedgerEntry => Boolean(entry));
+}
 
 export default function App() {
   const initialState = useMemo(readLocalTaskSystem, []);
@@ -63,6 +214,10 @@ export default function App() {
   const [tasks, setTasks] = useState<Task[]>(initialState.tasks);
   const [logs, setLogs] = useState<EventLog[]>(initialState.logs);
   const [punishment, setPunishment] = useState(initialState.punishment);
+  const [benefits, setBenefits] = useState<Benefit[]>(initialState.benefits);
+  const [walletLedger, setWalletLedger] = useState<WalletLedgerEntry[]>(
+    initialState.walletLedger,
+  );
   const [selectedBenefit, setSelectedBenefit] = useState<Benefit | null>(null);
   const [story, setStory] = useState<StoryEvent | null>(null);
   const hasLoadedServerState = useRef(false);
@@ -71,8 +226,8 @@ export default function App() {
   const previewRole = roleWithProgress(roles[previewLevel], progress);
 
   const sortedBenefits = useMemo(() => {
-    return [...benefitData].sort((a, b) => a.levelRequired - b.levelRequired);
-  }, []);
+    return [...benefits].sort((a, b) => a.levelRequired - b.levelRequired);
+  }, [benefits]);
 
   function addLog(
     log: Omit<EventLog, "id" | "createdAt"> & { createdAt?: string },
@@ -88,9 +243,46 @@ export default function App() {
     ]);
   }
 
+  function addLedger(
+    entry: Omit<WalletLedgerEntry, "id" | "createdAt"> & {
+      id?: string;
+      createdAt?: string;
+    },
+  ) {
+    const createdAt = entry.createdAt ?? new Date().toISOString();
+    setWalletLedger((current) => [
+      {
+        ...entry,
+        id: entry.id ?? ledgerId("ledger"),
+        createdAt,
+      },
+      ...current,
+    ]);
+    addLog({
+      type: "wallet_ledger",
+      title: entry.source,
+      description: entry.note,
+      taskId: entry.taskId,
+      taskTitle: entry.taskTitle,
+      benefitId: entry.benefitId,
+      benefitName: entry.benefitName,
+      amount: entry.amount,
+      unit: entry.unit,
+      createdAt,
+    });
+  }
+
   useEffect(() => {
     setPreviewLevel(progress.level);
   }, [progress.level]);
+
+  useEffect(() => {
+    setTasks((current) => refreshTaskCycles(current));
+    const timer = window.setInterval(() => {
+      setTasks((current) => refreshTaskCycles(current));
+    }, 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -102,6 +294,8 @@ export default function App() {
         setTasks(serverState.tasks);
         setLogs(serverState.logs);
         setPunishment(serverState.punishment);
+        setBenefits(serverState.benefits);
+        setWalletLedger(serverState.walletLedger);
       })
       .catch(() => {
         hasLoadedServerState.current = true;
@@ -113,7 +307,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const state = { progress, punishment, tasks, logs };
+    const state = { progress, punishment, tasks, logs, benefits, walletLedger };
     persistLocalTaskSystem(state);
 
     if (!hasLoadedServerState.current) return;
@@ -122,14 +316,14 @@ export default function App() {
     }, 250);
 
     return () => window.clearTimeout(timeout);
-  }, [logs, progress, punishment, tasks]);
+  }, [benefits, logs, progress, punishment, tasks, walletLedger]);
 
   useEffect(() => {
     const rewardedAt = new Date().toISOString();
     const newlyRewardedTasks = tasks.filter(
       (task) =>
         (task.status === "confirmed" || task.status === "completed") &&
-        !progress.rewardedTaskIds.includes(task.id),
+        !progress.rewardedTaskIds.includes(taskRewardKey(task)),
     );
     if (newlyRewardedTasks.length === 0) return;
 
@@ -144,8 +338,8 @@ export default function App() {
         rewardedTaskIds: [
           ...current.rewardedTaskIds,
           ...newlyRewardedTasks
-            .map((task) => task.id)
-            .filter((taskId) => !current.rewardedTaskIds.includes(taskId)),
+            .map(taskRewardKey)
+            .filter((key) => !current.rewardedTaskIds.includes(key)),
         ],
       }));
       setTasks((current) =>
@@ -168,6 +362,14 @@ export default function App() {
           text: `卖身奴隶状态下，任务奖励转入恢复进度：+${recoveryExp}。`,
           tone: "normal",
         });
+        addLedger({
+          type: "punishment",
+          source: "恢复经验",
+          amount: recoveryExp,
+          unit: "EXP",
+          createdAt: rewardedAt,
+          note: "卖身奴隶状态下任务奖励转入恢复进度",
+        });
       }
       return;
     }
@@ -175,6 +377,39 @@ export default function App() {
     const settled = settleConfirmedTasks(progress, tasks, roles);
     if (settled.stories.length === 0) return;
     setProgress(settled.progress);
+    const entries = newlyRewardedTasks.flatMap((task) =>
+      ledgerEntriesFromTask(task, rewardedAt),
+    );
+    if (entries.length) {
+      setWalletLedger((current) => [...entries, ...current]);
+      entries.forEach((entry) => {
+        addLog({
+          type: "wallet_ledger",
+          title: entry.source,
+          description: entry.note,
+          taskId: entry.taskId,
+          taskTitle: entry.taskTitle,
+          benefitName: entry.benefitName,
+          amount: entry.amount,
+          unit: entry.unit,
+          createdAt: entry.createdAt,
+        });
+      });
+    }
+    setBenefits((current) =>
+      current.map((benefit) => {
+        const bonusCount = newlyRewardedTasks
+          .flatMap(taskRewards)
+          .filter((reward) => reward.type === "benefit" && benefitMatchesReward(benefit, reward))
+          .reduce((sum, reward) => sum + Math.max(1, Math.trunc(reward.value ?? 1)), 0);
+        return bonusCount > 0
+          ? {
+              ...benefit,
+              availableBonusCount: (benefit.availableBonusCount ?? 0) + bonusCount,
+            }
+          : benefit;
+      }),
+    );
     if (newlyRewardedTasks.some((task) => !task.rewardedAt)) {
       const rewardedTaskIds = new Set(newlyRewardedTasks.map((task) => task.id));
       setTasks((current) =>
@@ -197,6 +432,34 @@ export default function App() {
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
+
+  useEffect(() => {
+    if (punishment.status === "slave") return;
+    const monthKey = getCurrentMonthKey();
+    if (
+      walletLedger.some(
+        (entry) => entry.type === "salary" && entry.monthKey === monthKey,
+      )
+    ) {
+      return;
+    }
+    const salary = currentRole.salary;
+    const createdAt = new Date().toISOString();
+    setProgress((current) => ({
+      ...current,
+      wallet: current.wallet + salary,
+    }));
+    addLedger({
+      id: `salary-${monthKey}`,
+      type: "salary",
+      source: "月薪发放",
+      amount: salary,
+      unit: "CNY",
+      monthKey,
+      createdAt,
+      note: `${monthKey} 月薪`,
+    });
+  }, [currentRole.salary, punishment.status, walletLedger]);
 
   function handleSelectView(view: ViewKey) {
     const pageMap: Record<ViewKey, number> = {
@@ -236,7 +499,7 @@ export default function App() {
               status: "submitted",
               submitNote,
               submittedAt,
-              deadline: "鍒氬垰鎻愪氦",
+              deadline: "刚刚提交",
             }
           : task,
       ),
@@ -277,21 +540,48 @@ export default function App() {
     });
   }
 
-  function handleApproveTask(id: string) {
+  function handleApproveTask(id: string, decision?: TaskReviewDecision) {
     const confirmedAt = new Date().toISOString();
     const target = tasks.find((task) => task.id === id);
     const isSlave = punishment.status === "slave";
+    const repeatTarget = target
+      ? Math.max(1, target.repeatCount ?? target.timeConfig?.repeatCount ?? 1)
+      : 1;
+    const nextCompleted = target
+      ? Math.min(repeatTarget, (target.completedCount ?? target.timeConfig?.completedCount ?? 0) + 1)
+      : 1;
     setTasks((current) =>
       current.map((task) =>
         task.id === id
-          ? {
-              ...task,
-              status: "confirmed",
-              confirmedAt,
-              resultText: isSlave
-                ? `老婆大人已确认：恢复经验 +${Math.min(30, taskRewardExp(task))}`
-                : `老婆大人已确认：${taskRewardText(task)}`,
-            }
+          ? nextCompleted < repeatTarget
+            ? {
+                ...task,
+                status: "doing",
+                completedCount: nextCompleted,
+                resultText: `老婆大人已确认本次进度：${nextCompleted}/${repeatTarget}。`,
+              }
+            : {
+                ...task,
+                rewards: decision?.rewards?.length ? decision.rewards : task.rewards,
+                rewardExp: decision?.rewards?.length
+                  ? decision.rewards
+                      .filter((reward) => reward.type === "experience")
+                      .reduce((sum, reward) => sum + Math.max(0, Math.trunc(reward.value ?? 0)), 0)
+                  : task.rewardExp,
+                rewardMoney: decision?.rewards?.length
+                  ? decision.rewards
+                      .filter((reward) => reward.type === "allowance")
+                      .reduce((sum, reward) => sum + Math.max(0, Math.trunc(reward.value ?? 0)), 0)
+                  : task.rewardMoney,
+                status: "confirmed",
+                completedCount: nextCompleted,
+                confirmedAt,
+                resultText: isSlave
+                  ? `老婆大人已确认：恢复经验 +${Math.min(30, taskRewardExp({ ...task, rewards: decision?.rewards ?? task.rewards }))}`
+                  : `老婆大人已确认：${taskRewardText({ ...task, rewards: decision?.rewards ?? task.rewards })}${
+                      decision?.extraPunishment ? `；追加惩罚：${decision.extraPunishment}` : ""
+                    }${decision?.extraRewardName ? `；额外赏赐：${decision.extraRewardName}` : ""}`,
+              }
           : task,
       ),
     );
@@ -299,25 +589,35 @@ export default function App() {
       addLog({
         type: "task_approved",
         title: target.title,
-        description: isSlave
-          ? `恢复经验 +${Math.min(30, taskRewardExp(target))}`
-          : `奖励：${taskRewardText(target)}`,
+        description:
+          nextCompleted < repeatTarget
+            ? `本周期进度 ${nextCompleted}/${repeatTarget}`
+            : isSlave
+              ? `恢复经验 +${Math.min(30, taskRewardExp(target))}`
+              : [
+                  `奖励：${taskRewardText({ ...target, rewards: decision?.rewards ?? target.rewards })}`,
+                  decision?.extraPunishment ? `追加惩罚：${decision.extraPunishment}` : "",
+                  decision?.extraRewardName ? `额外赏赐：${decision.extraRewardName}` : "",
+                ]
+                  .filter(Boolean)
+                  .join("；"),
         taskId: target.id,
         taskTitle: target.title,
         createdAt: confirmedAt,
       });
     }
   }
-  function handleRejectTask(id: string) {
+  function handleRejectTask(id: string, reason?: string) {
     const rejectedAt = new Date().toISOString();
     const target = tasks.find((task) => task.id === id);
+    const rejectReason = reason?.trim() || "老婆大人裁定未通过，需要重新表现。";
     setTasks((current) =>
       current.map((task) =>
         task.id === id
           ? {
               ...task,
               status: "failed",
-              resultText: "老婆大人裁定未通过，需要重新表现。",
+              resultText: rejectReason,
             }
           : task,
       ),
@@ -326,7 +626,7 @@ export default function App() {
       addLog({
         type: "task_rejected",
         title: target.title,
-        description: "老婆大人裁定未通过，需要重新表现。",
+        description: rejectReason,
         taskId: target.id,
         taskTitle: target.title,
         createdAt: rejectedAt,
@@ -340,28 +640,126 @@ export default function App() {
   }
 
   function handleUseBenefit(benefit: Benefit) {
+    if (punishment.status === "slave") return;
+    const currentBenefit = benefits.find((item) => item.id === benefit.id) ?? benefit;
+    if ((currentBenefit.availableBonusCount ?? 0) > 0) {
+      const usedAt = new Date().toISOString();
+      setBenefits((current) =>
+        current.map((item) =>
+          item.id === currentBenefit.id
+            ? {
+                ...item,
+                availableBonusCount: Math.max(0, (item.availableBonusCount ?? 0) - 1),
+              }
+            : item,
+        ),
+      );
+      addLog({
+        type: "benefit_approved",
+        title: currentBenefit.name,
+        description: "已消耗 1 次权益奖励库存。",
+        benefitId: currentBenefit.id,
+        benefitName: currentBenefit.name,
+        createdAt: usedAt,
+      });
+      addLedger({
+        type: "benefit",
+        source: "权益奖励消耗",
+        amount: -1,
+        unit: "BENEFIT",
+        benefitId: currentBenefit.id,
+        benefitName: currentBenefit.name,
+        createdAt: usedAt,
+        note: "优先消耗任务奖励权益次数",
+      });
+      setSelectedBenefit(null);
+      setStory({
+        title: `使用：${currentBenefit.name}`,
+        text: `已消耗 1 次「${currentBenefit.name}」奖励库存，不进入冷却申请。`,
+        tone: "normal",
+      });
+      return;
+    }
+    if (currentBenefit.pendingRequest) {
+      setSelectedBenefit(null);
+      setStory({
+        title: "权益待审批",
+        text: `「${currentBenefit.name}」已提交申请，等待老婆大人裁定。`,
+        tone: "normal",
+      });
+      return;
+    }
+    if (
+      currentBenefit.cooldownUntil &&
+      Date.parse(currentBenefit.cooldownUntil) > Date.now()
+    ) {
+      setSelectedBenefit(null);
+      setStory({
+        title: "权益冷却中",
+        text: `「${currentBenefit.name}」冷却至 ${formatDateTime(currentBenefit.cooldownUntil)}。`,
+        tone: "normal",
+      });
+      return;
+    }
+    const requestedAt = new Date().toISOString();
+    const pendingRequest = {
+      id: `benefit-request-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+      requestedAt,
+    };
+    setBenefits((current) =>
+      current.map((item) =>
+        item.id === currentBenefit.id
+          ? {
+              ...item,
+              lastRequestedAt: requestedAt,
+              pendingRequest,
+              status: "pending",
+            }
+          : item,
+      ),
+    );
     addLog({
       type: "benefit_requested",
-      title: benefit.name,
-      description: benefit.description,
-      benefitId: benefit.id,
-      benefitName: benefit.name,
+      title: currentBenefit.name,
+      description: currentBenefit.description,
+      benefitId: currentBenefit.id,
+      benefitName: currentBenefit.name,
+      createdAt: requestedAt,
     });
     setSelectedBenefit(null);
     setStory({
-      title: `申请：${benefit.name}`,
+      title: `申请：${currentBenefit.name}`,
       text: "申请已经递交。老婆大人会根据表现决定是否恩准这次权益。",
-      tone: benefit.levelRequired >= 9 ? "upgrade" : "normal",
+      tone: currentBenefit.levelRequired >= 9 ? "upgrade" : "normal",
     });
   }
 
   function handleApproveBenefit(benefit: Benefit) {
+    const approvedAt = new Date().toISOString();
+    const cooldownUntil = new Date(
+      Date.now() + benefitCooldownMs(benefit),
+    ).toISOString();
+    setBenefits((current) =>
+      current.map((item) =>
+        item.id === benefit.id
+          ? {
+              ...item,
+              lastApprovedAt: approvedAt,
+              cooldownUntil,
+              cooldownText: `冷却至 ${formatDateTime(cooldownUntil)}`,
+              pendingRequest: undefined,
+              status: "cooldown",
+            }
+          : item,
+      ),
+    );
     addLog({
       type: "benefit_approved",
       title: benefit.name,
-      description: benefit.description,
+      description: `已批准，冷却至 ${formatDateTime(cooldownUntil)}。`,
       benefitId: benefit.id,
       benefitName: benefit.name,
+      createdAt: approvedAt,
     });
     setStory({
       title: `恩准：${benefit.name}`,
@@ -370,7 +768,37 @@ export default function App() {
     });
   }
 
+  function handleRejectBenefit(benefit: Benefit, reason?: string) {
+    const rejectedAt = new Date().toISOString();
+    const rejectedReason = reason?.trim() || "老婆大人暂不批准本次权益申请。";
+    setBenefits((current) =>
+      current.map((item) =>
+        item.id === benefit.id
+          ? {
+              ...item,
+              pendingRequest: undefined,
+              status: "available",
+            }
+          : item,
+      ),
+    );
+    addLog({
+      type: "benefit_rejected",
+      title: benefit.name,
+      description: rejectedReason,
+      benefitId: benefit.id,
+      benefitName: benefit.name,
+      createdAt: rejectedAt,
+    });
+    setStory({
+      title: `暂缓：${benefit.name}`,
+      text: rejectedReason,
+      tone: "normal",
+    });
+  }
+
   function handleAdjustExperience(amount: number) {
+    const createdAt = new Date().toISOString();
     if (amount > 0) {
       setProgress((current) => {
         const result = grantExperience(
@@ -393,6 +821,14 @@ export default function App() {
         }
         return result.progress;
       });
+      addLedger({
+        type: "experience",
+        source: "老妞赏赐",
+        amount,
+        unit: "EXP",
+        createdAt,
+        note: "老婆端直接调整经验",
+      });
       return;
     }
 
@@ -401,6 +837,14 @@ export default function App() {
       exp: Math.max(0, current.exp + amount),
       totalExp: Math.max(0, current.totalExp + amount),
     }));
+    addLedger({
+      type: "experience",
+      source: "老妞扣罚",
+      amount,
+      unit: "EXP",
+      createdAt,
+      note: "老婆端直接调整经验",
+    });
   }
 
   function handleCustomExperience(amount: number) {
@@ -417,6 +861,15 @@ export default function App() {
       level: safeLevel,
       exp: Math.min(current.exp, expRequiredForLevel(safeLevel)),
     }));
+    if (safeLevel !== previousLevel) {
+      addLedger({
+        type: "level_up",
+        source: "等级裁定",
+        amount: safeLevel - previousLevel,
+        unit: "LEVEL",
+        note: reason,
+      });
+    }
     setPreviewLevel(safeLevel);
     if (safeLevel !== previousLevel) {
       addLog({
@@ -459,6 +912,13 @@ export default function App() {
       exp: 0,
       wallet: 0,
     }));
+    addLedger({
+      type: "punishment",
+      source: "卖身奴隶状态",
+      amount: -progress.wallet,
+      unit: "CNY",
+      note: "冻结并清空零花钱",
+    });
     setPreviewLevel(MIN_LEVEL);
     addLog({
       type: "punishment_status_changed",
@@ -508,6 +968,7 @@ export default function App() {
           progress={progress}
           tasks={tasks}
           logs={logs}
+          walletLedger={walletLedger}
           punishment={punishment}
           benefits={sortedBenefits}
           roles={roles}
@@ -515,6 +976,7 @@ export default function App() {
           onApproveTask={handleApproveTask}
           onRejectTask={handleRejectTask}
           onApproveBenefit={handleApproveBenefit}
+          onRejectBenefit={handleRejectBenefit}
           onAdjustExperience={handleAdjustExperience}
           onCustomExperience={handleCustomExperience}
           onSetLevel={(level) =>

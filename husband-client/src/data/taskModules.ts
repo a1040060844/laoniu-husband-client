@@ -67,7 +67,7 @@ export const taskModules: TaskModuleOption[] = [
     targetPlaceholder:
       "请输入要做什么，例如：煮面、炒菜、做晚饭、准备早餐",
     actionPlaceholder:
-      "请输入老妞要求，例如：做完收拾厨房、不要太油、按老妞口味来",
+      "请输入老妞要求，例如：不要太油、按老妞口味来、摆盘好看一点",
   },
   {
     id: "shopping",

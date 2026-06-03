@@ -33,8 +33,9 @@ body,
 #root {
   width: 100%;
   min-height: 100%;
+  height: 100%;
   margin: 0;
-  background: #050302;
+  background: #030303;
   overflow: hidden;
   overflow-x: hidden;
   -webkit-text-size-adjust: 100%;
@@ -79,10 +80,10 @@ button {
 
 .app {
   width: min(100%, 430px);
-  height: var(--app-height);
-  min-height: var(--app-height);
+  height: var(--app-height, 100dvh);
   min-height: -webkit-fill-available;
   min-height: 100dvh;
+  min-height: var(--app-height, 100dvh);
   margin: 0 auto;
   overflow: hidden;
   background: var(--bg);
@@ -95,10 +96,10 @@ button {
   position: fixed;
   inset: 0;
   width: min(100%, 430px);
-  height: var(--app-height);
-  min-height: var(--app-height);
+  height: var(--app-height, 100dvh);
   min-height: -webkit-fill-available;
   min-height: 100dvh;
+  min-height: var(--app-height, 100dvh);
   margin: 0 auto;
   overflow: hidden;
   background: #050302;
@@ -108,48 +109,48 @@ button {
 .husband-pager__track {
   display: flex;
   flex-direction: column;
-  height: calc(var(--app-height) * var(--pager-page-count, 3));
+  height: calc(var(--app-height, 100dvh) * var(--pager-page-count, 3));
   transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform;
 }
 
 .husband-pager__screen {
   position: relative;
-  flex: 0 0 var(--app-height);
+  flex: 0 0 var(--app-height, 100dvh);
   width: 100%;
-  height: var(--app-height);
-  min-height: var(--app-height);
+  height: var(--app-height, 100dvh);
   min-height: -webkit-fill-available;
   min-height: 100dvh;
+  min-height: var(--app-height, 100dvh);
   overflow: hidden;
 }
 
 .husband-pager__screen > .page-screen,
 .husband-pager__screen > .task-page {
-  height: var(--app-height);
-  min-height: var(--app-height);
+  height: var(--app-height, 100dvh);
   min-height: -webkit-fill-available;
   min-height: 100dvh;
+  min-height: var(--app-height, 100dvh);
 }
 
 .page-screen {
   position: relative;
-  height: var(--app-height);
-  min-height: var(--app-height);
+  height: var(--app-height, 100dvh);
   min-height: -webkit-fill-available;
   min-height: 100dvh;
+  min-height: var(--app-height, 100dvh);
   overflow: hidden;
   isolation: isolate;
 }
 
 .role-page {
-  height: var(--app-height);
-  min-height: var(--app-height);
+  height: var(--app-height, 100dvh);
   min-height: -webkit-fill-available;
   min-height: 100dvh;
+  min-height: var(--app-height, 100dvh);
   overflow: hidden;
-  padding-bottom: calc(24px + env(safe-area-inset-bottom));
-  background: #050302;
+  padding-bottom: calc(28px + env(safe-area-inset-bottom));
+  background: #030303;
 }
 
 .benefit-page::after {
@@ -174,16 +175,16 @@ button {
   position: fixed;
   left: 50%;
   right: auto;
-  bottom: 0;
-  z-index: 0;
+  bottom: calc(-1 * env(safe-area-inset-bottom));
+  z-index: 1;
   width: min(100%, 430px);
-  height: calc(88px + env(safe-area-inset-bottom));
+  height: calc(160px + env(safe-area-inset-bottom));
   pointer-events: none;
   background: linear-gradient(
-    to top,
-    rgba(5, 3, 2, 1),
-    rgba(5, 3, 2, 0.78),
-    rgba(5, 3, 2, 0)
+    180deg,
+    rgba(3, 3, 3, 0) 0%,
+    rgba(3, 3, 3, 0.72) 42%,
+    rgba(3, 3, 3, 0.98) 100%
   );
   transform: translateX(-50%);
 }
@@ -198,6 +199,12 @@ button {
   object-fit: contain;
   object-position: center top;
   background: #050302;
+}
+
+.role-page .cinema-image,
+.role-page .image-scrim {
+  bottom: calc(-1 * env(safe-area-inset-bottom));
+  height: calc(100% + env(safe-area-inset-bottom));
 }
 
 .image-scrim,
@@ -959,7 +966,9 @@ button {
 }
 
 .benefit-bubble--locked,
-.benefit-bubble--cooldown {
+.benefit-bubble--cooldown,
+.benefit-bubble--pending,
+.benefit-bubble--frozen {
   opacity: 0.46;
   filter: grayscale(0.5);
 }
@@ -4629,6 +4638,29 @@ button {
 .wife-review-list {
   display: grid;
   gap: 12px;
+}
+
+.wife-review-editor {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.wife-review-editor input,
+.wife-benefit-reason {
+  min-height: 36px;
+  min-width: 0;
+  border: 1px solid rgba(231, 199, 141, 0.24);
+  border-radius: 8px;
+  color: var(--ink);
+  background: rgba(0, 0, 0, 0.28);
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.wife-review-editor input:last-child {
+  grid-column: 1 / -1;
 }
 
 .wife-review-list article div {

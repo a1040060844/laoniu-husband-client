@@ -1,4 +1,5 @@
 import { initialTasks } from "../data/tasks";
+import { benefits as initialBenefits } from "../data/benefits";
 import {
   hydrateProgress,
   initialProgress,
@@ -7,6 +8,8 @@ import {
 import type {
   EventLog,
   EventLogType,
+  Benefit,
+  BenefitRequest,
   Punishment,
   PunishmentStatus,
   Task,
@@ -18,6 +21,8 @@ import type {
   TaskTimeConfig,
   TaskTimeType,
   TaskType,
+  WalletLedgerEntry,
+  WalletLedgerType,
 } from "../types/domain";
 
 export interface TaskSystemState {
@@ -25,12 +30,16 @@ export interface TaskSystemState {
   tasks: Task[];
   logs: EventLog[];
   punishment: Punishment;
+  benefits: Benefit[];
+  walletLedger: WalletLedgerEntry[];
 }
 
 export const PROGRESS_STORAGE_KEY = "laoniu-husband-progress-v1";
 export const TASKS_STORAGE_KEY = "laoniu-husband-tasks-v1";
 export const LOGS_STORAGE_KEY = "laoniu-husband-logs-v1";
 export const PUNISHMENT_STORAGE_KEY = "laoniu-husband-punishment-v1";
+export const BENEFITS_STORAGE_KEY = "laoniu-husband-benefits-v1";
+export const WALLET_LEDGER_STORAGE_KEY = "laoniu-husband-wallet-ledger-v1";
 export const DEFAULT_PUNISHMENT_DURATION_DAYS = 7;
 export const DEFAULT_REQUIRED_RECOVERY_EXP = 100;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -49,6 +58,7 @@ export const initialPunishment: Punishment = {
 const typeMap: Record<string, TaskType> = {
   custom: "custom",
   daily: "daily",
+  repeat: "repeat",
   urgent: "urgent",
   weekly: "weekly",
   周任务: "weekly",
@@ -63,6 +73,8 @@ const statusMap: Record<string, TaskStatus> = {
   confirmed: "confirmed",
   doing: "doing",
   failed: "failed",
+  expired: "expired",
+  failed_pending: "failed_pending",
   open: "todo",
   submitted: "submitted",
   todo: "todo",
@@ -75,8 +87,21 @@ const eventTypeMap: Record<string, EventLogType> = {
   punishment_status_changed: "punishment_status_changed",
   task_approved: "task_approved",
   task_created: "task_created",
+  task_expired: "task_expired",
   task_rejected: "task_rejected",
   task_submitted: "task_submitted",
+  benefit_rejected: "benefit_rejected",
+  wallet_ledger: "wallet_ledger",
+};
+
+const walletTypeMap: Record<string, WalletLedgerType> = {
+  allowance: "allowance",
+  benefit: "benefit",
+  custom: "custom",
+  experience: "experience",
+  level_up: "level_up",
+  punishment: "punishment",
+  salary: "salary",
 };
 
 const moduleIdMap: Record<string, TaskModuleId> = {
@@ -135,6 +160,76 @@ function readJson<T>(key: string): T | null {
   } catch {
     return null;
   }
+}
+
+const LEGACY_COOKING_CLEANUP = ["做完收拾", "厨房"].join("");
+
+function sanitizeTaskText(value: unknown) {
+  return String(value || "").split(LEGACY_COOKING_CLEANUP).join("按老妞口味来");
+}
+
+function dateKey(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function weekKey(date: Date) {
+  const target = new Date(date);
+  target.setHours(0, 0, 0, 0);
+  const day = target.getDay() || 7;
+  target.setDate(target.getDate() + 4 - day);
+  const yearStart = new Date(target.getFullYear(), 0, 1);
+  const week = Math.ceil(
+    ((target.getTime() - yearStart.getTime()) / DAY_MS + 1) / 7,
+  );
+  return `${target.getFullYear()}-W${String(week).padStart(2, "0")}`;
+}
+
+function endOfDay(date: Date) {
+  const result = new Date(date);
+  result.setHours(23, 59, 59, 999);
+  return result;
+}
+
+function endOfWeek(date: Date) {
+  const result = new Date(date);
+  const day = result.getDay() || 7;
+  result.setDate(result.getDate() + (7 - day));
+  result.setHours(23, 59, 59, 999);
+  return result;
+}
+
+function monthKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function endOfMonth(date: Date) {
+  const result = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+  result.setHours(23, 59, 59, 999);
+  return result;
+}
+
+function cycleForTask(
+  type: TaskType,
+  timeConfig: TaskTimeConfig | undefined,
+  now = new Date(),
+) {
+  const frequency = timeConfig?.repeatFrequency;
+  if (type === "daily" || frequency === "daily") {
+    return { cycleId: dateKey(now), dueAt: endOfDay(now).toISOString() };
+  }
+  if (type === "weekly" || frequency === "weekly") {
+    return { cycleId: weekKey(now), dueAt: endOfWeek(now).toISOString() };
+  }
+  if (frequency === "monthly") {
+    return { cycleId: monthKey(now), dueAt: endOfMonth(now).toISOString() };
+  }
+  if (timeConfig?.deadlineAt) {
+    const due = new Date(timeConfig.deadlineAt);
+    if (!Number.isNaN(due.getTime())) {
+      return { cycleId: dateKey(now), dueAt: due.toISOString() };
+    }
+  }
+  return { cycleId: undefined, dueAt: undefined };
 }
 
 function normalizeTimeConfig(raw: unknown): TaskTimeConfig | undefined {
@@ -215,6 +310,8 @@ function normalizeTask(raw: unknown): Task | null {
     value.source === "daily" ? "daily" : ("wife" satisfies TaskSource);
   const type =
     typeMap[String(value.type || value.urgency || "custom")] ?? "custom";
+  const timeConfig = normalizeTimeConfig(value.timeConfig);
+  const cycle = cycleForTask(type, timeConfig);
   const rewardExp = Number(value.rewardExp ?? value.exp ?? 0);
   const rewardMoney = Number(value.rewardMoney ?? value.money ?? 0);
   const rawModuleId = String(value.moduleId || "");
@@ -227,7 +324,7 @@ function normalizeTask(raw: unknown): Task | null {
         `task-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     ),
     title,
-    description: String(
+    description: sanitizeTaskText(
       value.description || "由老妞大人发布，验收标准以老妞大人裁定为准。",
     ),
     type: value.urgency === "urgent" ? "urgent" : type,
@@ -235,10 +332,28 @@ function normalizeTask(raw: unknown): Task | null {
     moduleId,
     moduleLabel:
       moduleId ? moduleLabelMap[moduleId] : undefined,
-    target: typeof value.target === "string" ? value.target : undefined,
-    action: typeof value.action === "string" ? value.action : undefined,
-    standard: typeof value.standard === "string" ? value.standard : undefined,
-    timeConfig: normalizeTimeConfig(value.timeConfig),
+    target:
+      typeof value.target === "string" ? sanitizeTaskText(value.target) : undefined,
+    action:
+      typeof value.action === "string" ? sanitizeTaskText(value.action) : undefined,
+    standard:
+      typeof value.standard === "string"
+        ? sanitizeTaskText(value.standard)
+        : undefined,
+    timeConfig,
+    cycleId:
+      typeof value.cycleId === "string" ? value.cycleId : cycle.cycleId,
+    dueAt: typeof value.dueAt === "string" ? value.dueAt : cycle.dueAt,
+    expiredAt:
+      typeof value.expiredAt === "string" ? value.expiredAt : undefined,
+    completedCount:
+      typeof value.completedCount === "number"
+        ? Math.max(0, Math.trunc(value.completedCount))
+        : timeConfig?.completedCount,
+    repeatCount:
+      typeof value.repeatCount === "number"
+        ? Math.max(1, Math.trunc(value.repeatCount))
+        : timeConfig?.repeatCount,
     rewards: normalizeRewards(value.rewards),
     rewardExp: Number.isFinite(rewardExp)
       ? Math.max(0, Math.trunc(rewardExp))
@@ -248,7 +363,7 @@ function normalizeTask(raw: unknown): Task | null {
       : 0,
     rewardBenefit:
       typeof value.rewardBenefit === "string" ? value.rewardBenefit : undefined,
-    deadline: String(value.deadline || "今日完成"),
+    deadline: sanitizeTaskText(value.deadline || "今日完成"),
     status: statusMap[String(value.status || "todo")] ?? "todo",
     createdAt:
       typeof value.createdAt === "string" ? value.createdAt : undefined,
@@ -259,9 +374,13 @@ function normalizeTask(raw: unknown): Task | null {
     rewardedAt:
       typeof value.rewardedAt === "string" ? value.rewardedAt : undefined,
     submitNote:
-      typeof value.submitNote === "string" ? value.submitNote : undefined,
+      typeof value.submitNote === "string"
+        ? sanitizeTaskText(value.submitNote)
+        : undefined,
     resultText:
-      typeof value.resultText === "string" ? value.resultText : undefined,
+      typeof value.resultText === "string"
+        ? sanitizeTaskText(value.resultText)
+        : undefined,
   };
 }
 
@@ -271,6 +390,57 @@ function hydrateTasks(raw: unknown): Task[] {
     .map(normalizeTask)
     .filter((task): task is Task => Boolean(task));
   return tasks.length ? tasks : initialTasks;
+}
+
+export function refreshTaskCycles(tasks: Task[], now = new Date()): Task[] {
+  return tasks.map((task) => {
+    const cycle = cycleForTask(task.type, task.timeConfig, now);
+    const dueAt = task.dueAt ?? cycle.dueAt;
+    const dueTime = dueAt ? Date.parse(dueAt) : Number.NaN;
+    const isOpen = task.status === "todo" || task.status === "doing";
+
+    if (isOpen && !Number.isNaN(dueTime) && dueTime < now.getTime()) {
+      return {
+        ...task,
+        status: "failed_pending",
+        expiredAt: task.expiredAt ?? now.toISOString(),
+        resultText: task.resultText ?? "任务已过期，待老妞大人裁定。",
+      };
+    }
+
+    if (
+      cycle.cycleId &&
+      task.cycleId &&
+      cycle.cycleId !== task.cycleId &&
+      (task.status === "confirmed" ||
+        task.status === "completed" ||
+        task.status === "failed" ||
+        task.status === "expired" ||
+        task.status === "failed_pending")
+    ) {
+      return {
+        ...task,
+        status: "todo",
+        cycleId: cycle.cycleId,
+        dueAt: cycle.dueAt,
+        expiredAt: undefined,
+        submittedAt: undefined,
+        confirmedAt: undefined,
+        rewardedAt: undefined,
+        submitNote: undefined,
+        resultText: undefined,
+        completedCount: 0,
+      };
+    }
+
+    return {
+      ...task,
+      cycleId: task.cycleId ?? cycle.cycleId,
+      dueAt,
+      repeatCount: task.repeatCount ?? task.timeConfig?.repeatCount,
+      completedCount: task.completedCount ?? task.timeConfig?.completedCount,
+    };
+  });
 }
 
 function normalizeEventLog(raw: unknown): EventLog | null {
@@ -301,6 +471,8 @@ function normalizeEventLog(raw: unknown): EventLog | null {
       typeof value.benefitId === "string" ? value.benefitId : undefined,
     benefitName:
       typeof value.benefitName === "string" ? value.benefitName : undefined,
+    amount: typeof value.amount === "number" ? value.amount : undefined,
+    unit: typeof value.unit === "string" ? value.unit : undefined,
     fromLevel:
       typeof value.fromLevel === "number" ? value.fromLevel : undefined,
     toLevel: typeof value.toLevel === "number" ? value.toLevel : undefined,
@@ -315,6 +487,116 @@ function hydrateEventLogs(raw: unknown): EventLog[] {
   return raw
     .map(normalizeEventLog)
     .filter((log): log is EventLog => Boolean(log));
+}
+
+function normalizeBenefitRequest(raw: unknown): BenefitRequest | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const value = raw as Record<string, unknown>;
+  const requestedAt =
+    typeof value.requestedAt === "string"
+      ? value.requestedAt
+      : new Date().toISOString();
+  return {
+    id: String(value.id || `benefit-request-${Date.now()}`),
+    requestedAt,
+    reason: typeof value.reason === "string" ? value.reason : undefined,
+    rejectedAt:
+      typeof value.rejectedAt === "string" ? value.rejectedAt : undefined,
+    rejectedReason:
+      typeof value.rejectedReason === "string"
+        ? value.rejectedReason
+        : undefined,
+  };
+}
+
+function normalizeBenefit(raw: unknown, fallback: Benefit): Benefit {
+  if (!raw || typeof raw !== "object") return { ...fallback };
+  const value = raw as Record<string, unknown>;
+  const status =
+    value.status === "cooldown" ||
+    value.status === "pending" ||
+    value.status === "frozen" ||
+    value.status === "locked"
+      ? value.status
+      : "available";
+
+  return {
+    ...fallback,
+    status,
+    cooldownText:
+      typeof value.cooldownText === "string"
+        ? value.cooldownText
+        : fallback.cooldownText,
+    lastRequestedAt:
+      typeof value.lastRequestedAt === "string"
+        ? value.lastRequestedAt
+        : undefined,
+    lastApprovedAt:
+      typeof value.lastApprovedAt === "string"
+        ? value.lastApprovedAt
+        : undefined,
+    cooldownUntil:
+      typeof value.cooldownUntil === "string" ? value.cooldownUntil : undefined,
+    availableBonusCount: safeNonNegativeInt(value.availableBonusCount, 0),
+    pendingRequest: normalizeBenefitRequest(value.pendingRequest),
+  };
+}
+
+function hydrateBenefits(raw: unknown): Benefit[] {
+  if (!Array.isArray(raw)) return initialBenefits;
+  return initialBenefits.map((benefit) => {
+    const saved = raw.find(
+      (item) =>
+        item &&
+        typeof item === "object" &&
+        (item as Record<string, unknown>).id === benefit.id,
+    );
+    return normalizeBenefit(saved, benefit);
+  });
+}
+
+function normalizeWalletLedgerEntry(raw: unknown): WalletLedgerEntry | null {
+  if (!raw || typeof raw !== "object") return null;
+  const value = raw as Record<string, unknown>;
+  const type = walletTypeMap[String(value.type || "")];
+  const amount = Number(value.amount);
+  if (!type || !Number.isFinite(amount)) return null;
+  const unit =
+    value.unit === "EXP" ||
+    value.unit === "CNY" ||
+    value.unit === "LEVEL" ||
+    value.unit === "BENEFIT" ||
+    value.unit === "COUNT"
+      ? value.unit
+      : "COUNT";
+
+  return {
+    id: String(value.id || `ledger-${Date.now()}`),
+    type,
+    source: String(value.source || type),
+    amount,
+    unit,
+    createdAt:
+      typeof value.createdAt === "string"
+        ? value.createdAt
+        : new Date().toISOString(),
+    taskId: typeof value.taskId === "string" ? value.taskId : undefined,
+    taskTitle:
+      typeof value.taskTitle === "string" ? value.taskTitle : undefined,
+    benefitId:
+      typeof value.benefitId === "string" ? value.benefitId : undefined,
+    benefitName:
+      typeof value.benefitName === "string" ? value.benefitName : undefined,
+    note: typeof value.note === "string" ? value.note : undefined,
+    monthKey: typeof value.monthKey === "string" ? value.monthKey : undefined,
+  };
+}
+
+function hydrateWalletLedger(raw: unknown): WalletLedgerEntry[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map(normalizeWalletLedgerEntry)
+    .filter((entry): entry is WalletLedgerEntry => Boolean(entry));
 }
 
 function safePositiveInt(value: unknown, fallback: number) {
@@ -411,9 +693,11 @@ function stateFromUnknown(raw: unknown): TaskSystemState {
       progress: hydrateProgress(
         readJson(PROGRESS_STORAGE_KEY) ?? initialProgress,
       ),
-      tasks: hydrateTasks(readJson(TASKS_STORAGE_KEY)),
+      tasks: refreshTaskCycles(hydrateTasks(readJson(TASKS_STORAGE_KEY))),
       logs: hydrateEventLogs(readJson(LOGS_STORAGE_KEY)),
       punishment: hydratePunishment(readJson(PUNISHMENT_STORAGE_KEY)),
+      benefits: hydrateBenefits(readJson(BENEFITS_STORAGE_KEY)),
+      walletLedger: hydrateWalletLedger(readJson(WALLET_LEDGER_STORAGE_KEY)),
     };
   }
 
@@ -428,6 +712,8 @@ function stateFromUnknown(raw: unknown): TaskSystemState {
     slaveStatus,
     tasks,
     logs,
+    benefits,
+    walletLedger,
     totalExp,
     wallet,
     ...extras
@@ -446,9 +732,11 @@ function stateFromUnknown(raw: unknown): TaskSystemState {
 
   return {
     progress: hydrateProgress(progressSource),
-    tasks: hydrateTasks(tasks),
+    tasks: refreshTaskCycles(hydrateTasks(tasks)),
     logs: hydrateEventLogs(logs),
     punishment: hydratePunishment(punishment ?? punishmentStatus ?? slaveStatus),
+    benefits: hydrateBenefits(benefits),
+    walletLedger: hydrateWalletLedger(walletLedger),
   };
 }
 
@@ -464,6 +752,11 @@ export function persistLocalTaskSystem(state: TaskSystemState) {
     PUNISHMENT_STORAGE_KEY,
     JSON.stringify(state.punishment),
   );
+  localStorage.setItem(BENEFITS_STORAGE_KEY, JSON.stringify(state.benefits));
+  localStorage.setItem(
+    WALLET_LEDGER_STORAGE_KEY,
+    JSON.stringify(state.walletLedger),
+  );
 }
 
 function serializeTaskSystem(state: TaskSystemState) {
@@ -475,6 +768,8 @@ function serializeTaskSystem(state: TaskSystemState) {
     punishmentStatus: state.punishment.status,
     tasks: state.tasks,
     logs: state.logs,
+    benefits: state.benefits,
+    walletLedger: state.walletLedger,
   };
 }
 

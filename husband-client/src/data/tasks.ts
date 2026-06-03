@@ -57,13 +57,13 @@ export const initialTasks: Task[] = [
     id: "wife-cooking-dinner",
     title: "做晚饭",
     description:
-      "请按老妞大人的要求完成做饭任务，具体内容为「晚饭」。具体要求：「做完收拾厨房」。完成后提交给老妞大人确认。",
+      "请按老妞大人的要求完成做饭任务，具体内容为「晚饭」。具体要求：「按老妞口味来」。完成后提交给老妞大人确认。",
     type: "daily",
     source: "wife",
     moduleId: "cooking",
     moduleLabel: "做饭",
     target: "晚饭",
-    action: "做完收拾厨房",
+    action: "按老妞口味来",
     timeConfig: { type: "today", label: "今日 23:59 前" },
     rewards: [
       {

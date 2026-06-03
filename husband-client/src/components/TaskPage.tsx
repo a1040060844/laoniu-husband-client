@@ -34,7 +34,16 @@ interface TaskPageProps {
 }
 
 const statusForFilter: Record<FilterKey, TaskStatus[]> = {
-  all: ["todo", "doing", "submitted", "confirmed", "failed", "completed"],
+  all: [
+    "todo",
+    "doing",
+    "submitted",
+    "confirmed",
+    "failed",
+    "expired",
+    "failed_pending",
+    "completed",
+  ],
   todo: ["todo"],
   doing: ["doing"],
   submitted: ["submitted"],

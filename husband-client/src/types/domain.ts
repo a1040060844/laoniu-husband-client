@@ -1,6 +1,11 @@
 export type ViewKey = "role" | "benefits" | "tasks";
 
-export type BenefitStatus = "available" | "cooldown" | "locked";
+export type BenefitStatus =
+  | "available"
+  | "cooldown"
+  | "pending"
+  | "frozen"
+  | "locked";
 
 export type TaskStatus =
   | "todo"
@@ -8,9 +13,11 @@ export type TaskStatus =
   | "submitted"
   | "confirmed"
   | "failed"
+  | "expired"
+  | "failed_pending"
   | "completed";
 
-export type TaskType = "daily" | "weekly" | "custom" | "urgent";
+export type TaskType = "daily" | "weekly" | "repeat" | "custom" | "urgent";
 
 export type TaskSource = "wife" | "daily";
 
@@ -75,6 +82,14 @@ export interface Role {
   benefitImage: string;
 }
 
+export interface BenefitRequest {
+  id: string;
+  requestedAt: string;
+  reason?: string;
+  rejectedAt?: string;
+  rejectedReason?: string;
+}
+
 export interface Benefit {
   id: string;
   levelRequired: number;
@@ -83,6 +98,11 @@ export interface Benefit {
   description: string;
   status: BenefitStatus;
   cooldownText?: string;
+  lastRequestedAt?: string;
+  lastApprovedAt?: string;
+  cooldownUntil?: string;
+  availableBonusCount?: number;
+  pendingRequest?: BenefitRequest;
   icon: string;
 }
 
@@ -108,6 +128,11 @@ export interface Task {
   action?: string;
   standard?: string;
   timeConfig?: TaskTimeConfig;
+  cycleId?: string;
+  dueAt?: string;
+  expiredAt?: string;
+  completedCount?: number;
+  repeatCount?: number;
   rewards?: TaskReward[];
   rewardExp: number;
   rewardMoney: number;
@@ -127,10 +152,44 @@ export type EventLogType =
   | "task_submitted"
   | "task_approved"
   | "task_rejected"
+  | "task_expired"
   | "level_changed"
   | "benefit_requested"
   | "benefit_approved"
+  | "benefit_rejected"
+  | "wallet_ledger"
   | "punishment_status_changed";
+
+export type WalletLedgerType =
+  | "experience"
+  | "allowance"
+  | "salary"
+  | "level_up"
+  | "benefit"
+  | "custom"
+  | "punishment";
+
+export interface WalletLedgerEntry {
+  id: string;
+  type: WalletLedgerType;
+  source: string;
+  amount: number;
+  unit: "EXP" | "CNY" | "LEVEL" | "BENEFIT" | "COUNT";
+  createdAt: string;
+  taskId?: string;
+  taskTitle?: string;
+  benefitId?: string;
+  benefitName?: string;
+  note?: string;
+  monthKey?: string;
+}
+
+export interface TaskReviewDecision {
+  rewards?: TaskReward[];
+  rejectReason?: string;
+  extraRewardName?: string;
+  extraPunishment?: string;
+}
 
 export interface EventLog {
   id: string;
@@ -142,6 +201,8 @@ export interface EventLog {
   taskTitle?: string;
   benefitId?: string;
   benefitName?: string;
+  amount?: number;
+  unit?: string;
   fromLevel?: number;
   toLevel?: number;
   fromStatus?: string;

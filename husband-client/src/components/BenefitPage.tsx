@@ -28,17 +28,36 @@ interface BenefitPageProps {
 function getStatus(
   currentLevel: number,
   benefit: Benefit,
+  forceFrozen = false,
 ): { status: BenefitStatus; text: string } {
+  if (forceFrozen) {
+    return { status: "frozen", text: "已冻结" };
+  }
   if (currentLevel < benefit.levelRequired) {
     return {
       status: "locked",
       text: "未解锁",
     };
   }
-  if (benefit.status === "cooldown") {
+  if (benefit.pendingRequest) {
+    return { status: "pending", text: "待审批" };
+  }
+  if (
+    benefit.cooldownUntil &&
+    Date.parse(benefit.cooldownUntil) > Date.now()
+  ) {
     return { status: "cooldown", text: benefit.cooldownText ?? "冷却中" };
   }
-  return { status: "available", text: "可使用" };
+  if (benefit.status === "cooldown" && !benefit.cooldownUntil) {
+    return { status: "cooldown", text: benefit.cooldownText ?? "冷却中" };
+  }
+  return {
+    status: "available",
+    text:
+      (benefit.availableBonusCount ?? 0) > 0
+        ? `奖励 ${benefit.availableBonusCount} 次`
+        : "可申请",
+  };
 }
 
 function isVisibleForRole(role: Role, benefit: Benefit): boolean {
@@ -132,7 +151,7 @@ export function BenefitPage({
       ? selectedBenefit
       : null;
   const selectedStatus = visibleSelectedBenefit
-    ? getStatus(currentLevel, visibleSelectedBenefit)
+    ? getStatus(currentLevel, visibleSelectedBenefit, forceFrozen)
     : { status: "locked" as BenefitStatus, text: "" };
   const isLightCurtainActive = Boolean(visibleSelectedBenefit);
 
@@ -193,7 +212,7 @@ export function BenefitPage({
         >
           {visibleBenefits.map((benefit, index) => {
             const computed = forceFrozen
-              ? { status: "locked" as BenefitStatus, text: "已冻结" }
+              ? { status: "frozen" as BenefitStatus, text: "已冻结" }
               : getStatus(currentLevel, benefit);
             const { x, y } = getBubblePosition(index, visibleBenefits.length);
             return (
@@ -248,6 +267,36 @@ export function BenefitPage({
         benefit={visibleSelectedBenefit}
         computedStatus={selectedStatus.status}
         statusText={selectedStatus.text}
+        usage={
+          visibleSelectedBenefit
+            ? {
+                currentStatus: selectedStatus.text,
+                remainingThisRound: `${visibleSelectedBenefit.availableBonusCount ?? 0} 次奖励库存`,
+                lastUsedAt: visibleSelectedBenefit.lastApprovedAt
+                  ? new Date(
+                      visibleSelectedBenefit.lastApprovedAt,
+                    ).toLocaleString("zh-CN", {
+                      day: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      month: "2-digit",
+                    })
+                  : "暂无记录",
+                nextAvailableAt: visibleSelectedBenefit.cooldownUntil
+                  ? new Date(
+                      visibleSelectedBenefit.cooldownUntil,
+                    ).toLocaleString("zh-CN", {
+                      day: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      month: "2-digit",
+                    })
+                  : visibleSelectedBenefit.pendingRequest
+                    ? "等待老婆审批"
+                    : "现在可申请",
+              }
+            : undefined
+        }
         onClose={onCloseBenefit}
         onUse={onUseBenefit}
       />

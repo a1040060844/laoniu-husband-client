@@ -116,12 +116,17 @@ export function grantExperience(
   };
 }
 
+export function taskRewardKey(task: Task) {
+  return task.cycleId ? `${task.id}:${task.cycleId}` : task.id;
+}
+
 export function settleTaskReward(
   current: GameProgress,
   task: Task,
   roles: Role[],
 ): ProgressResult {
-  if (current.rewardedTaskIds.includes(task.id)) {
+  const rewardKey = taskRewardKey(task);
+  if (current.rewardedTaskIds.includes(rewardKey)) {
     return { progress: current, stories: [] };
   }
 
@@ -226,7 +231,7 @@ export function settleTaskReward(
 
   progress = {
     ...progress,
-    rewardedTaskIds: [...progress.rewardedTaskIds, task.id],
+    rewardedTaskIds: [...progress.rewardedTaskIds, rewardKey],
   };
 
   const rewardStory: StoryEvent = {
