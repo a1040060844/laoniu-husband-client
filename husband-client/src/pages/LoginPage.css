@@ -1,0 +1,284 @@
+.login-page {
+  position: relative;
+  width: 100%;
+  height: var(--app-height, 100dvh);
+  min-height: -webkit-fill-available;
+  min-height: 100dvh;
+  min-height: var(--app-height, 100dvh);
+  overflow: hidden;
+  background: #000;
+  isolation: isolate;
+}
+
+.login-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+}
+
+.login-stage img,
+.sprite-sheet {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.login-layer {
+  position: absolute;
+  display: block;
+  max-width: none;
+  user-select: none;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+.login-bg {
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.login-stage__top-mask,
+.login-stage__bottom-mask {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.login-stage__top-mask {
+  top: 0;
+  height: 30%;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.96) 0%,
+    rgba(0, 0, 0, 0.82) 38%,
+    rgba(0, 0, 0, 0.34) 76%,
+    rgba(0, 0, 0, 0) 100%
+  );
+}
+
+.login-stage__bottom-mask {
+  bottom: 0;
+  height: calc(28% + env(safe-area-inset-bottom));
+  background: linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.96) 0%,
+    rgba(0, 0, 0, 0.82) 36%,
+    rgba(0, 0, 0, 0.4) 74%,
+    rgba(0, 0, 0, 0) 100%
+  );
+}
+
+.login-title {
+  top: max(36px, calc(env(safe-area-inset-top) + 24px));
+  left: 50%;
+  z-index: 2;
+  width: min(86%, 370px);
+  transform: translateX(-50%);
+  animation: loginTextFloat 3.8s ease-in-out infinite;
+  filter:
+    drop-shadow(0 7px 0 rgba(0, 0, 0, 0.78))
+    drop-shadow(0 0 14px rgba(226, 143, 32, 0.28));
+}
+
+.login-subtitle {
+  top: max(134px, calc(env(safe-area-inset-top) + 116px));
+  left: 50%;
+  z-index: 2;
+  width: min(57%, 245px);
+  transform: translateX(-50%);
+  animation: loginTextFloat 3.8s ease-in-out infinite;
+  animation-delay: -1.1s;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.66));
+}
+
+.sprite-sheet {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-repeat: no-repeat;
+  background-position-y: 0;
+}
+
+.draggable-sprite {
+  position: absolute;
+  z-index: 4;
+  display: block;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  transform: translate(-50%, -50%);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.draggable-sprite:active {
+  cursor: grabbing;
+  z-index: 9;
+}
+
+.draggable-sprite--husband,
+.draggable-sprite--wife {
+  width: min(18%, 78px);
+  aspect-ratio: 271.5 / 724;
+}
+
+.draggable-sprite--catBlue {
+  width: min(23%, 98px);
+  aspect-ratio: 271.5 / 724;
+}
+
+.draggable-sprite--catWhite {
+  width: min(18%, 78px);
+  aspect-ratio: 271.5 / 724;
+}
+
+.draggable-sprite__sheet {
+  filter: drop-shadow(0 9px 9px rgba(0, 0, 0, 0.42));
+}
+
+.login-bubble {
+  position: absolute;
+  z-index: 6;
+  display: block;
+  width: min(38%, 164px);
+  opacity: 0;
+  pointer-events: none;
+  user-select: none;
+  transform: translate(-50%, -118%);
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
+  -webkit-user-drag: none;
+  filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.58));
+}
+
+.login-bubble--wife {
+  width: min(40%, 172px);
+  transform: translate(-47%, -118%);
+}
+
+.login-bubble--visible {
+  opacity: 1;
+  transform: translate(-50%, -124%);
+}
+
+.login-bubble--wife.login-bubble--visible {
+  transform: translate(-47%, -124%);
+}
+
+.login-card-button {
+  position: absolute;
+  z-index: 7;
+  bottom: calc(7.3% + env(safe-area-inset-bottom));
+  width: 45%;
+  aspect-ratio: 1448 / 1086;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  animation: loginButtonFloat 3.4s ease-in-out infinite;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.login-card-button:active {
+  transform: scale(0.97);
+}
+
+.login-card-button:disabled {
+  cursor: default;
+}
+
+.login-card-button--husband {
+  left: 3.3%;
+}
+
+.login-card-button--wife {
+  right: 3.3%;
+  animation-delay: -1.2s;
+}
+
+.login-card-button img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+  -webkit-user-drag: none;
+  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.46));
+}
+
+.login-page__fade {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 50% 56%, rgba(206, 142, 58, 0.16), transparent 38%),
+    rgba(0, 0, 0, 0.84);
+  transition: opacity 420ms ease;
+}
+
+.login-page--exiting .login-page__fade {
+  opacity: 1;
+}
+
+@keyframes loginTextFloat {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+
+  50% {
+    translate: 0 -4px;
+  }
+}
+
+@keyframes loginButtonFloat {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+
+  50% {
+    translate: 0 -6px;
+  }
+}
+
+@media (max-height: 820px) {
+  .login-title {
+    top: max(28px, calc(env(safe-area-inset-top) + 16px));
+    width: min(82%, 352px);
+  }
+
+  .login-subtitle {
+    top: max(116px, calc(env(safe-area-inset-top) + 98px));
+  }
+
+  .login-card-button {
+    bottom: calc(6.6% + env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-title,
+  .login-subtitle,
+  .login-card-button {
+    animation: none;
+  }
+
+  .login-bubble,
+  .login-page__fade {
+    transition-duration: 1ms;
+  }
+}

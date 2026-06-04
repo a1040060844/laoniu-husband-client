@@ -92,219 +92,6 @@ button {
     0 0 90px rgba(0, 0, 0, 0.9);
 }
 
-.login-page {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 100%;
-  height: var(--app-height, 100dvh);
-  min-height: -webkit-fill-available;
-  min-height: 100dvh;
-  min-height: var(--app-height, 100dvh);
-  overflow: hidden;
-  background: #050301;
-  isolation: isolate;
-}
-
-.login-stage {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  max-width: 430px;
-  overflow: hidden;
-  background: #050301;
-}
-
-.login-layer {
-  position: absolute;
-  display: block;
-  max-width: none;
-  user-select: none;
-  pointer-events: none;
-  -webkit-user-drag: none;
-}
-
-.login-bg {
-  inset: 0;
-  z-index: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center top;
-}
-
-.login-title {
-  top: max(42px, calc(env(safe-area-inset-top) + 28px));
-  left: 50%;
-  z-index: 2;
-  width: min(80%, 344px);
-  transform: translateX(-50%);
-  filter:
-    drop-shadow(0 7px 0 rgba(0, 0, 0, 0.78))
-    drop-shadow(0 0 14px rgba(226, 143, 32, 0.28));
-}
-
-.login-subtitle {
-  top: max(136px, calc(env(safe-area-inset-top) + 120px));
-  left: 50%;
-  z-index: 2;
-  width: min(52%, 224px);
-  transform: translateX(-50%);
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.65));
-}
-
-.login-speech {
-  z-index: 3;
-  filter: drop-shadow(0 5px 0 rgba(0, 0, 0, 0.72));
-}
-
-.login-speech--husband {
-  top: 44.6%;
-  left: 22%;
-  width: 31%;
-}
-
-.login-speech--wife {
-  top: 45.4%;
-  right: 20%;
-  width: 32%;
-}
-
-.login-click {
-  position: absolute;
-  z-index: 5;
-  display: block;
-  border: 0;
-  border-radius: 0;
-  padding: 0;
-  background: transparent;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
-
-.login-click:active {
-  opacity: 0.92;
-}
-
-.login-click:focus-visible {
-  outline: 1px solid rgba(248, 223, 172, 0.32);
-  outline-offset: -1px;
-}
-
-.login-click--husband-avatar,
-.login-click--wife-avatar {
-  top: 52%;
-  width: 18%;
-  aspect-ratio: 480 / 865;
-  animation: loginAvatarFloat 3.6s ease-in-out infinite;
-}
-
-.login-click--husband-avatar {
-  left: 30%;
-}
-
-.login-click--wife-avatar {
-  right: 30%;
-  animation-delay: -1.3s;
-}
-
-.login-click--husband-avatar:active,
-.login-click--wife-avatar:active {
-  transform: scale(0.97);
-}
-
-.login-avatar {
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.login-cat {
-  z-index: 4;
-}
-
-.login-cat--blue {
-  top: 65.2%;
-  left: 43.5%;
-  width: 20%;
-}
-
-.login-cat--white {
-  top: 67%;
-  right: 27.2%;
-  width: 13.2%;
-}
-
-.login-click--husband-card,
-.login-click--wife-card {
-  bottom: calc(7.3% + env(safe-area-inset-bottom));
-  width: 45%;
-  aspect-ratio: 1005 / 512;
-  animation: loginCardPulse 4s ease-in-out infinite;
-}
-
-.login-click--husband-card {
-  left: 3.3%;
-}
-
-.login-click--wife-card {
-  right: 3.3%;
-  animation-delay: -1.2s;
-}
-
-.login-click--husband-card:active,
-.login-click--wife-card:active {
-  transform: scale(0.97);
-}
-
-.login-card {
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.46));
-}
-
-@keyframes loginAvatarFloat {
-  0%,
-  100% {
-    translate: 0 0;
-  }
-
-  50% {
-    translate: 0 -5px;
-  }
-}
-
-@keyframes loginCardPulse {
-  0%,
-  100% {
-    scale: 1;
-  }
-
-  50% {
-    scale: 1.012;
-  }
-}
-
-@media (max-height: 820px) {
-  .login-title {
-    top: max(32px, calc(env(safe-area-inset-top) + 18px));
-    width: min(76%, 326px);
-  }
-
-  .login-subtitle {
-    top: max(120px, calc(env(safe-area-inset-top) + 104px));
-  }
-
-  .login-click--husband-card,
-  .login-click--wife-card {
-    bottom: calc(6.6% + env(safe-area-inset-bottom));
-  }
-}
-
 .husband-pager {
   position: fixed;
   inset: 0;
@@ -5340,10 +5127,13 @@ button {
 
 .bio-panel--role.bio-panel--slave .slave-bio-copy {
   display: grid;
-  gap: 6px;
+  gap: 7px;
+  justify-items: center;
   overflow: visible;
+  margin-top: -3px;
   color: rgba(243, 234, 219, 0.74);
   line-height: 1.35;
+  text-align: center;
   -webkit-line-clamp: unset;
 }
 
@@ -5351,7 +5141,7 @@ button {
   display: block;
   color: #fff0d4;
   font-family: var(--serif);
-  font-size: 22px;
+  font-size: 28px;
   font-weight: 500;
   letter-spacing: 2px;
   line-height: 1.1;

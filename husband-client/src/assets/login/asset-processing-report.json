@@ -1,0 +1,514 @@
+{
+  "srcAssets": [
+    {
+      "file": "bg-room.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\bg-room.png",
+      "width": 941,
+      "height": 1672,
+      "removedPixels": 0,
+      "alpha": [
+        255,
+        255
+      ],
+      "copied": true
+    },
+    {
+      "file": "card-husband.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\card-husband.png",
+      "width": 1448,
+      "height": 1086,
+      "removedPixels": 0,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "card-wife.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\card-wife.png",
+      "width": 1448,
+      "height": 1086,
+      "removedPixels": 0,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "subtitle.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\subtitle.png",
+      "width": 2172,
+      "height": 724,
+      "removedPixels": 0,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "title.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\title.png",
+      "width": 2172,
+      "height": 724,
+      "removedPixels": 0,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "husband\\husband_drag_sheet.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\husband_drag_sheet.png",
+      "width": 2172,
+      "height": 724,
+      "removedPixels": 0,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "husband\\husband_idle_adjust_glasses_sheet.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\husband_idle_adjust_glasses_sheet.png",
+      "width": 2172,
+      "height": 724,
+      "removedPixels": 0,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "husband\\husband_nervous_sheet.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\husband_nervous_sheet.png",
+      "width": 2508,
+      "height": 627,
+      "removedPixels": 0,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "husband\\husband_select_sheet.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\husband_select_sheet.png",
+      "width": 2172,
+      "height": 724,
+      "removedPixels": 0,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "wife\\wife_drag_sheet.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\wife_drag_sheet.png",
+      "width": 2172,
+      "height": 724,
+      "removedPixels": 0,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "wife\\wife_idle_thinking_food_sheet.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\wife_idle_thinking_food_sheet.png",
+      "width": 2172,
+      "height": 724,
+      "removedPixels": 0,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "wife\\wife_response_sheet.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\wife_response_sheet.png",
+      "width": 2172,
+      "height": 724,
+      "removedPixels": 0,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "wife\\wife_select_sheet.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\wife_select_sheet.png",
+      "width": 2172,
+      "height": 724,
+      "removedPixels": 0,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "cat-blue\\cat_blue_annoyed_sheet.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\cat_blue_sprite_sheets\\cat_blue_annoyed_sheet.png",
+      "width": 2172,
+      "height": 724,
+      "removedPixels": 1281966,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "cat-blue\\cat_blue_blink_sheet.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\cat_blue_sprite_sheets\\cat_blue_blink_sheet.png",
+      "width": 2172,
+      "height": 724,
+      "removedPixels": 1256610,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "cat-blue\\cat_blue_drag_sheet.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\cat_blue_sprite_sheets\\cat_blue_drag_sheet.png",
+      "width": 2172,
+      "height": 724,
+      "removedPixels": 1115398,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "cat-blue\\cat_blue_idle_sheet.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\cat_blue_sprite_sheets\\cat_blue_idle_sheet.png",
+      "width": 2172,
+      "height": 724,
+      "removedPixels": 1279663,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "cat-blue\\cat_blue_lick_sheet.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\cat_blue_sprite_sheets\\cat_blue_lick_sheet.png",
+      "width": 2172,
+      "height": 724,
+      "removedPixels": 1291491,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "cat-blue\\cat_blue_sleep_sheet.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\cat_blue_sprite_sheets\\cat_blue_sleep_sheet.png",
+      "width": 2172,
+      "height": 724,
+      "removedPixels": 1351493,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "cat-blue\\cat_blue_tail_sheet.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\cat_blue_sprite_sheets\\cat_blue_tail_sheet.png",
+      "width": 2172,
+      "height": 724,
+      "removedPixels": 1278927,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "cat-white\\cat_white_blink_sheet.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\cat_white_sprite_sheets\\cat_white_blink_sheet.png",
+      "width": 2172,
+      "height": 724,
+      "removedPixels": 1247342,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "cat-white\\cat_white_drag_sheet.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\cat_white_sprite_sheets\\cat_white_drag_sheet.png",
+      "width": 2172,
+      "height": 724,
+      "removedPixels": 1218611,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "cat-white\\cat_white_idle_sheet.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\cat_white_sprite_sheets\\cat_white_idle_sheet.png",
+      "width": 2172,
+      "height": 724,
+      "removedPixels": 1249386,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "cat-white\\cat_white_jump_sheet.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\cat_white_sprite_sheets\\cat_white_jump_sheet.png",
+      "width": 2172,
+      "height": 724,
+      "removedPixels": 1326694,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "cat-white\\cat_white_lookaround_sheet.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\cat_white_sprite_sheets\\cat_white_lookaround_sheet.png",
+      "width": 2172,
+      "height": 724,
+      "removedPixels": 1260710,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "cat-white\\cat_white_roll_sheet.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\cat_white_sprite_sheets\\cat_white_roll_sheet.png",
+      "width": 2172,
+      "height": 724,
+      "removedPixels": 1310964,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "cat-white\\cat_white_stretch_sheet.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\cat_white_sprite_sheets\\cat_white_stretch_sheet.png",
+      "width": 2172,
+      "height": 724,
+      "removedPixels": 1386023,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "speech\\speech-husband-idle.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\final-renamed-pixel-ui\\speech-husband-idle.png",
+      "width": 1672,
+      "height": 941,
+      "removedPixels": 1235378,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "speech\\speech-husband-nervous.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\final-renamed-pixel-ui\\speech-husband-nervous.png",
+      "width": 1672,
+      "height": 941,
+      "removedPixels": 1182329,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "speech\\speech-husband-select.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\final-renamed-pixel-ui\\speech-husband-select.png",
+      "width": 1672,
+      "height": 941,
+      "removedPixels": 1219972,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "speech\\speech-wife-response.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\final-renamed-pixel-ui\\speech-wife-response.png",
+      "width": 1672,
+      "height": 941,
+      "removedPixels": 1202109,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "speech\\speech-wife-select.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\final-renamed-pixel-ui\\speech-wife-select.png",
+      "width": 1672,
+      "height": 941,
+      "removedPixels": 1194285,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "speech\\thought-wife-food-1.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\final-renamed-pixel-ui\\thought-wife-food-1.png",
+      "width": 1672,
+      "height": 941,
+      "removedPixels": 1197522,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "speech\\thought-wife-food-2.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\final-renamed-pixel-ui\\thought-wife-food-2.png",
+      "width": 1672,
+      "height": 941,
+      "removedPixels": 1210983,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "speech\\thought-wife-food-3.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\final-renamed-pixel-ui\\thought-wife-food-3.png",
+      "width": 1672,
+      "height": 941,
+      "removedPixels": 1200061,
+      "alpha": [
+        0,
+        255
+      ]
+    }
+  ],
+  "publicLegacyAssets": [
+    {
+      "file": "bg-room.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\bg-room.png",
+      "width": 941,
+      "height": 1672,
+      "removedPixels": 0,
+      "alpha": [
+        255,
+        255
+      ],
+      "copied": true
+    },
+    {
+      "file": "card-husband.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\card-husband.png",
+      "width": 1448,
+      "height": 1086,
+      "removedPixels": 0,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "card-wife.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\card-wife.png",
+      "width": 1448,
+      "height": 1086,
+      "removedPixels": 0,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "cat-blue.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\cat_blue.png",
+      "width": 1086,
+      "height": 1448,
+      "removedPixels": 0,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "cat-white.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\cat_white.png",
+      "width": 1086,
+      "height": 1448,
+      "removedPixels": 0,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "husband.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\husband.png",
+      "width": 1086,
+      "height": 1448,
+      "removedPixels": 0,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "wife.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\wife.png",
+      "width": 1087,
+      "height": 1447,
+      "removedPixels": 0,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "speech-husband.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\speech-husband.png",
+      "width": 1536,
+      "height": 1024,
+      "removedPixels": 0,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "speech-wife.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\speech-wife.png",
+      "width": 1672,
+      "height": 941,
+      "removedPixels": 0,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "subtitle.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\subtitle.png",
+      "width": 2172,
+      "height": 724,
+      "removedPixels": 0,
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "title.png",
+      "source": "D:\\下载\\login-assets-package\\login-assets-package\\title.png",
+      "width": 2172,
+      "height": 724,
+      "removedPixels": 0,
+      "alpha": [
+        0,
+        255
+      ]
+    }
+  ]
+}

@@ -46,8 +46,8 @@ export function SlavePage({ role, punishment, onSelectView }: SlavePageProps) {
             <span /> 人物小传 <span />
           </p>
           <div className="slave-bio-copy">
-            <strong>{role.title}</strong>
-            <span>{role.biography}</span>
+            <strong>表现太糟糕了</strong>
+            <span>奴隶市场又新增了一个奴隶。</span>
           </div>
         </article>
 

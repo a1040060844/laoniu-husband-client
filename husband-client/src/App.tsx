@@ -4,7 +4,6 @@ import {
   HUSBAND_PAGES,
   HusbandVerticalPager,
 } from "./components/HusbandVerticalPager";
-import { LoginPage } from "./components/LoginPage";
 import { RolePage } from "./components/RolePage";
 import { SlavePage } from "./components/SlavePage";
 import { StoryModal } from "./components/StoryModal";
@@ -32,6 +31,7 @@ import {
 } from "./lib/taskSystem";
 import { publicAsset } from "./lib/assets";
 import { taskRewardExp, taskRewardMoney, taskRewardText } from "./lib/taskRewards";
+import { LoginPage } from "./pages/LoginPage";
 import type {
   Benefit,
   EventLog,
