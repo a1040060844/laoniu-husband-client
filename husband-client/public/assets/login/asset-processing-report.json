@@ -1,0 +1,121 @@
+[
+  {
+    "source": "title.png",
+    "output": "title.png",
+    "action": "replaced with user-provided isolated title asset; source already had transparency, preserved as transparent PNG",
+    "size": "1866x327",
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  },
+  {
+    "source": "title.png",
+    "output": "login-page-reference.png",
+    "action": "kept full composite as reference because it is not an isolated title layer"
+  },
+  {
+    "source": "bg-room.png",
+    "output": "bg-room.png",
+    "action": "kept as opaque room background"
+  },
+  {
+    "source": "card-husband.png",
+    "output": "card-husband.png",
+    "action": "removed connected near-white background and cropped to alpha bounds",
+    "removedPixels": 1076284,
+    "size": "1005x512",
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  },
+  {
+    "source": "card-wife.png",
+    "output": "card-wife.png",
+    "action": "removed connected near-white background and cropped to alpha bounds",
+    "removedPixels": 965829,
+    "size": "1094x572",
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  },
+  {
+    "source": "cat_blue.png",
+    "output": "cat-blue.png",
+    "action": "removed connected near-white background and cropped to alpha bounds",
+    "removedPixels": 1150197,
+    "size": "823x721",
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  },
+  {
+    "source": "cat_white.png",
+    "output": "cat-white.png",
+    "action": "removed connected near-white background and cropped to alpha bounds",
+    "removedPixels": 1360455,
+    "size": "440x647",
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  },
+  {
+    "source": "husband.png",
+    "output": "husband.png",
+    "action": "removed connected near-white background and cropped to alpha bounds",
+    "removedPixels": 1300484,
+    "size": "480x865",
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  },
+  {
+    "source": "speech-husband.png",
+    "output": "speech-husband.png",
+    "action": "removed connected near-white background and cropped to alpha bounds",
+    "removedPixels": 1290052,
+    "size": "956x375",
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  },
+  {
+    "source": "speech-wife.png",
+    "output": "speech-wife.png",
+    "action": "removed connected near-white background and cropped to alpha bounds",
+    "removedPixels": 1220931,
+    "size": "1141x415",
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  },
+  {
+    "source": "subtitle.png",
+    "output": "subtitle.png",
+    "action": "replaced with user-provided subtitle asset; removed connected near-white background and cropped to alpha bounds",
+    "removedPixels": 1525342,
+    "size": "1152x130",
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  },
+  {
+    "source": "wife.png",
+    "output": "wife.png",
+    "action": "removed connected near-white background and cropped to alpha bounds",
+    "removedPixels": 1291073,
+    "size": "470x840",
+    "alphaExtrema": [
+      0,
+      255
+    ]
+  }
+]

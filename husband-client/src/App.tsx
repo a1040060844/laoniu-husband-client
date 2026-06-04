@@ -4,6 +4,7 @@ import {
   HUSBAND_PAGES,
   HusbandVerticalPager,
 } from "./components/HusbandVerticalPager";
+import { LoginPage } from "./components/LoginPage";
 import { RolePage } from "./components/RolePage";
 import { SlavePage } from "./components/SlavePage";
 import { StoryModal } from "./components/StoryModal";
@@ -44,12 +45,20 @@ import type {
 import "./styles.css";
 
 export type PreviewDirection = "none" | "next" | "prev";
+type RouteKey = "login" | "husband" | "wife";
 
 const SLAVE_PAGES = {
   BENEFIT: 0,
   STATUS: 1,
   TASK: 2,
 } as const;
+
+function routeFromPathname(pathname: string): RouteKey {
+  if (pathname === "/") return "login";
+  if (pathname.startsWith("/wife")) return "wife";
+  if (pathname.startsWith("/husband")) return "husband";
+  return "husband";
+}
 
 function ledgerId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
@@ -200,8 +209,8 @@ function ledgerEntriesFromTask(task: Task, createdAt: string): WalletLedgerEntry
 
 export default function App() {
   const initialState = useMemo(readLocalTaskSystem, []);
-  const [route, setRoute] = useState(() =>
-    window.location.pathname.startsWith("/wife") ? "wife" : "husband",
+  const [route, setRoute] = useState<RouteKey>(() =>
+    routeFromPathname(window.location.pathname),
   );
   const [activePage, setActivePage] = useState<number>(HUSBAND_PAGES.ROLE);
   const [slaveActivePage, setSlaveActivePage] = useState<number>(
@@ -425,9 +434,7 @@ export default function App() {
 
   useEffect(() => {
     const handlePopState = () => {
-      setRoute(
-        window.location.pathname.startsWith("/wife") ? "wife" : "husband",
-      );
+      setRoute(routeFromPathname(window.location.pathname));
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
@@ -958,6 +965,20 @@ export default function App() {
       text: "老婆大人确认恢复条件已满足，卖身奴隶状态解除，重新进入正常服役。",
       tone: "normal",
     });
+  }
+
+  function handleEnterRole(role: "husband" | "wife") {
+    const nextPath = role === "husband" ? "/husband" : "/wife";
+    window.history.pushState(null, "", nextPath);
+    setRoute(role);
+  }
+
+  if (route === "login") {
+    return (
+      <main className="app">
+        <LoginPage onEnterRole={handleEnterRole} />
+      </main>
+    );
   }
 
   if (route === "wife") {
