@@ -32,14 +32,9 @@ import husbandDrag from "../assets/login/husband/husband_drag_sheet.png";
 import husbandIdle from "../assets/login/husband/husband_idle_adjust_glasses_sheet.png";
 import husbandNervous from "../assets/login/husband/husband_nervous_sheet.png";
 import husbandSelect from "../assets/login/husband/husband_select_sheet.png";
-import speechHusbandIdle from "../assets/login/speech/speech-husband-idle.png";
-import speechHusbandNervous from "../assets/login/speech/speech-husband-nervous.png";
-import speechHusbandSelect from "../assets/login/speech/speech-husband-select.png";
-import speechWifeResponse from "../assets/login/speech/speech-wife-response.png";
-import speechWifeSelect from "../assets/login/speech/speech-wife-select.png";
-import thoughtWifeFood1 from "../assets/login/speech/thought-wife-food-1.png";
-import thoughtWifeFood2 from "../assets/login/speech/thought-wife-food-2.png";
-import thoughtWifeFood3 from "../assets/login/speech/thought-wife-food-3.png";
+import speechHusbandBg from "../assets/login/speech/speech-husband-bg.png";
+import speechWifeBg from "../assets/login/speech/speech-wife-bg.png";
+import thoughtWifeBg from "../assets/login/speech/thought-wife-bg.png";
 import wifeDrag from "../assets/login/wife/wife_drag_sheet.png";
 import wifeIdle from "../assets/login/wife/wife_idle_thinking_food_sheet.png";
 import wifeResponse from "../assets/login/wife/wife_response_sheet.png";
@@ -49,16 +44,7 @@ type RoleRoute = "husband" | "wife";
 type SpriteId = "husband" | "wife" | "catBlue" | "catWhite";
 type CharacterTarget = "husband" | "wife";
 type FlowState = "idle" | "selectingHusband" | "selectingWife" | "exiting";
-
-type BubbleId =
-  | "speech-husband-idle"
-  | "speech-husband-select"
-  | "speech-husband-nervous"
-  | "speech-wife-response"
-  | "speech-wife-select"
-  | "thought-wife-food-1"
-  | "thought-wife-food-2"
-  | "thought-wife-food-3";
+type BubbleKind = "speechHusband" | "speechWife" | "thoughtWife";
 
 interface LoginPageProps {
   onEnterRole: (role: RoleRoute) => void;
@@ -69,100 +55,345 @@ interface Position {
   y: number;
 }
 
-interface SpriteConfig {
+interface Rect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface SpriteActionConfig {
   src: string;
+  frames: number;
   fps: number;
   loop: boolean;
-  frames?: number;
+  frameWidth: number;
+  frameHeight: number;
+  displayWidth: number;
+  anchorX: number;
+  anchorY: number;
+  headOffsetX: number;
+  headOffsetY: number;
+  hitbox: Rect;
+  liftY: number;
 }
 
 interface ActiveBubble {
-  id: BubbleId;
+  kind: BubbleKind;
   target: CharacterTarget;
+  text: string;
 }
 
 interface SpriteSheetProps {
-  src: string;
-  frames?: number;
-  fps?: number;
-  loop?: boolean;
-  playing?: boolean;
+  config: SpriteActionConfig;
   className?: string;
-  style?: CSSProperties;
   onComplete?: () => void;
 }
 
 interface DraggableSpriteProps {
   id: SpriteId;
   action: string;
-  framesByAction: Record<string, SpriteConfig>;
+  actions: Record<string, SpriteActionConfig>;
   position: Position;
   stageRef: React.RefObject<HTMLDivElement | null>;
   disabled?: boolean;
-  className?: string;
   ariaLabel: string;
-  onActionComplete?: (id: SpriteId, action: string) => void;
+  isDragging: boolean;
+  onActionComplete: (id: SpriteId, action: string) => void;
   onPositionChange: (id: SpriteId, position: Position) => void;
-  onDragStart?: (id: SpriteId) => void;
-  onDragEnd?: (id: SpriteId) => void;
+  onDragStart: (id: SpriteId) => void;
+  onDragEnd: (id: SpriteId) => void;
 }
 
 interface LoginBubbleProps {
-  bubbleId: BubbleId;
-  target: CharacterTarget;
-  visible: boolean;
+  bubble: ActiveBubble;
+  config: SpriteActionConfig;
   position: Position;
 }
 
-const defaultPositions: Record<SpriteId, Position> = {
-  husband: { x: 37, y: 59 },
-  wife: { x: 59, y: 59 },
-  catBlue: { x: 49, y: 70 },
-  catWhite: { x: 62, y: 72 },
+const characterFrame = {
+  anchorX: 135.75,
+  anchorY: 690,
+  displayWidth: 84,
+  frameHeight: 724,
+  frameWidth: 271.5,
+  hitbox: { height: 610, width: 132, x: 70, y: 92 },
+  liftY: 14,
 };
 
-const spriteConfigs: Record<SpriteId, Record<string, SpriteConfig>> = {
+const catFrame = {
+  anchorX: 135.75,
+  frameHeight: 724,
+  frameWidth: 271.5,
+  liftY: 12,
+};
+
+const defaultPositions: Record<SpriteId, Position> = {
+  husband: { x: 38, y: 65 },
+  wife: { x: 59, y: 65 },
+  catBlue: { x: 51, y: 74 },
+  catWhite: { x: 63, y: 76 },
+};
+
+const spriteConfigs: Record<SpriteId, Record<string, SpriteActionConfig>> = {
   husband: {
-    drag: { fps: 8, loop: true, src: husbandDrag },
-    idle: { fps: 6, loop: true, src: husbandIdle },
-    nervous: { fps: 8, loop: false, src: husbandNervous },
-    select: { fps: 8, loop: false, src: husbandSelect },
+    drag: {
+      ...characterFrame,
+      fps: 5,
+      frames: 8,
+      headOffsetX: -46,
+      headOffsetY: -186,
+      loop: true,
+      src: husbandDrag,
+    },
+    idle: {
+      ...characterFrame,
+      fps: 4,
+      frames: 8,
+      headOffsetX: -48,
+      headOffsetY: -188,
+      loop: true,
+      src: husbandIdle,
+    },
+    nervous: {
+      anchorX: 156.75,
+      anchorY: 610,
+      displayWidth: 96,
+      fps: 5,
+      frameHeight: 627,
+      frameWidth: 313.5,
+      frames: 8,
+      headOffsetX: -48,
+      headOffsetY: -164,
+      hitbox: { height: 530, width: 146, x: 84, y: 82 },
+      liftY: 14,
+      loop: false,
+      src: husbandNervous,
+    },
+    select: {
+      ...characterFrame,
+      fps: 5,
+      frames: 8,
+      headOffsetX: -46,
+      headOffsetY: -188,
+      loop: false,
+      src: husbandSelect,
+    },
   },
   wife: {
-    drag: { fps: 8, loop: true, src: wifeDrag },
-    idle: { fps: 6, loop: true, src: wifeIdle },
-    response: { fps: 8, loop: false, src: wifeResponse },
-    select: { fps: 8, loop: false, src: wifeSelect },
+    drag: {
+      ...characterFrame,
+      displayWidth: 86,
+      fps: 5,
+      frames: 8,
+      headOffsetX: 48,
+      headOffsetY: -188,
+      loop: true,
+      src: wifeDrag,
+    },
+    idle: {
+      ...characterFrame,
+      displayWidth: 86,
+      fps: 4,
+      frames: 8,
+      headOffsetX: 48,
+      headOffsetY: -188,
+      loop: true,
+      src: wifeIdle,
+    },
+    response: {
+      ...characterFrame,
+      displayWidth: 86,
+      fps: 5,
+      frames: 8,
+      headOffsetX: 48,
+      headOffsetY: -188,
+      loop: false,
+      src: wifeResponse,
+    },
+    select: {
+      ...characterFrame,
+      displayWidth: 86,
+      fps: 5,
+      frames: 8,
+      headOffsetX: 48,
+      headOffsetY: -188,
+      loop: false,
+      src: wifeSelect,
+    },
   },
   catBlue: {
-    annoyed: { fps: 7, loop: false, src: catBlueAnnoyed },
-    blink: { fps: 7, loop: false, src: catBlueBlink },
-    drag: { fps: 8, loop: true, src: catBlueDrag },
-    idle: { fps: 5, loop: true, src: catBlueIdle },
-    lick: { fps: 7, loop: false, src: catBlueLick },
-    sleep: { fps: 7, loop: false, src: catBlueSleep },
-    tail: { fps: 7, loop: false, src: catBlueTail },
+    annoyed: {
+      ...catFrame,
+      anchorY: 486,
+      displayWidth: 112,
+      fps: 4,
+      frames: 8,
+      headOffsetX: 0,
+      headOffsetY: -96,
+      hitbox: { height: 231, width: 252, x: 19, y: 255 },
+      loop: false,
+      src: catBlueAnnoyed,
+    },
+    blink: {
+      ...catFrame,
+      anchorY: 493,
+      displayWidth: 112,
+      fps: 4,
+      frames: 8,
+      headOffsetX: 0,
+      headOffsetY: -98,
+      hitbox: { height: 232, width: 255, x: 14, y: 261 },
+      loop: false,
+      src: catBlueBlink,
+    },
+    drag: {
+      ...catFrame,
+      anchorY: 566,
+      displayWidth: 112,
+      fps: 5,
+      frames: 8,
+      headOffsetX: 0,
+      headOffsetY: -126,
+      hitbox: { height: 439, width: 258, x: 10, y: 127 },
+      loop: true,
+      src: catBlueDrag,
+    },
+    idle: {
+      ...catFrame,
+      anchorY: 453,
+      displayWidth: 112,
+      fps: 3,
+      frames: 8,
+      headOffsetX: 0,
+      headOffsetY: -96,
+      hitbox: { height: 229, width: 256, x: 12, y: 224 },
+      loop: true,
+      src: catBlueIdle,
+    },
+    lick: {
+      ...catFrame,
+      anchorY: 469,
+      displayWidth: 112,
+      fps: 4,
+      frames: 8,
+      headOffsetX: 0,
+      headOffsetY: -96,
+      hitbox: { height: 228, width: 245, x: 20, y: 241 },
+      loop: false,
+      src: catBlueLick,
+    },
+    sleep: {
+      ...catFrame,
+      anchorY: 478,
+      displayWidth: 116,
+      fps: 4,
+      frames: 8,
+      headOffsetX: 0,
+      headOffsetY: -96,
+      hitbox: { height: 217, width: 271, x: 0, y: 261 },
+      loop: false,
+      src: catBlueSleep,
+    },
+    tail: {
+      ...catFrame,
+      anchorY: 496,
+      displayWidth: 112,
+      fps: 4,
+      frames: 8,
+      headOffsetX: 0,
+      headOffsetY: -96,
+      hitbox: { height: 227, width: 271, x: 0, y: 269 },
+      loop: false,
+      src: catBlueTail,
+    },
   },
   catWhite: {
-    blink: { fps: 7, loop: false, src: catWhiteBlink },
-    drag: { fps: 8, loop: true, src: catWhiteDrag },
-    idle: { fps: 5, loop: true, src: catWhiteIdle },
-    jump: { fps: 7, loop: false, src: catWhiteJump },
-    lookaround: { fps: 7, loop: false, src: catWhiteLookaround },
-    roll: { fps: 7, loop: false, src: catWhiteRoll },
-    stretch: { fps: 7, loop: false, src: catWhiteStretch },
+    blink: {
+      ...catFrame,
+      anchorY: 489,
+      displayWidth: 98,
+      fps: 4,
+      frames: 8,
+      headOffsetX: 0,
+      headOffsetY: -98,
+      hitbox: { height: 254, width: 271, x: 0, y: 235 },
+      loop: false,
+      src: catWhiteBlink,
+    },
+    drag: {
+      ...catFrame,
+      anchorY: 541,
+      displayWidth: 98,
+      fps: 5,
+      frames: 8,
+      headOffsetX: 0,
+      headOffsetY: -116,
+      hitbox: { height: 357, width: 271, x: 0, y: 184 },
+      loop: true,
+      src: catWhiteDrag,
+    },
+    idle: {
+      ...catFrame,
+      anchorY: 499,
+      displayWidth: 98,
+      fps: 3,
+      frames: 8,
+      headOffsetX: 0,
+      headOffsetY: -100,
+      hitbox: { height: 254, width: 271, x: 0, y: 245 },
+      loop: true,
+      src: catWhiteIdle,
+    },
+    jump: {
+      ...catFrame,
+      anchorY: 518,
+      displayWidth: 100,
+      fps: 5,
+      frames: 8,
+      headOffsetX: 0,
+      headOffsetY: -120,
+      hitbox: { height: 296, width: 271, x: 0, y: 222 },
+      loop: false,
+      src: catWhiteJump,
+    },
+    lookaround: {
+      ...catFrame,
+      anchorY: 500,
+      displayWidth: 98,
+      fps: 4,
+      frames: 8,
+      headOffsetX: 0,
+      headOffsetY: -102,
+      hitbox: { height: 258, width: 271, x: 0, y: 242 },
+      loop: false,
+      src: catWhiteLookaround,
+    },
+    roll: {
+      ...catFrame,
+      anchorY: 467,
+      displayWidth: 100,
+      fps: 4,
+      frames: 8,
+      headOffsetX: 0,
+      headOffsetY: -88,
+      hitbox: { height: 242, width: 271, x: 0, y: 225 },
+      loop: false,
+      src: catWhiteRoll,
+    },
+    stretch: {
+      ...catFrame,
+      anchorY: 497,
+      displayWidth: 102,
+      fps: 4,
+      frames: 8,
+      headOffsetX: 0,
+      headOffsetY: -94,
+      hitbox: { height: 185, width: 271, x: 0, y: 312 },
+      loop: false,
+      src: catWhiteStretch,
+    },
   },
-};
-
-const bubbleAssets: Record<BubbleId, string> = {
-  "speech-husband-idle": speechHusbandIdle,
-  "speech-husband-nervous": speechHusbandNervous,
-  "speech-husband-select": speechHusbandSelect,
-  "speech-wife-response": speechWifeResponse,
-  "speech-wife-select": speechWifeSelect,
-  "thought-wife-food-1": thoughtWifeFood1,
-  "thought-wife-food-2": thoughtWifeFood2,
-  "thought-wife-food-3": thoughtWifeFood3,
 };
 
 const catBlueWeightedActions = [
@@ -170,21 +401,18 @@ const catBlueWeightedActions = [
   "blink",
   "blink",
   "blink",
-  "blink",
   "lick",
   "lick",
   "lick",
   "lick",
   "lick",
+  "tail",
+  "tail",
+  "tail",
+  "tail",
   "sleep",
   "sleep",
   "sleep",
-  "tail",
-  "tail",
-  "tail",
-  "tail",
-  "tail",
-  "annoyed",
   "annoyed",
 ];
 
@@ -192,11 +420,11 @@ const catWhiteWeightedActions = [
   "blink",
   "blink",
   "blink",
-  "blink",
-  "jump",
-  "jump",
-  "jump",
-  "jump",
+  "lookaround",
+  "lookaround",
+  "lookaround",
+  "lookaround",
+  "lookaround",
   "stretch",
   "stretch",
   "stretch",
@@ -204,12 +432,15 @@ const catWhiteWeightedActions = [
   "roll",
   "roll",
   "roll",
-  "lookaround",
-  "lookaround",
-  "lookaround",
-  "lookaround",
-  "lookaround",
+  "jump",
+  "jump",
 ];
+
+const bubbleBackgrounds: Record<BubbleKind, string> = {
+  speechHusband: speechHusbandBg,
+  speechWife: speechWifeBg,
+  thoughtWife: thoughtWifeBg,
+};
 
 function randomBetween(min: number, max: number) {
   return min + Math.random() * (max - min);
@@ -223,28 +454,27 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-function SpriteSheet({
-  className,
-  fps = 8,
-  frames = 8,
-  loop = true,
-  onComplete,
-  playing = true,
-  src,
-  style,
-}: SpriteSheetProps) {
+function getDisplayHeight(config: SpriteActionConfig) {
+  return (config.displayWidth * config.frameHeight) / config.frameWidth;
+}
+
+function getScale(config: SpriteActionConfig) {
+  return config.displayWidth / config.frameWidth;
+}
+
+function SpriteSheet({ className, config, onComplete }: SpriteSheetProps) {
   const [frame, setFrame] = useState(0);
   const completedRef = useRef(false);
+  const displayHeight = getDisplayHeight(config);
 
   useEffect(() => {
     setFrame(0);
     completedRef.current = false;
-    if (!playing) return undefined;
 
     const interval = window.setInterval(() => {
       setFrame((current) => {
-        if (loop) return (current + 1) % frames;
-        if (current >= frames - 1) {
+        if (config.loop) return (current + 1) % config.frames;
+        if (current >= config.frames - 1) {
           if (!completedRef.current) {
             completedRef.current = true;
             window.setTimeout(() => onComplete?.(), 0);
@@ -253,33 +483,34 @@ function SpriteSheet({
         }
         return current + 1;
       });
-    }, 1000 / fps);
+    }, 1000 / config.fps);
 
     return () => window.clearInterval(interval);
-  }, [fps, frames, loop, onComplete, playing, src]);
-
-  const framePosition = frames <= 1 ? 0 : (frame / (frames - 1)) * 100;
+  }, [config, onComplete]);
 
   return (
     <span
       className={`sprite-sheet${className ? ` ${className}` : ""}`}
-      style={{
-        backgroundImage: `url(${src})`,
-        backgroundPosition: `${framePosition}% 0`,
-        backgroundSize: `${frames * 100}% 100%`,
-        ...style,
-      }}
+      style={
+        {
+          "--sprite-bg": `url(${config.src})`,
+          "--sprite-height": `${displayHeight}px`,
+          "--sprite-width": `${config.displayWidth}px`,
+          "--sprite-sheet-width": `${config.displayWidth * config.frames}px`,
+          backgroundPosition: `${frame * config.displayWidth * -1}px 0`,
+        } as CSSProperties
+      }
     />
   );
 }
 
 function DraggableSprite({
   action,
+  actions,
   ariaLabel,
-  className,
   disabled = false,
-  framesByAction,
   id,
+  isDragging,
   onActionComplete,
   onDragEnd,
   onDragStart,
@@ -293,7 +524,11 @@ function DraggableSprite({
     offsetX: 0,
     offsetY: 0,
   });
-  const config = framesByAction[action] ?? framesByAction.idle;
+  const config = actions[action] ?? actions.idle;
+  const displayHeight = getDisplayHeight(config);
+  const scale = getScale(config);
+  const anchorXPct = (config.anchorX / config.frameWidth) * 100;
+  const anchorYPct = (config.anchorY / config.frameHeight) * 100;
 
   const updateFromPointer = useCallback(
     (event: PointerEvent | ReactPointerEvent<HTMLDivElement>) => {
@@ -302,52 +537,65 @@ function DraggableSprite({
       if (!stage || !sprite) return;
 
       const stageRect = stage.getBoundingClientRect();
-      const spriteRect = sprite.getBoundingClientRect();
-      const halfX = (spriteRect.width / stageRect.width) * 50;
-      const halfY = (spriteRect.height / stageRect.height) * 50;
-      const x =
-        ((event.clientX - stageRect.left - dragRef.current.offsetX) /
-          stageRect.width) *
-        100;
-      const y =
-        ((event.clientY - stageRect.top - dragRef.current.offsetY) /
-          stageRect.height) *
-        100;
+      const hitbox = config.hitbox;
+      const hitboxLeftFromAnchor = (hitbox.x - config.anchorX) * scale;
+      const hitboxRightFromAnchor =
+        (hitbox.x + hitbox.width - config.anchorX) * scale;
+      const hitboxTopFromAnchor = (hitbox.y - config.anchorY) * scale;
+      const hitboxBottomFromAnchor =
+        (hitbox.y + hitbox.height - config.anchorY) * scale;
+      const anchorX = event.clientX - dragRef.current.offsetX;
+      const anchorY = event.clientY - dragRef.current.offsetY;
+
+      const minX = stageRect.left - hitboxLeftFromAnchor;
+      const maxX = stageRect.right - hitboxRightFromAnchor;
+      const minY = stageRect.top - hitboxTopFromAnchor;
+      const maxY = stageRect.bottom - hitboxBottomFromAnchor;
+      const clampedX = clamp(anchorX, minX, maxX);
+      const clampedY = clamp(anchorY, minY, maxY);
 
       onPositionChange(id, {
-        x: clamp(x, halfX, 100 - halfX),
-        y: clamp(y, halfY, 100 - halfY),
+        x: ((clampedX - stageRect.left) / stageRect.width) * 100,
+        y: ((clampedY - stageRect.top) / stageRect.height) * 100,
       });
     },
-    [id, onPositionChange, stageRef],
+    [config, id, onPositionChange, scale, stageRef],
   );
 
   function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
     if (disabled) return;
+    event.preventDefault();
+    event.stopPropagation();
+
     const sprite = spriteRef.current;
     if (!sprite) return;
 
     const spriteRect = sprite.getBoundingClientRect();
+    const anchorScreenX = spriteRect.left + config.anchorX * scale;
+    const anchorScreenY = spriteRect.top + config.anchorY * scale;
     dragRef.current = {
       active: true,
-      offsetX: event.clientX - (spriteRect.left + spriteRect.width / 2),
-      offsetY: event.clientY - (spriteRect.top + spriteRect.height / 2),
+      offsetX: event.clientX - anchorScreenX,
+      offsetY: event.clientY - anchorScreenY,
     };
-    sprite.setPointerCapture(event.pointerId);
-    onDragStart?.(id);
+    event.currentTarget.setPointerCapture(event.pointerId);
+    onDragStart(id);
   }
 
   function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
     if (!dragRef.current.active || disabled) return;
     event.preventDefault();
+    event.stopPropagation();
     updateFromPointer(event);
   }
 
   function finishDrag(event: ReactPointerEvent<HTMLDivElement>) {
     if (!dragRef.current.active) return;
+    event.preventDefault();
+    event.stopPropagation();
     dragRef.current.active = false;
     event.currentTarget.releasePointerCapture(event.pointerId);
-    onDragEnd?.(id);
+    onDragEnd(id);
   }
 
   return (
@@ -355,44 +603,58 @@ function DraggableSprite({
       ref={spriteRef}
       aria-label={ariaLabel}
       className={`draggable-sprite draggable-sprite--${id}${
-        className ? ` ${className}` : ""
+        isDragging ? " is-dragging" : ""
       }`}
       role="img"
-      style={{
-        left: `${position.x}%`,
-        top: `${position.y}%`,
-      }}
-      onPointerCancel={finishDrag}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={finishDrag}
+      style={
+        {
+          "--anchor-x": `${anchorXPct}%`,
+          "--anchor-y": `${anchorYPct}%`,
+          "--display-height": `${displayHeight}px`,
+          "--display-width": `${config.displayWidth}px`,
+          "--hitbox-height": `${config.hitbox.height * scale}px`,
+          "--hitbox-left": `${config.hitbox.x * scale}px`,
+          "--hitbox-top": `${config.hitbox.y * scale}px`,
+          "--hitbox-width": `${config.hitbox.width * scale}px`,
+          "--lift-y": `${config.liftY}px`,
+          left: `${position.x}%`,
+          top: `${position.y}%`,
+          zIndex: isDragging ? 80 : Math.round(10 + position.y),
+        } as CSSProperties
+      }
     >
-      <SpriteSheet
-        className="draggable-sprite__sheet"
-        fps={config.fps}
-        frames={config.frames}
-        loop={config.loop}
-        src={config.src}
-        onComplete={() => onActionComplete?.(id, action)}
+      <div className="draggable-sprite__visual">
+        <SpriteSheet
+          className="draggable-sprite__sheet"
+          config={config}
+          onComplete={() => onActionComplete(id, action)}
+        />
+      </div>
+      <div
+        className="draggable-sprite__hitbox"
+        onPointerCancel={finishDrag}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={finishDrag}
       />
     </div>
   );
 }
 
-function LoginBubble({ bubbleId, position, target, visible }: LoginBubbleProps) {
+function LoginBubble({ bubble, config, position }: LoginBubbleProps) {
   return (
-    <img
-      className={`login-bubble login-bubble--${target}${
-        visible ? " login-bubble--visible" : ""
-      }`}
-      src={bubbleAssets[bubbleId]}
-      alt=""
-      draggable={false}
-      style={{
-        left: `${position.x}%`,
-        top: `${position.y}%`,
-      }}
-    />
+    <div
+      className={`login-bubble login-bubble--${bubble.kind}`}
+      style={
+        {
+          "--bubble-bg": `url(${bubbleBackgrounds[bubble.kind]})`,
+          left: `calc(${position.x}% + ${config.headOffsetX}px)`,
+          top: `calc(${position.y}% + ${config.headOffsetY}px)`,
+        } as CSSProperties
+      }
+    >
+      <span>{bubble.text}</span>
+    </div>
   );
 }
 
@@ -401,24 +663,33 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
   const timeoutRefs = useRef<number[]>([]);
   const flowRef = useRef<FlowState>("idle");
   const draggingRef = useRef<SpriteId | null>(null);
-  const [positions, setPositions] =
-    useState<Record<SpriteId, Position>>(defaultPositions);
-  const [actions, setActions] = useState<Record<SpriteId, string>>({
+  const actionsRef = useRef<Record<SpriteId, string>>({
     catBlue: "idle",
     catWhite: "idle",
     husband: "idle",
     wife: "idle",
   });
+  const selectionRef = useRef<{
+    role: RoleRoute;
+    complete: Set<CharacterTarget>;
+  } | null>(null);
+  const [positions, setPositions] =
+    useState<Record<SpriteId, Position>>(defaultPositions);
+  const [actions, setActions] = useState<Record<SpriteId, string>>(
+    actionsRef.current,
+  );
   const [draggingId, setDraggingId] = useState<SpriteId | null>(null);
   const [flow, setFlow] = useState<FlowState>("idle");
   const [activeBubbles, setActiveBubbles] = useState<ActiveBubble[]>([]);
-
   const isBusy = flow !== "idle";
-  const cardDisabled = isBusy;
 
   useEffect(() => {
     flowRef.current = flow;
   }, [flow]);
+
+  useEffect(() => {
+    actionsRef.current = actions;
+  }, [actions]);
 
   useEffect(() => {
     draggingRef.current = draggingId;
@@ -440,17 +711,33 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
     setActiveBubbles([]);
   }, []);
 
-  const showBubble = useCallback((target: CharacterTarget, id: BubbleId) => {
-    setActiveBubbles((current) => [
-      ...current.filter((bubble) => bubble.target !== target),
-      { id, target },
-    ]);
+  const showBubble = useCallback(
+    (target: CharacterTarget, kind: BubbleKind, text: string) => {
+      setActiveBubbles((current) => [
+        ...current.filter((bubble) => bubble.target !== target),
+        { kind, target, text },
+      ]);
+    },
+    [],
+  );
+
+  const setSpriteAction = useCallback((id: SpriteId, action: string) => {
+    setActions((current) => {
+      if (current[id] === action) return current;
+      return { ...current, [id]: action };
+    });
   }, []);
 
   useEffect(() => {
-    addTimeout(() => showBubble("husband", "speech-husband-idle"), 300);
-    addTimeout(() => showBubble("wife", "thought-wife-food-1"), 600);
-    addTimeout(hideAllBubbles, 4000);
+    addTimeout(
+      () => showBubble("husband", "speechHusband", "先看看老哥表现。"),
+      300,
+    );
+    addTimeout(
+      () => showBubble("wife", "speechWife", "我今天一定好好表现！"),
+      600,
+    );
+    addTimeout(hideAllBubbles, 4200);
 
     return () => {
       timeoutRefs.current.forEach((id) => window.clearTimeout(id));
@@ -461,78 +748,34 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
   useEffect(() => {
     let cancelled = false;
 
-    function scheduleHusbandBubble() {
+    function scheduleCat(catId: "catBlue" | "catWhite") {
       window.setTimeout(() => {
         if (cancelled) return;
-        if (flowRef.current === "idle" && !draggingRef.current) {
-          showBubble("husband", "speech-husband-idle");
-          window.setTimeout(() => {
-            if (!cancelled) hideBubble("husband");
-          }, 2500);
-        }
-        scheduleHusbandBubble();
-      }, randomBetween(14000, 22000));
-    }
-
-    function scheduleWifeBubble() {
-      window.setTimeout(() => {
-        if (cancelled) return;
-        if (flowRef.current === "idle" && !draggingRef.current) {
-          showBubble(
-            "wife",
-            pickRandom([
-              "thought-wife-food-1",
-              "thought-wife-food-2",
-              "thought-wife-food-3",
-            ]),
+        if (
+          flowRef.current === "idle" &&
+          draggingRef.current !== catId &&
+          actionsRef.current[catId] === "idle"
+        ) {
+          setSpriteAction(
+            catId,
+            pickRandom(
+              catId === "catBlue"
+                ? catBlueWeightedActions
+                : catWhiteWeightedActions,
+            ),
           );
-          window.setTimeout(() => {
-            if (!cancelled) hideBubble("wife");
-          }, 2800);
         }
-        scheduleWifeBubble();
-      }, randomBetween(8000, 15000));
+        scheduleCat(catId);
+      }, randomBetween(7000, 14000));
     }
 
-    scheduleHusbandBubble();
-    scheduleWifeBubble();
+    scheduleCat("catBlue");
+    scheduleCat("catWhite");
 
     return () => {
       cancelled = true;
     };
-  }, [hideBubble, showBubble]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    function scheduleCatAction() {
-      window.setTimeout(() => {
-        if (cancelled) return;
-        if (flowRef.current === "idle" && !draggingRef.current) {
-          const catId: SpriteId = Math.random() > 0.5 ? "catBlue" : "catWhite";
-          const action =
-            catId === "catBlue"
-              ? pickRandom(catBlueWeightedActions)
-              : pickRandom(catWhiteWeightedActions);
-          setActions((current) =>
-            current[catId] === "idle"
-              ? {
-                  ...current,
-                  [catId]: action,
-                }
-              : current,
-          );
-        }
-        scheduleCatAction();
-      }, randomBetween(4000, 9000));
-    }
-
-    scheduleCatAction();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  }, [setSpriteAction]);
 
   const handlePositionChange = useCallback(
     (id: SpriteId, nextPosition: Position) => {
@@ -548,42 +791,60 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
     (id: SpriteId) => {
       if (flowRef.current !== "idle") return;
       setDraggingId(id);
-      setActions((current) => ({
-        ...current,
-        [id]: "drag",
-      }));
+      setSpriteAction(id, "drag");
       if (id === "husband") hideBubble("husband");
       if (id === "wife") hideBubble("wife");
     },
-    [hideBubble],
+    [hideBubble, setSpriteAction],
   );
 
-  const handleDragEnd = useCallback((id: SpriteId) => {
-    setDraggingId(null);
-    setActions((current) => ({
-      ...current,
-      [id]: "idle",
-    }));
-  }, []);
+  const handleDragEnd = useCallback(
+    (id: SpriteId) => {
+      setDraggingId(null);
+      setSpriteAction(id, "idle");
+    },
+    [setSpriteAction],
+  );
+
+  const completeSelectionIfReady = useCallback(() => {
+    const selection = selectionRef.current;
+    if (!selection) return;
+    if (!selection.complete.has("husband") || !selection.complete.has("wife")) {
+      return;
+    }
+
+    const { role } = selection;
+    selectionRef.current = null;
+    setFlow("exiting");
+    addTimeout(() => onEnterRole(role), 360);
+  }, [addTimeout, onEnterRole]);
 
   const handleActionComplete = useCallback(
     (id: SpriteId, action: string) => {
-      if (id === "catBlue" || id === "catWhite") {
-        if (action !== "idle" && action !== "drag") {
-          setActions((current) => ({
-            ...current,
-            [id]: "idle",
-          }));
+      const config = spriteConfigs[id][action];
+      if (!config || config.loop || action === "idle" || action === "drag") {
+        return;
+      }
+
+      setSpriteAction(id, "idle");
+
+      if (id === "husband" || id === "wife") {
+        const selection = selectionRef.current;
+        if (selection) {
+          selection.complete.add(id);
+          completeSelectionIfReady();
         }
       }
     },
-    [],
+    [completeSelectionIfReady, setSpriteAction],
   );
 
   function beginSelect(role: RoleRoute) {
     if (flowRef.current !== "idle") return;
     const selectingWife = role === "wife";
+    selectionRef.current = { complete: new Set(), role };
     setFlow(selectingWife ? "selectingWife" : "selectingHusband");
+    setDraggingId(null);
     hideAllBubbles();
     setActions((current) => ({
       ...current,
@@ -594,15 +855,25 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
     }));
 
     if (selectingWife) {
-      addTimeout(() => showBubble("wife", "speech-wife-select"), 100);
-      addTimeout(() => showBubble("husband", "speech-husband-nervous"), 450);
+      addTimeout(
+        () => showBubble("wife", "speechWife", "本宫上线，先查老哥表现。"),
+        100,
+      );
+      addTimeout(
+        () => showBubble("husband", "speechHusband", "收到，我立刻站好。"),
+        450,
+      );
     } else {
-      addTimeout(() => showBubble("husband", "speech-husband-select"), 100);
-      addTimeout(() => showBubble("wife", "speech-wife-response"), 500);
+      addTimeout(
+        () => showBubble("husband", "speechHusband", "老妞大人，我上线待命。"),
+        100,
+      );
+      addTimeout(
+        () =>
+          showBubble("wife", "speechWife", "准了，进去把今天的事做好。"),
+        450,
+      );
     }
-
-    addTimeout(() => setFlow("exiting"), 1200);
-    addTimeout(() => onEnterRole(role), 1650);
   }
 
   const bubbleByTarget = useMemo(
@@ -614,100 +885,56 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
   );
 
   return (
-    <section
-      className={`login-page login-page--${flow}`}
-      aria-label="角色登录"
-    >
+    <section className={`login-page login-page--${flow}`} aria-label="角色登录">
       <div className="login-stage" ref={stageRef}>
         <img className="login-layer login-bg" src={bgRoom} alt="" />
         <div className="login-stage__top-mask" aria-hidden="true" />
         <div className="login-stage__bottom-mask" aria-hidden="true" />
 
-        <img
-          className="login-layer login-title"
-          src={title}
-          alt="今天谁来上线？"
-        />
+        <img className="login-layer login-title" src={title} alt="今天谁来上线？" />
         <img
           className="login-layer login-subtitle"
           src={subtitle}
           alt="点击角色进入对应主页"
         />
 
-        <DraggableSprite
-          action={actions.husband}
-          ariaLabel="老哥本人，可拖拽"
-          disabled={isBusy}
-          framesByAction={spriteConfigs.husband}
-          id="husband"
-          position={positions.husband}
-          stageRef={stageRef}
-          onActionComplete={handleActionComplete}
-          onDragEnd={handleDragEnd}
-          onDragStart={handleDragStart}
-          onPositionChange={handlePositionChange}
-        />
-        <DraggableSprite
-          action={actions.wife}
-          ariaLabel="老妞大人，可拖拽"
-          disabled={isBusy}
-          framesByAction={spriteConfigs.wife}
-          id="wife"
-          position={positions.wife}
-          stageRef={stageRef}
-          onActionComplete={handleActionComplete}
-          onDragEnd={handleDragEnd}
-          onDragStart={handleDragStart}
-          onPositionChange={handlePositionChange}
-        />
-        <DraggableSprite
-          action={actions.catBlue}
-          ariaLabel="蓝猫，可拖拽"
-          disabled={isBusy}
-          framesByAction={spriteConfigs.catBlue}
-          id="catBlue"
-          position={positions.catBlue}
-          stageRef={stageRef}
-          onActionComplete={handleActionComplete}
-          onDragEnd={handleDragEnd}
-          onDragStart={handleDragStart}
-          onPositionChange={handlePositionChange}
-        />
-        <DraggableSprite
-          action={actions.catWhite}
-          ariaLabel="白猫，可拖拽"
-          disabled={isBusy}
-          framesByAction={spriteConfigs.catWhite}
-          id="catWhite"
-          position={positions.catWhite}
-          stageRef={stageRef}
-          onActionComplete={handleActionComplete}
-          onDragEnd={handleDragEnd}
-          onDragStart={handleDragStart}
-          onPositionChange={handlePositionChange}
-        />
+        {(["husband", "wife", "catBlue", "catWhite"] as const).map((id) => (
+          <DraggableSprite
+            key={id}
+            action={actions[id]}
+            actions={spriteConfigs[id]}
+            ariaLabel={`${id} 可拖拽`}
+            disabled={isBusy}
+            id={id}
+            isDragging={draggingId === id}
+            position={positions[id]}
+            stageRef={stageRef}
+            onActionComplete={handleActionComplete}
+            onDragEnd={handleDragEnd}
+            onDragStart={handleDragStart}
+            onPositionChange={handlePositionChange}
+          />
+        ))}
 
         {bubbleByTarget.husband && draggingId !== "husband" && (
           <LoginBubble
-            bubbleId={bubbleByTarget.husband.id}
+            bubble={bubbleByTarget.husband}
+            config={spriteConfigs.husband[actions.husband]}
             position={positions.husband}
-            target="husband"
-            visible
           />
         )}
         {bubbleByTarget.wife && draggingId !== "wife" && (
           <LoginBubble
-            bubbleId={bubbleByTarget.wife.id}
+            bubble={bubbleByTarget.wife}
+            config={spriteConfigs.wife[actions.wife]}
             position={positions.wife}
-            target="wife"
-            visible
           />
         )}
 
         <button
           className="login-card-button login-card-button--husband"
           type="button"
-          disabled={cardDisabled}
+          disabled={isBusy}
           aria-label="点击老哥本人按钮进入老公端"
           onClick={() => beginSelect("husband")}
         >
@@ -716,7 +943,7 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
         <button
           className="login-card-button login-card-button--wife"
           type="button"
-          disabled={cardDisabled}
+          disabled={isBusy}
           aria-label="点击老妞大人按钮进入老婆端"
           onClick={() => beginSelect("wife")}
         >

@@ -100,84 +100,127 @@
 
 .sprite-sheet {
   display: block;
-  width: 100%;
-  height: 100%;
+  width: var(--sprite-width);
+  height: var(--sprite-height);
+  background-image: var(--sprite-bg);
   background-repeat: no-repeat;
-  background-position-y: 0;
+  background-size: var(--sprite-sheet-width) var(--sprite-height);
 }
 
 .draggable-sprite {
   position: absolute;
-  z-index: 4;
   display: block;
+  width: var(--display-width);
+  height: var(--display-height);
   border: 0;
   padding: 0;
   background: transparent;
   cursor: grab;
+  pointer-events: auto;
   touch-action: none;
   user-select: none;
-  transform: translate(-50%, -50%);
+  transform: translate(calc(var(--anchor-x) * -1), calc(var(--anchor-y) * -1));
   -webkit-tap-highlight-color: transparent;
 }
 
-.draggable-sprite:active {
+.draggable-sprite.is-dragging {
   cursor: grabbing;
-  z-index: 9;
 }
 
-.draggable-sprite--husband,
-.draggable-sprite--wife {
-  width: min(18%, 78px);
-  aspect-ratio: 271.5 / 724;
+.draggable-sprite__visual {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transform: translateY(0);
+  transition:
+    filter 120ms ease,
+    transform 120ms ease;
 }
 
-.draggable-sprite--catBlue {
-  width: min(23%, 98px);
-  aspect-ratio: 271.5 / 724;
-}
-
-.draggable-sprite--catWhite {
-  width: min(18%, 78px);
-  aspect-ratio: 271.5 / 724;
+.draggable-sprite.is-dragging .draggable-sprite__visual {
+  filter: drop-shadow(0 18px 13px rgba(0, 0, 0, 0.45));
+  transform: translateY(calc(var(--lift-y) * -1));
 }
 
 .draggable-sprite__sheet {
   filter: drop-shadow(0 9px 9px rgba(0, 0, 0, 0.42));
 }
 
+.draggable-sprite__hitbox {
+  position: absolute;
+  left: var(--hitbox-left);
+  top: var(--hitbox-top);
+  z-index: 2;
+  width: var(--hitbox-width);
+  height: var(--hitbox-height);
+  pointer-events: auto;
+  touch-action: none;
+}
+
 .login-bubble {
   position: absolute;
-  z-index: 6;
-  display: block;
-  width: min(38%, 164px);
-  opacity: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  width: 168px;
+  min-height: 62px;
+  padding: 12px 20px 18px;
+  color: #17100a;
+  font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  letter-spacing: 0;
   pointer-events: none;
   user-select: none;
-  transform: translate(-50%, -118%);
-  transition:
-    opacity 220ms ease,
-    transform 220ms ease;
-  -webkit-user-drag: none;
+  transform: translate(-50%, -100%);
+  animation: loginBubbleIn 180ms ease-out both;
   filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.58));
+  -webkit-user-drag: none;
 }
 
-.login-bubble--wife {
-  width: min(40%, 172px);
-  transform: translate(-47%, -118%);
+.login-bubble::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--bubble-bg);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  content: "";
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
-.login-bubble--visible {
-  opacity: 1;
-  transform: translate(-50%, -124%);
+.login-bubble span {
+  display: block;
+  max-width: 130px;
 }
 
-.login-bubble--wife.login-bubble--visible {
-  transform: translate(-47%, -124%);
+.login-bubble--speechWife {
+  width: 176px;
+  transform: translate(-48%, -100%);
+}
+
+.login-bubble--speechWife span {
+  max-width: 138px;
+}
+
+.login-bubble--thoughtWife {
+  width: 142px;
+  min-height: 74px;
+  padding: 14px 18px 16px;
+  transform: translate(-50%, -96%);
+}
+
+.login-bubble--thoughtWife span {
+  max-width: 96px;
 }
 
 .login-card-button {
   position: absolute;
-  z-index: 7;
+  z-index: 100;
   bottom: calc(7.3% + env(safe-area-inset-bottom));
   width: 45%;
   aspect-ratio: 1448 / 1086;
@@ -220,13 +263,13 @@
 .login-page__fade {
   position: absolute;
   inset: 0;
-  z-index: 8;
+  z-index: 110;
   pointer-events: none;
   opacity: 0;
   background:
     radial-gradient(circle at 50% 56%, rgba(206, 142, 58, 0.16), transparent 38%),
     rgba(0, 0, 0, 0.84);
-  transition: opacity 420ms ease;
+  transition: opacity 360ms ease;
 }
 
 .login-page--exiting .login-page__fade {
@@ -255,6 +298,18 @@
   }
 }
 
+@keyframes loginBubbleIn {
+  from {
+    opacity: 0;
+    translate: 0 5px;
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
 @media (max-height: 820px) {
   .login-title {
     top: max(28px, calc(env(safe-area-inset-top) + 16px));
@@ -277,7 +332,7 @@
     animation: none;
   }
 
-  .login-bubble,
+  .draggable-sprite__visual,
   .login-page__fade {
     transition-duration: 1ms;
   }
