@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -14,32 +15,23 @@ import cardHusband from "../assets/login/card-husband.png";
 import cardWife from "../assets/login/card-wife.png";
 import subtitle from "../assets/login/subtitle.png";
 import title from "../assets/login/title.png";
-import catBlueBlink from "../assets/login/cat-blue/cat_blue_blink_new_sheet.png";
-import catBlueLift from "../assets/login/cat-blue/cat_blue_lift_sheet.png";
-import catBlueLickHand from "../assets/login/cat-blue/cat_blue_lick_hand_sheet.png";
-import catBlueTail from "../assets/login/cat-blue/cat_blue_tail_new_sheet.png";
-import catBlueYawn from "../assets/login/cat-blue/cat_blue_yawn_sheet.png";
-import catWhiteBlink from "../assets/login/cat-white/cat_white_blink_sheet.png";
-import catWhiteDrag from "../assets/login/cat-white/cat_white_drag_sheet.png";
-import catWhiteIdle from "../assets/login/cat-white/cat_white_idle_sheet.png";
-import catWhiteJump from "../assets/login/cat-white/cat_white_jump_sheet.png";
-import catWhiteLookaround from "../assets/login/cat-white/cat_white_lookaround_sheet.png";
-import catWhiteRoll from "../assets/login/cat-white/cat_white_roll_sheet.png";
-import catWhiteStretch from "../assets/login/cat-white/cat_white_stretch_sheet.png";
-import husbandDrag from "../assets/login/husband/husband_drag_sheet.png";
-import husbandIdle from "../assets/login/husband/husband_idle_adjust_glasses_sheet.png";
-import husbandNervous from "../assets/login/husband/husband_nervous_sheet.png";
-import husbandSelect from "../assets/login/husband/husband_select_sheet.png";
 import speechHusbandBg from "../assets/login/speech/speech-husband-bg.png";
 import speechWifeBg from "../assets/login/speech/speech-wife-bg.png";
+import thoughtWifeFood3 from "../assets/login/speech/thought-wife-food-3.png";
+import thoughtWifeHotpotBbq from "../assets/login/speech/thought-wife-hotpot-bbq.png";
 import thoughtWifeBg from "../assets/login/speech/thought-wife-bg.png";
-import wifeDrag from "../assets/login/wife/wife_drag_sheet.png";
-import wifeIdle from "../assets/login/wife/wife_idle_thinking_food_sheet.png";
-import wifeResponse from "../assets/login/wife/wife_response_sheet.png";
-import wifeSelect from "../assets/login/wife/wife_select_sheet.png";
+import thoughtWifeWhatEat from "../assets/login/speech/thought-wife-what-eat.png";
+import {
+  catBlueWeightedActions,
+  catWhiteWeightedActions,
+  husbandWeightedActions,
+  spriteConfigs,
+  type SpriteActionConfig,
+  type SpriteId,
+  wifeWeightedActions,
+} from "./loginSpriteData";
 
 type RoleRoute = "husband" | "wife";
-type SpriteId = "husband" | "wife" | "catBlue" | "catWhite";
 type CharacterTarget = "husband" | "wife";
 type FlowState = "idle" | "selectingHusband" | "selectingWife" | "exiting";
 type BubbleKind = "speechHusband" | "speechWife" | "thoughtWife";
@@ -53,40 +45,23 @@ interface Position {
   y: number;
 }
 
-interface Rect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-interface SpriteActionConfig {
-  src: string;
-  frames: number;
-  sheetColumns?: number;
-  fps: number;
-  loop: boolean;
-  frameWidth: number;
-  frameHeight: number;
-  displayWidth: number;
-  anchorX: number;
-  anchorY: number;
-  headOffsetX: number;
-  headOffsetY: number;
-  hitbox: Rect;
-  liftY: number;
-}
-
 interface ActiveBubble {
   kind: BubbleKind;
   target: CharacterTarget;
-  text: string;
+  text?: string;
+  imageSrc?: string;
+  imageAlt?: string;
 }
 
 interface SpriteSheetProps {
   config: SpriteActionConfig;
   className?: string;
   onComplete?: () => void;
+}
+
+interface SpriteRenderSnapshot {
+  config: SpriteActionConfig;
+  frameIndex: number;
 }
 
 interface DraggableSpriteProps {
@@ -99,6 +74,7 @@ interface DraggableSpriteProps {
   ariaLabel: string;
   isDragging: boolean;
   onActionComplete: (id: SpriteId, action: string) => void;
+  onSpriteClick: (id: SpriteId) => void;
   onPositionChange: (id: SpriteId, position: Position) => void;
   onDragStart: (id: SpriteId) => void;
   onDragEnd: (id: SpriteId) => void;
@@ -110,33 +86,16 @@ interface LoginBubbleProps {
   position: Position;
 }
 
-const characterFrame = {
-  anchorX: 135.75,
-  anchorY: 690,
-  displayWidth: 84,
-  frameHeight: 724,
-  frameWidth: 271.5,
-  hitbox: { height: 610, width: 132, x: 70, y: 92 },
-  liftY: 14,
-};
-
-const catFrame = {
-  anchorX: 135.75,
-  frameHeight: 724,
-  frameWidth: 271.5,
-  liftY: 12,
-};
-
-const catBlueFrame = {
-  anchorX: 128,
-  displayWidth: 112,
-  frameWidth: 256,
-  frames: 20,
-  headOffsetX: 0,
-  headOffsetY: -96,
-  liftY: 12,
-  sheetColumns: 5,
-};
+type WifeThinkingBubble =
+  | {
+      imageAlt: string;
+      imageSrc: string;
+      type: "image";
+    }
+  | {
+      text: string;
+      type: "text";
+    };
 
 const defaultPositions: Record<SpriteId, Position> = {
   husband: { x: 38, y: 65 },
@@ -145,274 +104,22 @@ const defaultPositions: Record<SpriteId, Position> = {
   catWhite: { x: 63, y: 76 },
 };
 
-const spriteConfigs: Record<SpriteId, Record<string, SpriteActionConfig>> = {
-  husband: {
-    drag: {
-      ...characterFrame,
-      fps: 5,
-      frames: 8,
-      headOffsetX: -46,
-      headOffsetY: -186,
-      loop: true,
-      src: husbandDrag,
-    },
-    idle: {
-      ...characterFrame,
-      fps: 4,
-      frames: 8,
-      headOffsetX: -48,
-      headOffsetY: -188,
-      loop: true,
-      src: husbandIdle,
-    },
-    nervous: {
-      anchorX: 156.75,
-      anchorY: 610,
-      displayWidth: 96,
-      fps: 5,
-      frameHeight: 627,
-      frameWidth: 313.5,
-      frames: 8,
-      headOffsetX: -48,
-      headOffsetY: -164,
-      hitbox: { height: 530, width: 146, x: 84, y: 82 },
-      liftY: 14,
-      loop: false,
-      src: husbandNervous,
-    },
-    select: {
-      ...characterFrame,
-      fps: 5,
-      frames: 8,
-      headOffsetX: -46,
-      headOffsetY: -188,
-      loop: false,
-      src: husbandSelect,
-    },
+const wifeThinkingBubbles: WifeThinkingBubble[] = [
+  {
+    imageAlt: "今天吃什么呢",
+    imageSrc: thoughtWifeWhatEat,
+    type: "image",
   },
-  wife: {
-    drag: {
-      ...characterFrame,
-      displayWidth: 86,
-      fps: 5,
-      frames: 8,
-      headOffsetX: 48,
-      headOffsetY: -188,
-      loop: true,
-      src: wifeDrag,
-    },
-    idle: {
-      ...characterFrame,
-      displayWidth: 86,
-      fps: 4,
-      frames: 8,
-      headOffsetX: 48,
-      headOffsetY: -188,
-      loop: true,
-      src: wifeIdle,
-    },
-    response: {
-      ...characterFrame,
-      displayWidth: 86,
-      fps: 5,
-      frames: 8,
-      headOffsetX: 48,
-      headOffsetY: -188,
-      loop: false,
-      src: wifeResponse,
-    },
-    select: {
-      ...characterFrame,
-      displayWidth: 86,
-      fps: 5,
-      frames: 8,
-      headOffsetX: 48,
-      headOffsetY: -188,
-      loop: false,
-      src: wifeSelect,
-    },
+  {
+    imageAlt: "火锅还是烤肉呢",
+    imageSrc: thoughtWifeHotpotBbq,
+    type: "image",
   },
-  catBlue: {
-    blink: {
-      ...catBlueFrame,
-      anchorY: 341,
-      fps: 8,
-      frameHeight: 341,
-      hitbox: { height: 275, width: 256, x: 0, y: 66 },
-      loop: false,
-      src: catBlueBlink,
-    },
-    drag: {
-      ...catBlueFrame,
-      anchorY: 434,
-      fps: 10,
-      frameHeight: 444,
-      hitbox: { height: 402, width: 225, x: 21, y: 32 },
-      loop: true,
-      src: catBlueLift,
-    },
-    idle: {
-      ...catBlueFrame,
-      anchorY: 341,
-      fps: 5,
-      frameHeight: 341,
-      hitbox: { height: 275, width: 256, x: 0, y: 66 },
-      loop: true,
-      src: catBlueBlink,
-    },
-    lick: {
-      ...catBlueFrame,
-      anchorY: 265,
-      fps: 8,
-      frameHeight: 341,
-      hitbox: { height: 200, width: 210, x: 31, y: 65 },
-      loop: false,
-      src: catBlueLickHand,
-    },
-    tail: {
-      ...catBlueFrame,
-      anchorY: 341,
-      fps: 8,
-      frameHeight: 341,
-      hitbox: { height: 275, width: 256, x: 0, y: 66 },
-      loop: false,
-      src: catBlueTail,
-    },
-    yawn: {
-      ...catBlueFrame,
-      anchorY: 261,
-      fps: 8,
-      frameHeight: 341,
-      hitbox: { height: 197, width: 204, x: 32, y: 64 },
-      loop: false,
-      src: catBlueYawn,
-    },
+  {
+    imageAlt: "还是看看老哥表现吧",
+    imageSrc: thoughtWifeFood3,
+    type: "image",
   },
-  catWhite: {
-    blink: {
-      ...catFrame,
-      anchorY: 489,
-      displayWidth: 98,
-      fps: 4,
-      frames: 8,
-      headOffsetX: 0,
-      headOffsetY: -98,
-      hitbox: { height: 254, width: 271, x: 0, y: 235 },
-      loop: false,
-      src: catWhiteBlink,
-    },
-    drag: {
-      ...catFrame,
-      anchorY: 541,
-      displayWidth: 98,
-      fps: 5,
-      frames: 8,
-      headOffsetX: 0,
-      headOffsetY: -116,
-      hitbox: { height: 357, width: 271, x: 0, y: 184 },
-      loop: true,
-      src: catWhiteDrag,
-    },
-    idle: {
-      ...catFrame,
-      anchorY: 499,
-      displayWidth: 98,
-      fps: 3,
-      frames: 8,
-      headOffsetX: 0,
-      headOffsetY: -100,
-      hitbox: { height: 254, width: 271, x: 0, y: 245 },
-      loop: true,
-      src: catWhiteIdle,
-    },
-    jump: {
-      ...catFrame,
-      anchorY: 518,
-      displayWidth: 100,
-      fps: 5,
-      frames: 8,
-      headOffsetX: 0,
-      headOffsetY: -120,
-      hitbox: { height: 296, width: 271, x: 0, y: 222 },
-      loop: false,
-      src: catWhiteJump,
-    },
-    lookaround: {
-      ...catFrame,
-      anchorY: 500,
-      displayWidth: 98,
-      fps: 4,
-      frames: 8,
-      headOffsetX: 0,
-      headOffsetY: -102,
-      hitbox: { height: 258, width: 271, x: 0, y: 242 },
-      loop: false,
-      src: catWhiteLookaround,
-    },
-    roll: {
-      ...catFrame,
-      anchorY: 467,
-      displayWidth: 100,
-      fps: 4,
-      frames: 8,
-      headOffsetX: 0,
-      headOffsetY: -88,
-      hitbox: { height: 242, width: 271, x: 0, y: 225 },
-      loop: false,
-      src: catWhiteRoll,
-    },
-    stretch: {
-      ...catFrame,
-      anchorY: 497,
-      displayWidth: 102,
-      fps: 4,
-      frames: 8,
-      headOffsetX: 0,
-      headOffsetY: -94,
-      hitbox: { height: 185, width: 271, x: 0, y: 312 },
-      loop: false,
-      src: catWhiteStretch,
-    },
-  },
-};
-
-const catBlueWeightedActions = [
-  "blink",
-  "blink",
-  "blink",
-  "blink",
-  "lick",
-  "lick",
-  "lick",
-  "lick",
-  "lick",
-  "tail",
-  "tail",
-  "tail",
-  "tail",
-  "yawn",
-  "yawn",
-  "yawn",
-];
-
-const catWhiteWeightedActions = [
-  "blink",
-  "blink",
-  "blink",
-  "lookaround",
-  "lookaround",
-  "lookaround",
-  "lookaround",
-  "lookaround",
-  "stretch",
-  "stretch",
-  "stretch",
-  "stretch",
-  "roll",
-  "roll",
-  "roll",
-  "jump",
-  "jump",
 ];
 
 const bubbleBackgrounds: Record<BubbleKind, string> = {
@@ -429,64 +136,161 @@ function pickRandom<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)];
 }
 
+function pickDifferent(items: string[], current: string) {
+  const candidates = items.filter((item) => item !== current);
+  return pickRandom(candidates.length > 0 ? candidates : items);
+}
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
 function getDisplayHeight(config: SpriteActionConfig) {
-  return (config.displayWidth * config.frameHeight) / config.frameWidth;
+  return (config.displayWidth * config.meta.frame_size.h) / config.meta.frame_size.w;
 }
 
 function getScale(config: SpriteActionConfig) {
-  return config.displayWidth / config.frameWidth;
+  return config.displayWidth / config.meta.frame_size.w;
+}
+
+function getFrameDelay(config: SpriteActionConfig, frameIndex: number) {
+  const frames = config.meta.frames;
+  const fallback = 1000 / config.fps;
+  const current = frames[frameIndex];
+  const next = frames[frameIndex + 1];
+
+  if (!current || !next) return fallback;
+
+  const delta = next.t - current.t;
+  const delay = delta > 0 && delta < 10 ? delta * 1000 : delta;
+  if (!Number.isFinite(delay) || delay < 16 || delay > 2500) return fallback;
+  return delay / Math.max(config.playbackRate, 0.1);
+}
+
+function getSpriteFrameStyle(
+  snapshot: SpriteRenderSnapshot,
+  alignToConfig?: SpriteActionConfig,
+) {
+  const { config } = snapshot;
+  const scale = getScale(config);
+  const alignScale = alignToConfig ? getScale(alignToConfig) : scale;
+  const frame =
+    config.meta.frames[snapshot.frameIndex] ?? config.meta.frames[0];
+  const frameBounds = config.frameBounds[snapshot.frameIndex];
+  const bottomOffset =
+    config.stabilizeBottom && frameBounds
+      ? (config.anchorY - (frameBounds.y + frameBounds.h)) * scale
+      : 0;
+  const visualOffset = bottomOffset + config.visualOffsetY;
+  const alignOffsetX = alignToConfig
+    ? alignToConfig.anchorX * alignScale - config.anchorX * scale
+    : 0;
+  const alignOffsetY = alignToConfig
+    ? alignToConfig.anchorY * alignScale - config.anchorY * scale
+    : 0;
+  const translateX = alignOffsetX;
+  const translateY = alignOffsetY + visualOffset;
+
+  return {
+    "--sprite-bg": `url(${config.src})`,
+    "--sprite-height": `${frame.h * scale}px`,
+    "--sprite-width": `${frame.w * scale}px`,
+    "--sprite-sheet-height": `${config.meta.sheet_size.h * scale}px`,
+    "--sprite-sheet-width": `${config.meta.sheet_size.w * scale}px`,
+    backgroundPosition: `${frame.x * scale * -1}px ${
+      frame.y * scale * -1
+    }px`,
+    transform:
+      translateX === 0 && translateY === 0
+        ? undefined
+        : `translate(${translateX}px, ${translateY}px)`,
+  } as CSSProperties;
 }
 
 function SpriteSheet({ className, config, onComplete }: SpriteSheetProps) {
-  const [frame, setFrame] = useState(0);
+  const [frameIndex, setFrameIndex] = useState(0);
+  const [ghostSnapshot, setGhostSnapshot] =
+    useState<SpriteRenderSnapshot | null>(null);
   const completedRef = useRef(false);
-  const displayHeight = getDisplayHeight(config);
-  const sheetColumns = config.sheetColumns ?? config.frames;
-  const sheetRows = Math.ceil(config.frames / sheetColumns);
-  const frameColumn = frame % sheetColumns;
-  const frameRow = Math.floor(frame / sheetColumns);
+  const onCompleteRef = useRef(onComplete);
+  const previousSnapshotRef = useRef<SpriteRenderSnapshot | null>(null);
+  const scale = getScale(config);
+  const previousSnapshot = previousSnapshotRef.current;
+  const isSwitchingSprite =
+    previousSnapshot !== null && previousSnapshot.config.src !== config.src;
+  const visibleFrameIndex = isSwitchingSprite ? 0 : frameIndex;
+  const frame = config.meta.frames[visibleFrameIndex] ?? config.meta.frames[0];
+  const currentSnapshot = { config, frameIndex: visibleFrameIndex };
+  const visibleGhostSnapshot = ghostSnapshot ?? (isSwitchingSprite ? previousSnapshot : null);
 
   useEffect(() => {
-    setFrame(0);
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  useLayoutEffect(() => {
+    previousSnapshotRef.current = currentSnapshot;
+  });
+
+  useEffect(() => {
+    if (isSwitchingSprite) {
+      setGhostSnapshot(previousSnapshot);
+    }
+
+    setFrameIndex(0);
     completedRef.current = false;
 
-    const interval = window.setInterval(() => {
-      setFrame((current) => {
-        if (config.loop) return (current + 1) % config.frames;
-        if (current >= config.frames - 1) {
+    let timeout = 0;
+    const ghostTimeout = isSwitchingSprite
+      ? window.setTimeout(() => setGhostSnapshot(null), 120)
+      : 0;
+
+    function schedule(current: number) {
+      timeout = window.setTimeout(() => {
+        const isLastFrame = current >= config.meta.frames.length - 1;
+
+        if (isLastFrame && !config.loop) {
           if (!completedRef.current) {
             completedRef.current = true;
-            window.setTimeout(() => onComplete?.(), 0);
+            onCompleteRef.current?.();
           }
-          return current;
+          return;
         }
-        return current + 1;
-      });
-    }, 1000 / config.fps);
 
-    return () => window.clearInterval(interval);
-  }, [config, onComplete]);
+        const next = isLastFrame ? 0 : current + 1;
+        setFrameIndex(next);
+        schedule(next);
+      }, getFrameDelay(config, current));
+    }
+
+    schedule(0);
+
+    return () => {
+      window.clearTimeout(timeout);
+      if (ghostTimeout !== 0) window.clearTimeout(ghostTimeout);
+    };
+  }, [config]);
 
   return (
     <span
-      className={`sprite-sheet${className ? ` ${className}` : ""}`}
+      className={`sprite-sheet-stack${className ? ` ${className}` : ""}`}
       style={
         {
-          "--sprite-bg": `url(${config.src})`,
-          "--sprite-height": `${displayHeight}px`,
-          "--sprite-width": `${config.displayWidth}px`,
-          "--sprite-sheet-height": `${displayHeight * sheetRows}px`,
-          "--sprite-sheet-width": `${config.displayWidth * sheetColumns}px`,
-          backgroundPosition: `${frameColumn * config.displayWidth * -1}px ${
-            frameRow * displayHeight * -1
-          }px`,
+          "--sprite-stack-height": `${frame.h * scale}px`,
+          "--sprite-stack-width": `${frame.w * scale}px`,
         } as CSSProperties
       }
-    />
+    >
+      {visibleGhostSnapshot && (
+        <span
+          className="sprite-sheet sprite-sheet--ghost"
+          style={getSpriteFrameStyle(visibleGhostSnapshot, config)}
+        />
+      )}
+      <span
+        className="sprite-sheet"
+        style={getSpriteFrameStyle(currentSnapshot)}
+      />
+    </span>
   );
 }
 
@@ -500,21 +304,25 @@ function DraggableSprite({
   onActionComplete,
   onDragEnd,
   onDragStart,
+  onSpriteClick,
   onPositionChange,
   position,
   stageRef,
 }: DraggableSpriteProps) {
   const spriteRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef({
-    active: false,
+    capturing: false,
+    dragging: false,
     offsetX: 0,
     offsetY: 0,
+    startX: 0,
+    startY: 0,
   });
   const config = actions[action] ?? actions.idle;
   const displayHeight = getDisplayHeight(config);
   const scale = getScale(config);
-  const anchorXPct = (config.anchorX / config.frameWidth) * 100;
-  const anchorYPct = (config.anchorY / config.frameHeight) * 100;
+  const anchorXPct = (config.anchorX / config.meta.frame_size.w) * 100;
+  const anchorYPct = (config.anchorY / config.meta.frame_size.h) * 100;
 
   const updateFromPointer = useCallback(
     (event: PointerEvent | ReactPointerEvent<HTMLDivElement>) => {
@@ -560,28 +368,46 @@ function DraggableSprite({
     const anchorScreenX = spriteRect.left + config.anchorX * scale;
     const anchorScreenY = spriteRect.top + config.anchorY * scale;
     dragRef.current = {
-      active: true,
+      capturing: true,
+      dragging: false,
       offsetX: event.clientX - anchorScreenX,
       offsetY: event.clientY - anchorScreenY,
+      startX: event.clientX,
+      startY: event.clientY,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
-    onDragStart(id);
   }
 
   function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
-    if (!dragRef.current.active || disabled) return;
+    if (!dragRef.current.capturing || disabled) return;
     event.preventDefault();
     event.stopPropagation();
+    const deltaX = event.clientX - dragRef.current.startX;
+    const deltaY = event.clientY - dragRef.current.startY;
+    const shouldStartDrag = Math.hypot(deltaX, deltaY) >= 6;
+
+    if (!dragRef.current.dragging) {
+      if (!shouldStartDrag) return;
+      dragRef.current.dragging = true;
+      onDragStart(id);
+    }
+
     updateFromPointer(event);
   }
 
   function finishDrag(event: ReactPointerEvent<HTMLDivElement>) {
-    if (!dragRef.current.active) return;
+    if (!dragRef.current.capturing) return;
     event.preventDefault();
     event.stopPropagation();
-    dragRef.current.active = false;
+    const wasDragging = dragRef.current.dragging;
+    dragRef.current.capturing = false;
+    dragRef.current.dragging = false;
     event.currentTarget.releasePointerCapture(event.pointerId);
-    onDragEnd(id);
+    if (wasDragging) {
+      onDragEnd(id);
+      return;
+    }
+    onSpriteClick(id);
   }
 
   return (
@@ -605,7 +431,7 @@ function DraggableSprite({
           "--lift-y": `${config.liftY}px`,
           left: `${position.x}%`,
           top: `${position.y}%`,
-          zIndex: isDragging ? 80 : Math.round(10 + position.y),
+          zIndex: isDragging ? 95 : Math.round(10 + position.y),
         } as CSSProperties
       }
     >
@@ -630,7 +456,9 @@ function DraggableSprite({
 function LoginBubble({ bubble, config, position }: LoginBubbleProps) {
   return (
     <div
-      className={`login-bubble login-bubble--${bubble.kind}`}
+      className={`login-bubble login-bubble--${bubble.kind}${
+        bubble.imageSrc ? " login-bubble--image" : ""
+      }`}
       style={
         {
           "--bubble-bg": `url(${bubbleBackgrounds[bubble.kind]})`,
@@ -639,7 +467,16 @@ function LoginBubble({ bubble, config, position }: LoginBubbleProps) {
         } as CSSProperties
       }
     >
-      <span>{bubble.text}</span>
+      {bubble.imageSrc ? (
+        <img
+          className="login-bubble__image"
+          src={bubble.imageSrc}
+          alt={bubble.imageAlt ?? ""}
+          draggable={false}
+        />
+      ) : (
+        <span>{bubble.text}</span>
+      )}
     </div>
   );
 }
@@ -649,6 +486,7 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
   const timeoutRefs = useRef<number[]>([]);
   const flowRef = useRef<FlowState>("idle");
   const draggingRef = useRef<SpriteId | null>(null);
+  const wifeThinkingIndexRef = useRef(0);
   const actionsRef = useRef<Record<SpriteId, string>>({
     catBlue: "idle",
     catWhite: "idle",
@@ -657,7 +495,7 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
   });
   const selectionRef = useRef<{
     role: RoleRoute;
-    complete: Set<CharacterTarget>;
+    target: CharacterTarget;
   } | null>(null);
   const [positions, setPositions] =
     useState<Record<SpriteId, Position>>(defaultPositions);
@@ -707,6 +545,21 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
     [],
   );
 
+  const showImageBubble = useCallback(
+    (
+      target: CharacterTarget,
+      kind: BubbleKind,
+      imageSrc: string,
+      imageAlt: string,
+    ) => {
+      setActiveBubbles((current) => [
+        ...current.filter((bubble) => bubble.target !== target),
+        { imageAlt, imageSrc, kind, target },
+      ]);
+    },
+    [],
+  );
+
   const setSpriteAction = useCallback((id: SpriteId, action: string) => {
     setActions((current) => {
       if (current[id] === action) return current;
@@ -715,12 +568,31 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
   }, []);
 
   useEffect(() => {
+    const sources = new Set(
+      Object.values(spriteConfigs).flatMap((actionsById) =>
+        Object.values(actionsById).map((config) => config.src),
+      ),
+    );
+    const images = Array.from(sources, (src) => {
+      const image = new Image();
+      image.src = src;
+      return image;
+    });
+
+    return () => {
+      images.forEach((image) => {
+        image.src = "";
+      });
+    };
+  }, []);
+
+  useEffect(() => {
     addTimeout(
-      () => showBubble("husband", "speechHusband", "先看看老哥表现。"),
+      () => showBubble("husband", "speechHusband", "我今天一定好好表现！"),
       300,
     );
     addTimeout(
-      () => showBubble("wife", "speechWife", "我今天一定好好表现！"),
+      () => showBubble("wife", "speechWife", "先看看老哥表现。"),
       600,
     );
     addTimeout(hideAllBubbles, 4200);
@@ -763,6 +635,54 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
     };
   }, [setSpriteAction]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    function scheduleCharacter(characterId: "husband" | "wife") {
+      window.setTimeout(() => {
+        if (cancelled) return;
+        if (
+          flowRef.current === "idle" &&
+          draggingRef.current !== characterId &&
+          actionsRef.current[characterId] === "idle"
+        ) {
+          const nextAction = pickRandom(
+            characterId === "husband"
+              ? husbandWeightedActions
+              : wifeWeightedActions,
+          );
+          setSpriteAction(characterId, nextAction);
+
+          if (characterId === "wife" && nextAction === "thinking") {
+            const nextBubble =
+              wifeThinkingBubbles[
+                wifeThinkingIndexRef.current % wifeThinkingBubbles.length
+              ];
+            wifeThinkingIndexRef.current += 1;
+            if (nextBubble.type === "image") {
+              showImageBubble(
+                "wife",
+                "thoughtWife",
+                nextBubble.imageSrc,
+                nextBubble.imageAlt,
+              );
+            } else {
+              showBubble("wife", "thoughtWife", nextBubble.text);
+            }
+          }
+        }
+        scheduleCharacter(characterId);
+      }, randomBetween(9000, 17000));
+    }
+
+    scheduleCharacter("husband");
+    scheduleCharacter("wife");
+
+    return () => {
+      cancelled = true;
+    };
+  }, [setSpriteAction, showBubble, showImageBubble]);
+
   const handlePositionChange = useCallback(
     (id: SpriteId, nextPosition: Position) => {
       setPositions((current) => ({
@@ -792,18 +712,34 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
     [setSpriteAction],
   );
 
-  const completeSelectionIfReady = useCallback(() => {
+  const handleSpriteClick = useCallback(
+    (id: SpriteId) => {
+      if (flowRef.current !== "idle") return;
+      if (id === "catBlue") {
+        setSpriteAction(
+          id,
+          pickDifferent(catBlueWeightedActions, actionsRef.current[id]),
+        );
+      }
+      if (id === "catWhite") {
+        setSpriteAction(
+          id,
+          pickDifferent(catWhiteWeightedActions, actionsRef.current[id]),
+        );
+      }
+    },
+    [setSpriteAction],
+  );
+
+  const completeSelection = useCallback(() => {
     const selection = selectionRef.current;
     if (!selection) return;
-    if (!selection.complete.has("husband") || !selection.complete.has("wife")) {
-      return;
-    }
 
     const { role } = selection;
     selectionRef.current = null;
     setFlow("exiting");
-    addTimeout(() => onEnterRole(role), 360);
-  }, [addTimeout, onEnterRole]);
+    onEnterRole(role);
+  }, [onEnterRole]);
 
   const handleActionComplete = useCallback(
     (id: SpriteId, action: string) => {
@@ -814,21 +750,24 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
 
       setSpriteAction(id, "idle");
 
+      if (id === "wife" && action === "thinking") {
+        hideBubble("wife");
+      }
+
       if (id === "husband" || id === "wife") {
         const selection = selectionRef.current;
-        if (selection) {
-          selection.complete.add(id);
-          completeSelectionIfReady();
+        if (selection && id === selection.target && action === "select") {
+          completeSelection();
         }
       }
     },
-    [completeSelectionIfReady, setSpriteAction],
+    [completeSelection, hideBubble, setSpriteAction],
   );
 
   function beginSelect(role: RoleRoute) {
     if (flowRef.current !== "idle") return;
     const selectingWife = role === "wife";
-    selectionRef.current = { complete: new Set(), role };
+    selectionRef.current = { role, target: selectingWife ? "wife" : "husband" };
     setFlow(selectingWife ? "selectingWife" : "selectingHusband");
     setDraggingId(null);
     hideAllBubbles();
@@ -899,6 +838,7 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
             onDragEnd={handleDragEnd}
             onDragStart={handleDragStart}
             onPositionChange={handlePositionChange}
+            onSpriteClick={handleSpriteClick}
           />
         ))}
 

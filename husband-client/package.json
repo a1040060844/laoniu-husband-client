@@ -4,10 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "audit:login-sprites": "node scripts/audit-login-sprites.mjs",
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "check": "tsc -b && vite build"
+    "check": "npm run audit:login-sprites && tsc -b && vite build"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.0",
