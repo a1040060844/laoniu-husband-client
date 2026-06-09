@@ -104,7 +104,7 @@
   height: var(--sprite-height);
   background-image: var(--sprite-bg);
   background-repeat: no-repeat;
-  background-size: var(--sprite-sheet-width) var(--sprite-height);
+  background-size: var(--sprite-sheet-width) var(--sprite-sheet-height);
 }
 
 .draggable-sprite {

@@ -14,13 +14,11 @@ import cardHusband from "../assets/login/card-husband.png";
 import cardWife from "../assets/login/card-wife.png";
 import subtitle from "../assets/login/subtitle.png";
 import title from "../assets/login/title.png";
-import catBlueAnnoyed from "../assets/login/cat-blue/cat_blue_annoyed_sheet.png";
-import catBlueBlink from "../assets/login/cat-blue/cat_blue_blink_sheet.png";
-import catBlueDrag from "../assets/login/cat-blue/cat_blue_drag_sheet.png";
-import catBlueIdle from "../assets/login/cat-blue/cat_blue_idle_sheet.png";
-import catBlueLick from "../assets/login/cat-blue/cat_blue_lick_sheet.png";
-import catBlueSleep from "../assets/login/cat-blue/cat_blue_sleep_sheet.png";
-import catBlueTail from "../assets/login/cat-blue/cat_blue_tail_sheet.png";
+import catBlueBlink from "../assets/login/cat-blue/cat_blue_blink_new_sheet.png";
+import catBlueLift from "../assets/login/cat-blue/cat_blue_lift_sheet.png";
+import catBlueLickHand from "../assets/login/cat-blue/cat_blue_lick_hand_sheet.png";
+import catBlueTail from "../assets/login/cat-blue/cat_blue_tail_new_sheet.png";
+import catBlueYawn from "../assets/login/cat-blue/cat_blue_yawn_sheet.png";
 import catWhiteBlink from "../assets/login/cat-white/cat_white_blink_sheet.png";
 import catWhiteDrag from "../assets/login/cat-white/cat_white_drag_sheet.png";
 import catWhiteIdle from "../assets/login/cat-white/cat_white_idle_sheet.png";
@@ -65,6 +63,7 @@ interface Rect {
 interface SpriteActionConfig {
   src: string;
   frames: number;
+  sheetColumns?: number;
   fps: number;
   loop: boolean;
   frameWidth: number;
@@ -126,6 +125,17 @@ const catFrame = {
   frameHeight: 724,
   frameWidth: 271.5,
   liftY: 12,
+};
+
+const catBlueFrame = {
+  anchorX: 128,
+  displayWidth: 112,
+  frameWidth: 256,
+  frames: 20,
+  headOffsetX: 0,
+  headOffsetY: -96,
+  liftY: 12,
+  sheetColumns: 5,
 };
 
 const defaultPositions: Record<SpriteId, Position> = {
@@ -223,89 +233,59 @@ const spriteConfigs: Record<SpriteId, Record<string, SpriteActionConfig>> = {
     },
   },
   catBlue: {
-    annoyed: {
-      ...catFrame,
-      anchorY: 486,
-      displayWidth: 112,
-      fps: 4,
-      frames: 8,
-      headOffsetX: 0,
-      headOffsetY: -96,
-      hitbox: { height: 231, width: 252, x: 19, y: 255 },
-      loop: false,
-      src: catBlueAnnoyed,
-    },
     blink: {
-      ...catFrame,
-      anchorY: 493,
-      displayWidth: 112,
-      fps: 4,
-      frames: 8,
-      headOffsetX: 0,
-      headOffsetY: -98,
-      hitbox: { height: 232, width: 255, x: 14, y: 261 },
+      ...catBlueFrame,
+      anchorY: 341,
+      fps: 8,
+      frameHeight: 341,
+      hitbox: { height: 275, width: 256, x: 0, y: 66 },
       loop: false,
       src: catBlueBlink,
     },
     drag: {
-      ...catFrame,
-      anchorY: 566,
-      displayWidth: 112,
-      fps: 5,
-      frames: 8,
-      headOffsetX: 0,
-      headOffsetY: -126,
-      hitbox: { height: 439, width: 258, x: 10, y: 127 },
+      ...catBlueFrame,
+      anchorY: 434,
+      fps: 10,
+      frameHeight: 444,
+      hitbox: { height: 402, width: 225, x: 21, y: 32 },
       loop: true,
-      src: catBlueDrag,
+      src: catBlueLift,
     },
     idle: {
-      ...catFrame,
-      anchorY: 453,
-      displayWidth: 112,
-      fps: 3,
-      frames: 8,
-      headOffsetX: 0,
-      headOffsetY: -96,
-      hitbox: { height: 229, width: 256, x: 12, y: 224 },
+      ...catBlueFrame,
+      anchorY: 341,
+      fps: 5,
+      frameHeight: 341,
+      hitbox: { height: 275, width: 256, x: 0, y: 66 },
       loop: true,
-      src: catBlueIdle,
+      src: catBlueBlink,
     },
     lick: {
-      ...catFrame,
-      anchorY: 469,
-      displayWidth: 112,
-      fps: 4,
-      frames: 8,
-      headOffsetX: 0,
-      headOffsetY: -96,
-      hitbox: { height: 228, width: 245, x: 20, y: 241 },
+      ...catBlueFrame,
+      anchorY: 265,
+      fps: 8,
+      frameHeight: 341,
+      hitbox: { height: 200, width: 210, x: 31, y: 65 },
       loop: false,
-      src: catBlueLick,
-    },
-    sleep: {
-      ...catFrame,
-      anchorY: 478,
-      displayWidth: 116,
-      fps: 4,
-      frames: 8,
-      headOffsetX: 0,
-      headOffsetY: -96,
-      hitbox: { height: 217, width: 271, x: 0, y: 261 },
-      loop: false,
-      src: catBlueSleep,
+      src: catBlueLickHand,
     },
     tail: {
-      ...catFrame,
-      anchorY: 496,
-      displayWidth: 112,
-      fps: 4,
-      frames: 8,
-      headOffsetX: 0,
-      headOffsetY: -96,
-      hitbox: { height: 227, width: 271, x: 0, y: 269 },
+      ...catBlueFrame,
+      anchorY: 341,
+      fps: 8,
+      frameHeight: 341,
+      hitbox: { height: 275, width: 256, x: 0, y: 66 },
       loop: false,
       src: catBlueTail,
+    },
+    yawn: {
+      ...catBlueFrame,
+      anchorY: 261,
+      fps: 8,
+      frameHeight: 341,
+      hitbox: { height: 197, width: 204, x: 32, y: 64 },
+      loop: false,
+      src: catBlueYawn,
     },
   },
   catWhite: {
@@ -410,10 +390,9 @@ const catBlueWeightedActions = [
   "tail",
   "tail",
   "tail",
-  "sleep",
-  "sleep",
-  "sleep",
-  "annoyed",
+  "yawn",
+  "yawn",
+  "yawn",
 ];
 
 const catWhiteWeightedActions = [
@@ -466,6 +445,10 @@ function SpriteSheet({ className, config, onComplete }: SpriteSheetProps) {
   const [frame, setFrame] = useState(0);
   const completedRef = useRef(false);
   const displayHeight = getDisplayHeight(config);
+  const sheetColumns = config.sheetColumns ?? config.frames;
+  const sheetRows = Math.ceil(config.frames / sheetColumns);
+  const frameColumn = frame % sheetColumns;
+  const frameRow = Math.floor(frame / sheetColumns);
 
   useEffect(() => {
     setFrame(0);
@@ -496,8 +479,11 @@ function SpriteSheet({ className, config, onComplete }: SpriteSheetProps) {
           "--sprite-bg": `url(${config.src})`,
           "--sprite-height": `${displayHeight}px`,
           "--sprite-width": `${config.displayWidth}px`,
-          "--sprite-sheet-width": `${config.displayWidth * config.frames}px`,
-          backgroundPosition: `${frame * config.displayWidth * -1}px 0`,
+          "--sprite-sheet-height": `${displayHeight * sheetRows}px`,
+          "--sprite-sheet-width": `${config.displayWidth * sheetColumns}px`,
+          backgroundPosition: `${frameColumn * config.displayWidth * -1}px ${
+            frameRow * displayHeight * -1
+          }px`,
         } as CSSProperties
       }
     />
