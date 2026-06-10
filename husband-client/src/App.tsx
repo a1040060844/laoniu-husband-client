@@ -973,6 +973,11 @@ export default function App() {
     setRoute(role);
   }
 
+  function handleReturnToLogin() {
+    window.history.pushState(null, "", "/");
+    setRoute("login");
+  }
+
   if (route === "login") {
     return (
       <main className="app">
@@ -1126,6 +1131,7 @@ export default function App() {
           roleCount={roles.length}
           onPreviewPrev={handlePreviewPrev}
           onPreviewNext={handlePreviewNext}
+          onReturnToLogin={handleReturnToLogin}
           onSelectView={handleSelectView}
         />
 

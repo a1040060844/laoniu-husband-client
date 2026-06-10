@@ -130,9 +130,10 @@ interface ActionOptions {
 
 const personVisualHeight = 188;
 const wifeDragVisualHeight = 179;
-const husbandHeadOffsetX = -48;
-const husbandDragHeadOffsetX = -46;
-const wifeHeadOffsetX = 48;
+const wifeThinkingVisualHeight = 154;
+const husbandHeadOffsetX = 0;
+const husbandDragHeadOffsetX = 0;
+const wifeHeadOffsetX = 0;
 const personHeadOffsetY = -188;
 const husbandNervousHeadOffsetY = -164;
 const blueCatWidth = 82;
@@ -259,7 +260,8 @@ export const spriteConfigs: Record<
       headOffsetX: wifeHeadOffsetX,
       headOffsetY: personHeadOffsetY,
       loop: false,
-      targetVisualHeight: personVisualHeight,
+      targetVisualHeight: wifeThinkingVisualHeight,
+      visualOffsetY: -34,
     }),
   },
   catBlue: {
@@ -289,6 +291,7 @@ export const spriteConfigs: Record<
       headOffsetY: -96,
       loop: false,
       stabilizeBottom: true,
+      visualOffsetY: -24,
     }),
     lift: makeAction(catBlueLift, catBlueLiftMeta, catBlueLiftMetrics, {
       displayWidth: blueCatWidth,
@@ -308,6 +311,7 @@ export const spriteConfigs: Record<
       headOffsetY: -96,
       loop: false,
       stabilizeBottom: true,
+      visualOffsetY: -24,
     }),
   },
   catWhite: {

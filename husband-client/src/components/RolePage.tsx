@@ -1,6 +1,7 @@
 import { ShieldCheck } from "lucide-react";
 import { ProgressBar } from "./ProgressBar";
 import { RoleNavigator } from "./RoleNavigator";
+import { publicAsset } from "../lib/assets";
 import type { Role, ViewKey } from "../types/domain";
 
 interface RolePageProps {
@@ -12,6 +13,7 @@ interface RolePageProps {
   roleCount: number;
   onPreviewPrev: () => void;
   onPreviewNext: () => void;
+  onReturnToLogin: () => void;
   onSelectView: (view: ViewKey) => void;
 }
 
@@ -24,6 +26,7 @@ export function RolePage({
   roleCount = 12,
   onPreviewPrev,
   onPreviewNext,
+  onReturnToLogin,
   onSelectView,
 }: RolePageProps) {
   const isPreviewing = previewRole.level !== role.level;
@@ -53,7 +56,17 @@ export function RolePage({
           <strong>Lv. {String(previewRole.level).padStart(2, "0")}</strong>
           <span />
         </div>
-        <h1>{previewRole.title}</h1>
+        <div className="role-title-row">
+          <button
+            className="role-return-login-button"
+            type="button"
+            aria-label="返回登录"
+            onClick={onReturnToLogin}
+          >
+            <img src={publicAsset("/assets/ui/return-login.png")} alt="" />
+          </button>
+          <h1>{previewRole.title}</h1>
+        </div>
         <i />
       </header>
 
@@ -106,12 +119,12 @@ export function RolePage({
         </div>
 
         <button
-          className="swipe-hint"
+          className="swipe-hint swipe-hint--image"
           type="button"
+          aria-label="上滑查看任务"
           onClick={() => onSelectView("tasks")}
         >
-          <span>⌃</span>
-          上滑查看任务
+          <img src={publicAsset("/assets/ui/swipe-up.png")} alt="" />
         </button>
       </div>
     </section>

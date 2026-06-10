@@ -207,6 +207,11 @@ button {
   height: calc(100% + env(safe-area-inset-bottom));
 }
 
+.role-page .cinema-image {
+  object-fit: cover;
+  object-position: center top;
+}
+
 .image-scrim,
 .task-scrim {
   position: absolute;
@@ -399,6 +404,41 @@ button {
   font-weight: 500;
   letter-spacing: 0;
   line-height: 1.06;
+}
+
+.role-title-row {
+  position: relative;
+  display: block;
+  width: 100%;
+  align-items: center;
+}
+
+.role-title-row h1 {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+.role-return-login-button {
+  position: absolute;
+  top: 50%;
+  left: -18px;
+  width: clamp(82px, 22vw, 102px);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: translateY(-50%);
+}
+
+.role-return-login-button img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
 }
 
 .hero-title i {
@@ -799,6 +839,34 @@ button {
   line-height: 0.7;
 }
 
+.swipe-hint--image {
+  width: min(100%, 352px);
+  min-height: 0;
+  padding: 0;
+  justify-self: center;
+  overflow: visible;
+  color: transparent;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  font-size: 0;
+  line-height: 0;
+  letter-spacing: 0;
+}
+
+.swipe-hint--image span {
+  display: none;
+}
+
+.swipe-hint--image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
 .back-button {
   position: absolute;
   z-index: 3;
@@ -1018,6 +1086,14 @@ button {
   right: 18px;
   bottom: max(12px, env(safe-area-inset-bottom));
   min-height: 58px;
+}
+
+.swipe-hint--benefit.swipe-hint--image {
+  left: 50%;
+  right: auto;
+  width: min(88%, 352px);
+  min-height: 0;
+  transform: translateX(-50%);
 }
 
 .swipe-hint--task-top {
@@ -5377,6 +5453,15 @@ button {
 
   .swipe-hint--benefit {
     min-height: 50px;
+  }
+
+  .swipe-hint--image,
+  .swipe-hint--benefit.swipe-hint--image {
+    min-height: 0;
+  }
+
+  .role-return-login-button {
+    width: clamp(74px, 20vw, 92px);
   }
 }
 

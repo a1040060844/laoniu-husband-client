@@ -4,6 +4,7 @@ import { Coins } from "lucide-react";
 import { BenefitBubble } from "./BenefitBubble";
 import { BenefitModal } from "./BenefitModal";
 import { RoleNavigator } from "./RoleNavigator";
+import { publicAsset } from "../lib/assets";
 import type { Benefit, BenefitStatus, Role, ViewKey } from "../types/domain";
 
 interface BenefitPageProps {
@@ -255,12 +256,12 @@ export function BenefitPage({
       </footer>
 
       <button
-        className="swipe-hint swipe-hint--benefit"
+        className="swipe-hint swipe-hint--benefit swipe-hint--image"
         type="button"
+        aria-label="上滑进入主页"
         onClick={() => onSelectView("role")}
       >
-        <span>⌃</span>
-        上滑进入主页
+        <img src={publicAsset("/assets/ui/swipe-up.png")} alt="" />
       </button>
 
       <BenefitModal

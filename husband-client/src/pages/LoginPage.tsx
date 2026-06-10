@@ -13,14 +13,16 @@ import "./LoginPage.css";
 import bgRoom from "../assets/login/bg-room.png";
 import cardHusband from "../assets/login/card-husband.png";
 import cardWife from "../assets/login/card-wife.png";
+import resetButton from "../assets/login/reset-button.png";
 import subtitle from "../assets/login/subtitle.png";
 import title from "../assets/login/title.png";
-import speechHusbandBg from "../assets/login/speech/speech-husband-bg.png";
-import speechWifeBg from "../assets/login/speech/speech-wife-bg.png";
-import thoughtWifeFood3 from "../assets/login/speech/thought-wife-food-3.png";
-import thoughtWifeHotpotBbq from "../assets/login/speech/thought-wife-hotpot-bbq.png";
-import thoughtWifeBg from "../assets/login/speech/thought-wife-bg.png";
-import thoughtWifeWhatEat from "../assets/login/speech/thought-wife-what-eat.png";
+import speechHusbandIdle from "../assets/login/speech/speech-husband-idle.png";
+import speechHusbandLogin from "../assets/login/speech/speech-husband-login.png";
+import speechHusbandSelect from "../assets/login/speech/speech-husband-select.png";
+import speechWifeLogin from "../assets/login/speech/speech-wife-login.png";
+import speechWifeResponse from "../assets/login/speech/speech-wife-response.png";
+import thoughtWifeFood1 from "../assets/login/speech/thought-wife-food-1.png";
+import thoughtWifeFood2 from "../assets/login/speech/thought-wife-food-2.png";
 import {
   catBlueWeightedActions,
   catWhiteWeightedActions,
@@ -48,18 +50,20 @@ interface Position {
 interface ActiveBubble {
   kind: BubbleKind;
   target: CharacterTarget;
-  text?: string;
-  imageSrc?: string;
-  imageAlt?: string;
+  imageSrc: string;
+  imageAlt: string;
 }
 
 interface SpriteSheetProps {
+  action: string;
   config: SpriteActionConfig;
   className?: string;
   onComplete?: () => void;
+  playbackKey: number;
 }
 
 interface SpriteRenderSnapshot {
+  action: string;
   config: SpriteActionConfig;
   frameIndex: number;
 }
@@ -78,6 +82,7 @@ interface DraggableSpriteProps {
   onPositionChange: (id: SpriteId, position: Position) => void;
   onDragStart: (id: SpriteId) => void;
   onDragEnd: (id: SpriteId) => void;
+  playbackKey: number;
 }
 
 interface LoginBubbleProps {
@@ -86,16 +91,29 @@ interface LoginBubbleProps {
   position: Position;
 }
 
-type WifeThinkingBubble =
-  | {
-      imageAlt: string;
-      imageSrc: string;
-      type: "image";
-    }
-  | {
-      text: string;
-      type: "text";
-    };
+interface WifeThinkingBubble {
+  imageAlt: string;
+  imageSrc: string;
+}
+
+const LOVE_START_UTC = Date.UTC(2024, 8, 14);
+const DAY_MS = 24 * 60 * 60 * 1000;
+const LOGIN_BG_WIDTH = 941;
+const LOGIN_BG_HEIGHT = 1672;
+const TREE_PLAQUE_CENTER = { x: 206, y: 1144 };
+
+function getLoveDayCount(now = new Date()) {
+  const todayUtc = Date.UTC(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+  );
+
+  const diffDays = Math.floor((todayUtc - LOVE_START_UTC) / DAY_MS);
+  const inclusiveDays = diffDays + 1;
+
+  return Math.min(9999, Math.max(1, inclusiveDays));
+}
 
 const defaultPositions: Record<SpriteId, Position> = {
   husband: { x: 38, y: 65 },
@@ -104,29 +122,37 @@ const defaultPositions: Record<SpriteId, Position> = {
   catWhite: { x: 63, y: 76 },
 };
 
+const defaultActions: Record<SpriteId, string> = {
+  catBlue: "idle",
+  catWhite: "idle",
+  husband: "idle",
+  wife: "idle",
+};
+
 const wifeThinkingBubbles: WifeThinkingBubble[] = [
   {
-    imageAlt: "今天吃什么呢",
-    imageSrc: thoughtWifeWhatEat,
-    type: "image",
+    imageAlt: "今天吃什么呢……",
+    imageSrc: speechWifeResponse,
   },
   {
-    imageAlt: "火锅还是烤肉呢",
-    imageSrc: thoughtWifeHotpotBbq,
-    type: "image",
+    imageAlt: "火锅？烤肉？奶茶？",
+    imageSrc: speechHusbandSelect,
   },
   {
-    imageAlt: "还是看看老哥表现吧",
-    imageSrc: thoughtWifeFood3,
-    type: "image",
+    imageAlt: "先看看老哥表现。",
+    imageSrc: speechHusbandIdle,
   },
 ];
 
-const bubbleBackgrounds: Record<BubbleKind, string> = {
-  speechHusband: speechHusbandBg,
-  speechWife: speechWifeBg,
-  thoughtWife: thoughtWifeBg,
-};
+const bubbleImageSources = [
+  speechHusbandIdle,
+  speechHusbandLogin,
+  speechHusbandSelect,
+  speechWifeLogin,
+  speechWifeResponse,
+  thoughtWifeFood1,
+  thoughtWifeFood2,
+];
 
 function randomBetween(min: number, max: number) {
   return min + Math.random() * (max - min);
@@ -134,6 +160,31 @@ function randomBetween(min: number, max: number) {
 
 function pickRandom<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)];
+}
+
+const spriteImageElements = new Map<string, HTMLImageElement>();
+const spriteImagePromises = new Map<string, Promise<void>>();
+
+function preloadSpriteImage(src: string) {
+  const cached = spriteImagePromises.get(src);
+  if (cached) return cached;
+
+  const image = new Image();
+  spriteImageElements.set(src, image);
+  const promise = new Promise<void>((resolve) => {
+    const finish = () => resolve();
+    image.addEventListener("load", finish, { once: true });
+    image.addEventListener("error", finish, { once: true });
+    image.src = src;
+
+    if (typeof image.decode === "function") {
+      void image.decode().then(finish, finish);
+    } else if (image.complete) {
+      finish();
+    }
+  });
+  spriteImagePromises.set(src, promise);
+  return promise;
 }
 
 function pickDifferent(items: string[], current: string) {
@@ -207,7 +258,13 @@ function getSpriteFrameStyle(
   } as CSSProperties;
 }
 
-function SpriteSheet({ className, config, onComplete }: SpriteSheetProps) {
+function SpriteSheet({
+  action,
+  className,
+  config,
+  onComplete,
+  playbackKey,
+}: SpriteSheetProps) {
   const [frameIndex, setFrameIndex] = useState(0);
   const [ghostSnapshot, setGhostSnapshot] =
     useState<SpriteRenderSnapshot | null>(null);
@@ -220,8 +277,9 @@ function SpriteSheet({ className, config, onComplete }: SpriteSheetProps) {
     previousSnapshot !== null && previousSnapshot.config.src !== config.src;
   const visibleFrameIndex = isSwitchingSprite ? 0 : frameIndex;
   const frame = config.meta.frames[visibleFrameIndex] ?? config.meta.frames[0];
-  const currentSnapshot = { config, frameIndex: visibleFrameIndex };
-  const visibleGhostSnapshot = ghostSnapshot ?? (isSwitchingSprite ? previousSnapshot : null);
+  const currentSnapshot = { action, config, frameIndex: visibleFrameIndex };
+  const visibleGhostSnapshot =
+    ghostSnapshot ?? (isSwitchingSprite ? previousSnapshot : null);
 
   useEffect(() => {
     onCompleteRef.current = onComplete;
@@ -234,15 +292,28 @@ function SpriteSheet({ className, config, onComplete }: SpriteSheetProps) {
   useEffect(() => {
     if (isSwitchingSprite) {
       setGhostSnapshot(previousSnapshot);
+    } else {
+      setGhostSnapshot(null);
     }
 
     setFrameIndex(0);
     completedRef.current = false;
 
     let timeout = 0;
-    const ghostTimeout = isSwitchingSprite
-      ? window.setTimeout(() => setGhostSnapshot(null), 120)
-      : 0;
+    let paintFrame = 0;
+    let settleFrame = 0;
+    let cancelled = false;
+
+    if (isSwitchingSprite) {
+      void preloadSpriteImage(config.src).then(() => {
+        if (cancelled) return;
+        paintFrame = window.requestAnimationFrame(() => {
+          settleFrame = window.requestAnimationFrame(() => {
+            if (!cancelled) setGhostSnapshot(null);
+          });
+        });
+      });
+    }
 
     function schedule(current: number) {
       timeout = window.setTimeout(() => {
@@ -265,10 +336,12 @@ function SpriteSheet({ className, config, onComplete }: SpriteSheetProps) {
     schedule(0);
 
     return () => {
+      cancelled = true;
       window.clearTimeout(timeout);
-      if (ghostTimeout !== 0) window.clearTimeout(ghostTimeout);
+      if (paintFrame !== 0) window.cancelAnimationFrame(paintFrame);
+      if (settleFrame !== 0) window.cancelAnimationFrame(settleFrame);
     };
-  }, [config]);
+  }, [config, playbackKey]);
 
   return (
     <span
@@ -306,6 +379,7 @@ function DraggableSprite({
   onDragStart,
   onSpriteClick,
   onPositionChange,
+  playbackKey,
   position,
   stageRef,
 }: DraggableSpriteProps) {
@@ -437,9 +511,11 @@ function DraggableSprite({
     >
       <div className="draggable-sprite__visual">
         <SpriteSheet
+          action={action}
           className="draggable-sprite__sheet"
           config={config}
           onComplete={() => onActionComplete(id, action)}
+          playbackKey={playbackKey}
         />
       </div>
       <div
@@ -456,27 +532,20 @@ function DraggableSprite({
 function LoginBubble({ bubble, config, position }: LoginBubbleProps) {
   return (
     <div
-      className={`login-bubble login-bubble--${bubble.kind}${
-        bubble.imageSrc ? " login-bubble--image" : ""
-      }`}
+      className={`login-bubble login-bubble--${bubble.kind} login-bubble--image`}
       style={
         {
-          "--bubble-bg": `url(${bubbleBackgrounds[bubble.kind]})`,
           left: `calc(${position.x}% + ${config.headOffsetX}px)`,
           top: `calc(${position.y}% + ${config.headOffsetY}px)`,
         } as CSSProperties
       }
     >
-      {bubble.imageSrc ? (
-        <img
-          className="login-bubble__image"
-          src={bubble.imageSrc}
-          alt={bubble.imageAlt ?? ""}
-          draggable={false}
-        />
-      ) : (
-        <span>{bubble.text}</span>
-      )}
+      <img
+        className="login-bubble__image"
+        src={bubble.imageSrc}
+        alt={bubble.imageAlt}
+        draggable={false}
+      />
     </div>
   );
 }
@@ -487,12 +556,7 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
   const flowRef = useRef<FlowState>("idle");
   const draggingRef = useRef<SpriteId | null>(null);
   const wifeThinkingIndexRef = useRef(0);
-  const actionsRef = useRef<Record<SpriteId, string>>({
-    catBlue: "idle",
-    catWhite: "idle",
-    husband: "idle",
-    wife: "idle",
-  });
+  const actionsRef = useRef<Record<SpriteId, string>>(defaultActions);
   const selectionRef = useRef<{
     role: RoleRoute;
     target: CharacterTarget;
@@ -505,7 +569,44 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
   const [draggingId, setDraggingId] = useState<SpriteId | null>(null);
   const [flow, setFlow] = useState<FlowState>("idle");
   const [activeBubbles, setActiveBubbles] = useState<ActiveBubble[]>([]);
+  const [playbackKey, setPlaybackKey] = useState(0);
+  const [loveDayCount, setLoveDayCount] = useState(() => getLoveDayCount());
+  const [lovePlaquePosition, setLovePlaquePosition] =
+    useState<Position | null>(null);
   const isBusy = flow !== "idle";
+
+  useLayoutEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    const updateLovePlaquePosition = () => {
+      const scale = Math.max(
+        stage.clientWidth / LOGIN_BG_WIDTH,
+        stage.clientHeight / LOGIN_BG_HEIGHT,
+      );
+      const renderedWidth = LOGIN_BG_WIDTH * scale;
+      const horizontalCrop = (renderedWidth - stage.clientWidth) / 2;
+
+      setLovePlaquePosition({
+        x: TREE_PLAQUE_CENTER.x * scale - horizontalCrop,
+        y: TREE_PLAQUE_CENTER.y * scale,
+      });
+    };
+
+    updateLovePlaquePosition();
+    const resizeObserver = new ResizeObserver(updateLovePlaquePosition);
+    resizeObserver.observe(stage);
+
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setLoveDayCount(getLoveDayCount());
+    }, 60 * 60 * 1000);
+
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     flowRef.current = flow;
@@ -525,6 +626,11 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
     return id;
   }, []);
 
+  const clearLoginTimeouts = useCallback(() => {
+    timeoutRefs.current.forEach((id) => window.clearTimeout(id));
+    timeoutRefs.current = [];
+  }, []);
+
   const hideBubble = useCallback((target: CharacterTarget) => {
     setActiveBubbles((current) =>
       current.filter((bubble) => bubble.target !== target),
@@ -534,16 +640,6 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
   const hideAllBubbles = useCallback(() => {
     setActiveBubbles([]);
   }, []);
-
-  const showBubble = useCallback(
-    (target: CharacterTarget, kind: BubbleKind, text: string) => {
-      setActiveBubbles((current) => [
-        ...current.filter((bubble) => bubble.target !== target),
-        { kind, target, text },
-      ]);
-    },
-    [],
-  );
 
   const showImageBubble = useCallback(
     (
@@ -560,6 +656,32 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
     [],
   );
 
+  const playLoginIntro = useCallback(() => {
+    clearLoginTimeouts();
+    hideAllBubbles();
+    addTimeout(
+      () =>
+        showImageBubble(
+          "wife",
+          "speechWife",
+          speechWifeLogin,
+          "老妞驾到~~~",
+        ),
+      300,
+    );
+    addTimeout(
+      () =>
+        showImageBubble(
+          "husband",
+          "speechHusband",
+          speechHusbandLogin,
+          "老妞万岁！万岁！万万岁！",
+        ),
+      600,
+    );
+    addTimeout(hideAllBubbles, 4200);
+  }, [addTimeout, clearLoginTimeouts, hideAllBubbles, showImageBubble]);
+
   const setSpriteAction = useCallback((id: SpriteId, action: string) => {
     setActions((current) => {
       if (current[id] === action) return current;
@@ -568,40 +690,20 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
   }, []);
 
   useEffect(() => {
-    const sources = new Set(
-      Object.values(spriteConfigs).flatMap((actionsById) =>
+    const sources = new Set([
+      ...Object.values(spriteConfigs).flatMap((actionsById) =>
         Object.values(actionsById).map((config) => config.src),
       ),
-    );
-    const images = Array.from(sources, (src) => {
-      const image = new Image();
-      image.src = src;
-      return image;
-    });
-
-    return () => {
-      images.forEach((image) => {
-        image.src = "";
-      });
-    };
+      ...bubbleImageSources,
+    ]);
+    sources.forEach((src) => void preloadSpriteImage(src));
   }, []);
 
   useEffect(() => {
-    addTimeout(
-      () => showBubble("husband", "speechHusband", "我今天一定好好表现！"),
-      300,
-    );
-    addTimeout(
-      () => showBubble("wife", "speechWife", "先看看老哥表现。"),
-      600,
-    );
-    addTimeout(hideAllBubbles, 4200);
+    playLoginIntro();
 
-    return () => {
-      timeoutRefs.current.forEach((id) => window.clearTimeout(id));
-      timeoutRefs.current = [];
-    };
-  }, [addTimeout, hideAllBubbles, showBubble]);
+    return clearLoginTimeouts;
+  }, [clearLoginTimeouts, playLoginIntro]);
 
   useEffect(() => {
     let cancelled = false;
@@ -659,16 +761,12 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
                 wifeThinkingIndexRef.current % wifeThinkingBubbles.length
               ];
             wifeThinkingIndexRef.current += 1;
-            if (nextBubble.type === "image") {
-              showImageBubble(
-                "wife",
-                "thoughtWife",
-                nextBubble.imageSrc,
-                nextBubble.imageAlt,
-              );
-            } else {
-              showBubble("wife", "thoughtWife", nextBubble.text);
-            }
+            showImageBubble(
+              "wife",
+              "thoughtWife",
+              nextBubble.imageSrc,
+              nextBubble.imageAlt,
+            );
           }
         }
         scheduleCharacter(characterId);
@@ -681,7 +779,7 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
     return () => {
       cancelled = true;
     };
-  }, [setSpriteAction, showBubble, showImageBubble]);
+  }, [setSpriteAction, showImageBubble]);
 
   const handlePositionChange = useCallback(
     (id: SpriteId, nextPosition: Position) => {
@@ -731,6 +829,21 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
     [setSpriteAction],
   );
 
+  const handleReset = useCallback(() => {
+    clearLoginTimeouts();
+    selectionRef.current = null;
+    flowRef.current = "idle";
+    draggingRef.current = null;
+    actionsRef.current = defaultActions;
+    wifeThinkingIndexRef.current = 0;
+    setFlow("idle");
+    setDraggingId(null);
+    setPositions(defaultPositions);
+    setActions(defaultActions);
+    setPlaybackKey((current) => current + 1);
+    playLoginIntro();
+  }, [clearLoginTimeouts, playLoginIntro]);
+
   const completeSelection = useCallback(() => {
     const selection = selectionRef.current;
     if (!selection) return;
@@ -751,21 +864,25 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
       setSpriteAction(id, "idle");
 
       if (id === "wife" && action === "thinking") {
-        hideBubble("wife");
+        addTimeout(() => hideBubble("wife"), 500);
       }
 
       if (id === "husband" || id === "wife") {
         const selection = selectionRef.current;
         if (selection && id === selection.target && action === "select") {
-          completeSelection();
+          addTimeout(() => {
+            hideAllBubbles();
+            completeSelection();
+          }, 500);
         }
       }
     },
-    [completeSelection, hideBubble, setSpriteAction],
+    [addTimeout, completeSelection, hideAllBubbles, hideBubble, setSpriteAction],
   );
 
   function beginSelect(role: RoleRoute) {
     if (flowRef.current !== "idle") return;
+    clearLoginTimeouts();
     const selectingWife = role === "wife";
     selectionRef.current = { role, target: selectingWife ? "wife" : "husband" };
     setFlow(selectingWife ? "selectingWife" : "selectingHusband");
@@ -781,22 +898,25 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
 
     if (selectingWife) {
       addTimeout(
-        () => showBubble("wife", "speechWife", "本宫上线，先查老哥表现。"),
+        () =>
+          showImageBubble(
+            "wife",
+            "speechWife",
+            thoughtWifeFood2,
+            "今天的规矩，我说了算。",
+          ),
         100,
-      );
-      addTimeout(
-        () => showBubble("husband", "speechHusband", "收到，我立刻站好。"),
-        450,
       );
     } else {
       addTimeout(
-        () => showBubble("husband", "speechHusband", "老妞大人，我上线待命。"),
-        100,
-      );
-      addTimeout(
         () =>
-          showBubble("wife", "speechWife", "准了，进去把今天的事做好。"),
-        450,
+          showImageBubble(
+            "husband",
+            "speechHusband",
+            thoughtWifeFood1,
+            "我今天一定好好表现！",
+          ),
+        100,
       );
     }
   }
@@ -813,6 +933,20 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
     <section className={`login-page login-page--${flow}`} aria-label="角色登录">
       <div className="login-stage" ref={stageRef}>
         <img className="login-layer login-bg" src={bgRoom} alt="" />
+        <div
+          className={`login-tree-plaque-days login-tree-plaque-days--digits-${String(loveDayCount).length}`}
+          aria-label={`从2024年9月14日至今第${loveDayCount}天`}
+          style={
+            lovePlaquePosition
+              ? {
+                  left: `${lovePlaquePosition.x}px`,
+                  top: `${lovePlaquePosition.y - 2}px`,
+                }
+              : { visibility: "hidden" }
+          }
+        >
+          {loveDayCount}
+        </div>
         <div className="login-stage__top-mask" aria-hidden="true" />
         <div className="login-stage__bottom-mask" aria-hidden="true" />
 
@@ -822,6 +956,15 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
           src={subtitle}
           alt="点击角色进入对应主页"
         />
+
+        <button
+          className="login-reset-button"
+          type="button"
+          aria-label="复位所有角色并重播登录动画"
+          onClick={handleReset}
+        >
+          <img src={resetButton} alt="复位" draggable={false} />
+        </button>
 
         {(["husband", "wife", "catBlue", "catWhite"] as const).map((id) => (
           <DraggableSprite
@@ -839,6 +982,7 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
             onDragStart={handleDragStart}
             onPositionChange={handlePositionChange}
             onSpriteClick={handleSpriteClick}
+            playbackKey={playbackKey}
           />
         ))}
 
