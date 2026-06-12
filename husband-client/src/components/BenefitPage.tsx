@@ -184,7 +184,7 @@ export function BenefitPage({
     >
       <img
         className="cinema-image"
-        src={role.roleImage}
+        src={role.benefitImage}
         alt={`${role.title}权益背景`}
       />
       <div className="image-scrim image-scrim--benefit" />
@@ -261,7 +261,10 @@ export function BenefitPage({
         aria-label="上滑进入主页"
         onClick={() => onSelectView("role")}
       >
-        <img src={publicAsset("/assets/ui/swipe-up.png")} alt="" />
+        <img
+          src={publicAsset("/assets/ui/swipe-return.png?v=b94ee0a3")}
+          alt=""
+        />
       </button>
 
       <BenefitModal

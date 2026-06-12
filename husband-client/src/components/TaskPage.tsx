@@ -150,12 +150,15 @@ export function TaskPage({
 
       <div className="task-shell">
         <button
-          className="swipe-hint swipe-hint--task-top"
+          className="swipe-hint swipe-hint--task-top swipe-hint--image"
           type="button"
+          aria-label="下滑进入主页"
           onClick={() => onSelectView("role")}
         >
-          <span>⌄</span>
-          下滑进入主页
+          <img
+            src={publicAsset("/assets/ui/swipe-down-return.png?v=7e938cd4")}
+            alt=""
+          />
         </button>
 
         <header className="task-header">

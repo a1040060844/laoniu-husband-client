@@ -183,8 +183,8 @@ button {
   background: linear-gradient(
     180deg,
     rgba(3, 3, 3, 0) 0%,
-    rgba(3, 3, 3, 0.72) 42%,
-    rgba(3, 3, 3, 0.98) 100%
+    rgba(3, 3, 3, 0.32) 42%,
+    rgba(3, 3, 3, 0.62) 100%
   );
   transform: translateX(-50%);
 }
@@ -196,7 +196,7 @@ button {
   z-index: -3;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   object-position: center top;
   background: #050302;
 }
@@ -268,8 +268,8 @@ button {
       rgba(5, 3, 2, 0.66) 0 10%,
       rgba(5, 3, 2, 0.34) 22%,
       rgba(5, 3, 2, 0.04) 40%,
-      rgba(0, 0, 0, 0.48) 84%,
-      rgba(5, 3, 2, 0.94)
+      rgba(0, 0, 0, 0.22) 84%,
+      rgba(5, 3, 2, 0.58)
     ),
     radial-gradient(
       circle at 50% 38%,
@@ -329,8 +329,6 @@ button {
 
 .benefit-page .cinema-image {
   object-position: center top;
-  transform: translateY(18dvh) scale(1);
-  transform-origin: center top;
 }
 
 .page-screen--locked-role .cinema-image {
@@ -515,6 +513,26 @@ button {
   letter-spacing: 5px;
   font-family: var(--serif);
   font-size: 15px;
+}
+
+.side-guide--image {
+  top: 28px;
+  right: 10px;
+  display: block;
+  width: clamp(102px, 27vw, 117px);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.side-guide--image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
 }
 
 .bottom-panel {
@@ -1091,14 +1109,15 @@ button {
 .swipe-hint--benefit.swipe-hint--image {
   left: 50%;
   right: auto;
-  width: min(88%, 352px);
+  bottom: max(4px, env(safe-area-inset-bottom));
+  width: min(260px, 78%);
   min-height: 0;
   transform: translateX(-50%);
 }
 
 .swipe-hint--task-top {
   width: min(260px, 78%);
-  min-height: 54px;
+  min-height: 0;
   margin: 0 auto -2px;
 }
 
@@ -1193,10 +1212,13 @@ button {
 }
 
 .task-header img {
-  width: 82px;
-  height: 96px;
+  width: 88px;
+  height: 88px;
+  flex: 0 0 88px;
   border: 1px solid var(--gold-line);
+  border-radius: 50%;
   object-fit: cover;
+  object-position: center 27%;
   box-shadow: 0 12px 35px rgba(0, 0, 0, 0.55);
 }
 
@@ -1973,22 +1995,22 @@ button {
 @keyframes benefit-image-enter-next {
   from {
     opacity: 0;
-    transform: translateY(18dvh) translateX(14px) scale(1);
+    transform: translateX(14px);
   }
   to {
     opacity: 1;
-    transform: translateY(18dvh) translateX(0) scale(1);
+    transform: translateX(0);
   }
 }
 
 @keyframes benefit-image-enter-prev {
   from {
     opacity: 0;
-    transform: translateY(18dvh) translateX(-14px) scale(1);
+    transform: translateX(-14px);
   }
   to {
     opacity: 1;
-    transform: translateY(18dvh) translateX(0) scale(1);
+    transform: translateX(0);
   }
 }
 
@@ -2520,7 +2542,7 @@ button {
   width: 100%;
   height: 68dvh;
   min-height: 492px;
-  object-fit: contain;
+  object-fit: cover;
   object-position: center top;
   background: #030201;
   filter: saturate(0.96) contrast(1.08) brightness(0.84);
@@ -4763,6 +4785,7 @@ button {
   height: var(--app-height);
   min-height: -webkit-fill-available;
   min-height: 100dvh;
+  min-height: var(--app-height, 100dvh);
   overflow: hidden;
   background: #030201;
 }
@@ -4778,6 +4801,7 @@ button {
   height: var(--app-height);
   min-height: -webkit-fill-available;
   min-height: 100dvh;
+  min-height: var(--app-height, 100dvh);
   margin: 0 auto;
   overflow: hidden;
   color: var(--ink);
@@ -4803,6 +4827,7 @@ button {
   height: var(--app-height);
   min-height: -webkit-fill-available;
   min-height: 100dvh;
+  min-height: var(--app-height, 100dvh);
   background: #030201;
 }
 
@@ -4841,7 +4866,7 @@ button {
   width: 100%;
   height: min(68dvh, 590px);
   min-height: 492px;
-  object-fit: contain;
+  object-fit: cover;
   object-position: center top;
   background: #030201;
 }
@@ -4978,6 +5003,7 @@ button {
   height: var(--app-height);
   min-height: -webkit-fill-available;
   min-height: 100dvh;
+  min-height: var(--app-height, 100dvh);
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;

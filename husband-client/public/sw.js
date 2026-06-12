@@ -1,10 +1,9 @@
-const CACHE_NAME = "laoniu-pwa-static-v1";
+const CACHE_NAME = "laoniu-pwa-static-v2";
 const APP_SCOPE = new URL(self.registration.scope).pathname;
 const CORE_ASSETS = [
   APP_SCOPE,
   `${APP_SCOPE}index.html`,
   `${APP_SCOPE}manifest.webmanifest`,
-  `${APP_SCOPE}icon.svg`,
   `${APP_SCOPE}icon-192.png`,
   `${APP_SCOPE}icon-512.png`,
   `${APP_SCOPE}apple-touch-icon.png`,

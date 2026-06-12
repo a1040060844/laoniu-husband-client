@@ -1,4 +1,3 @@
-import { ShieldCheck } from "lucide-react";
 import { ProgressBar } from "./ProgressBar";
 import { RoleNavigator } from "./RoleNavigator";
 import { publicAsset } from "../lib/assets";
@@ -70,10 +69,17 @@ export function RolePage({
         <i />
       </header>
 
-      <div className="side-guide">
-        <ShieldCheck size={20} />
-        <span>下滑查看权益</span>
-      </div>
+      <button
+        className="side-guide side-guide--image"
+        type="button"
+        aria-label="下滑查看权益"
+        onClick={() => onSelectView("benefits")}
+      >
+        <img
+          src={publicAsset("/assets/ui/swipe-down.png?v=2a55bb1a")}
+          alt=""
+        />
+      </button>
 
       <RoleNavigator
         canPrev={canPrev}

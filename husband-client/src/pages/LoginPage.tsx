@@ -39,6 +39,7 @@ type FlowState = "idle" | "selectingHusband" | "selectingWife" | "exiting";
 type BubbleKind = "speechHusband" | "speechWife" | "thoughtWife";
 
 interface LoginPageProps {
+  isEntering?: boolean;
   onEnterRole: (role: RoleRoute) => void;
 }
 
@@ -550,7 +551,7 @@ function LoginBubble({ bubble, config, position }: LoginBubbleProps) {
   );
 }
 
-export function LoginPage({ onEnterRole }: LoginPageProps) {
+export function LoginPage({ isEntering = false, onEnterRole }: LoginPageProps) {
   const stageRef = useRef<HTMLDivElement | null>(null);
   const timeoutRefs = useRef<number[]>([]);
   const flowRef = useRef<FlowState>("idle");
@@ -573,7 +574,7 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
   const [loveDayCount, setLoveDayCount] = useState(() => getLoveDayCount());
   const [lovePlaquePosition, setLovePlaquePosition] =
     useState<Position | null>(null);
-  const isBusy = flow !== "idle";
+  const isBusy = flow !== "idle" || isEntering;
 
   useLayoutEffect(() => {
     const stage = stageRef.current;
@@ -830,6 +831,7 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
   );
 
   const handleReset = useCallback(() => {
+    if (isEntering) return;
     clearLoginTimeouts();
     selectionRef.current = null;
     flowRef.current = "idle";
@@ -842,7 +844,7 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
     setActions(defaultActions);
     setPlaybackKey((current) => current + 1);
     playLoginIntro();
-  }, [clearLoginTimeouts, playLoginIntro]);
+  }, [clearLoginTimeouts, isEntering, playLoginIntro]);
 
   const completeSelection = useCallback(() => {
     const selection = selectionRef.current;
@@ -861,14 +863,19 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
         return;
       }
 
-      setSpriteAction(id, "idle");
+      const selection = selectionRef.current;
+      const shouldHoldWifeSelectionFrame =
+        id === "wife" && selection?.target === "wife" && action === "select";
+
+      if (!shouldHoldWifeSelectionFrame) {
+        setSpriteAction(id, "idle");
+      }
 
       if (id === "wife" && action === "thinking") {
         addTimeout(() => hideBubble("wife"), 500);
       }
 
       if (id === "husband" || id === "wife") {
-        const selection = selectionRef.current;
         if (selection && id === selection.target && action === "select") {
           addTimeout(() => {
             hideAllBubbles();
@@ -881,7 +888,7 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
   );
 
   function beginSelect(role: RoleRoute) {
-    if (flowRef.current !== "idle") return;
+    if (flowRef.current !== "idle" || isEntering) return;
     clearLoginTimeouts();
     const selectingWife = role === "wife";
     selectionRef.current = { role, target: selectingWife ? "wife" : "husband" };
@@ -960,6 +967,7 @@ export function LoginPage({ onEnterRole }: LoginPageProps) {
         <button
           className="login-reset-button"
           type="button"
+          disabled={isBusy}
           aria-label="复位所有角色并重播登录动画"
           onClick={handleReset}
         >

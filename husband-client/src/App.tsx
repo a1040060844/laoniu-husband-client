@@ -1,4 +1,10 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback } from "react";
+import {
+  AppLoadingPage,
+  type LoadingBackdropMode,
+  type LoadingPhase,
+} from "./components/AppLoadingPage";
 import { BenefitPage } from "./components/BenefitPage";
 import {
   HUSBAND_PAGES,
@@ -30,6 +36,10 @@ import {
   saveTaskSystem,
 } from "./lib/taskSystem";
 import { publicAsset } from "./lib/assets";
+import {
+  preloadRouteAssets,
+  type AppRoute,
+} from "./lib/preloadAssets";
 import { taskRewardExp, taskRewardMoney, taskRewardText } from "./lib/taskRewards";
 import { LoginPage } from "./pages/LoginPage";
 import type {
@@ -45,13 +55,46 @@ import type {
 import "./styles.css";
 
 export type PreviewDirection = "none" | "next" | "prev";
-type RouteKey = "login" | "husband" | "wife";
+type RouteKey = AppRoute;
 
 const SLAVE_PAGES = {
   BENEFIT: 0,
   STATUS: 1,
   TASK: 2,
 } as const;
+
+type LoadedTaskSystem = Awaited<ReturnType<typeof loadTaskSystem>>;
+
+let taskSystemLoadPromise: Promise<LoadedTaskSystem | null> | null = null;
+const MIN_LOADING_DURATION_MS = 3_000;
+
+function loadTaskSystemOnce() {
+  if (taskSystemLoadPromise) return taskSystemLoadPromise;
+
+  taskSystemLoadPromise = new Promise<LoadedTaskSystem | null>((resolve) => {
+    let settled = false;
+    const finish = (state: LoadedTaskSystem | null) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeoutId);
+      resolve(state);
+    };
+    const timeoutId = window.setTimeout(() => finish(null), 8_000);
+
+    loadTaskSystem()
+      .then((state) => finish(state))
+      .catch(() => finish(null));
+  });
+
+  return taskSystemLoadPromise;
+}
+
+function isLoadingPreviewRoute(target: Exclude<AppRoute, "login">) {
+  return (
+    routeFromPathname(window.location.pathname) === target &&
+    new URLSearchParams(window.location.search).get("loading-preview") === "1"
+  );
+}
 
 function routeFromPathname(pathname: string): RouteKey {
   if (pathname === "/") return "login";
@@ -209,9 +252,10 @@ function ledgerEntriesFromTask(task: Task, createdAt: string): WalletLedgerEntry
 
 export default function App() {
   const initialState = useMemo(readLocalTaskSystem, []);
-  const [route, setRoute] = useState<RouteKey>(() =>
+  const initialRoute = useRef<RouteKey>(
     routeFromPathname(window.location.pathname),
-  );
+  ).current;
+  const [route, setRoute] = useState<RouteKey>(initialRoute);
   const [activePage, setActivePage] = useState<number>(HUSBAND_PAGES.ROLE);
   const [slaveActivePage, setSlaveActivePage] = useState<number>(
     SLAVE_PAGES.STATUS,
@@ -229,7 +273,21 @@ export default function App() {
   );
   const [selectedBenefit, setSelectedBenefit] = useState<Benefit | null>(null);
   const [story, setStory] = useState<StoryEvent | null>(null);
+  const [loadingTarget, setLoadingTarget] = useState<AppRoute | null>(
+    initialRoute === "login" ? null : initialRoute,
+  );
+  const [loadingPercent, setLoadingPercent] = useState(0);
+  const [isLoading, setIsLoading] = useState(initialRoute !== "login");
+  const [loadingPhase, setLoadingPhase] = useState<LoadingPhase>("loading");
+  const [isLoadingPreview, setIsLoadingPreview] = useState(
+    initialRoute !== "login" && isLoadingPreviewRoute(initialRoute),
+  );
+  const [loadingBackdropMode, setLoadingBackdropMode] =
+    useState<LoadingBackdropMode>(initialRoute === "login" ? "current" : "room");
   const hasLoadedServerState = useRef(false);
+  const loadingAttemptRef = useRef(0);
+  const navigationLockedRef = useRef(initialRoute !== "login");
+  const loadingPushHistoryRef = useRef(false);
 
   const currentRole = roleWithProgress(roles[progress.level], progress);
   const previewRole = roleWithProgress(roles[previewLevel], progress);
@@ -237,6 +295,114 @@ export default function App() {
   const sortedBenefits = useMemo(() => {
     return [...benefits].sort((a, b) => a.levelRequired - b.levelRequired);
   }, [benefits]);
+
+  const commitLoadedRoute = useCallback(
+    (target: Exclude<AppRoute, "login">, pushHistory: boolean) => {
+      const nextPath = target === "husband" ? "/husband" : "/wife";
+      if (pushHistory && window.location.pathname !== nextPath) {
+        window.history.pushState(null, "", nextPath);
+      }
+      setRoute(target);
+      setLoadingPercent(100);
+      setLoadingPhase("loading");
+      setIsLoadingPreview(false);
+      setIsLoading(false);
+      setLoadingTarget(null);
+      navigationLockedRef.current = false;
+    },
+    [],
+  );
+
+  const runLoadingAttempt = useCallback(
+    (
+      target: Exclude<AppRoute, "login">,
+      pushHistory: boolean,
+      backdropMode: LoadingBackdropMode = "current",
+    ) => {
+      const attempt = loadingAttemptRef.current + 1;
+      const previewMode = isLoadingPreviewRoute(target);
+      loadingAttemptRef.current = attempt;
+      loadingPushHistoryRef.current = pushHistory;
+      navigationLockedRef.current = true;
+      setLoadingTarget(target);
+      setLoadingBackdropMode(backdropMode);
+      setLoadingPercent(1);
+      setLoadingPhase("loading");
+      setIsLoadingPreview(previewMode);
+      setIsLoading(true);
+
+      const visualProgressRequest = new Promise<void>((resolve) => {
+        const startedAt = window.performance.now();
+        let settled = false;
+        const finish = (showFinalProgress: boolean) => {
+          if (settled) return;
+          settled = true;
+          window.clearTimeout(fallbackTimer);
+          if (
+            showFinalProgress &&
+            loadingAttemptRef.current === attempt
+          ) {
+            setLoadingPercent(99);
+          }
+          resolve();
+        };
+        const fallbackTimer = window.setTimeout(
+          () => finish(true),
+          MIN_LOADING_DURATION_MS,
+        );
+        const updateProgress = (now: number) => {
+          if (settled) return;
+          if (loadingAttemptRef.current !== attempt) {
+            finish(false);
+            return;
+          }
+
+          const elapsed = now - startedAt;
+          const percent = 1 + (elapsed / MIN_LOADING_DURATION_MS) * 98;
+          setLoadingPercent(Math.min(99, Math.floor(percent)));
+
+          if (elapsed >= MIN_LOADING_DURATION_MS) {
+            finish(true);
+            return;
+          }
+
+          window.requestAnimationFrame(updateProgress);
+        };
+
+        window.requestAnimationFrame(updateProgress);
+      });
+
+      Promise.all([
+        preloadRouteAssets(target),
+        loadTaskSystemOnce(),
+        visualProgressRequest,
+      ])
+        .then(([assetResult]) => {
+          if (loadingAttemptRef.current !== attempt) return;
+          if (previewMode) {
+            setLoadingPercent(100);
+            setLoadingPhase("ready");
+            return;
+          }
+          if (assetResult.failed.length > 0) {
+            setLoadingPhase("error");
+            return;
+          }
+          setLoadingPercent(100);
+          setLoadingPhase("ready");
+        })
+        .catch(() => {
+          if (loadingAttemptRef.current !== attempt) return;
+          if (previewMode) {
+            setLoadingPercent(100);
+            setLoadingPhase("ready");
+            return;
+          }
+          setLoadingPhase("error");
+        });
+    },
+    [],
+  );
 
   function addLog(
     log: Omit<EventLog, "id" | "createdAt"> & { createdAt?: string },
@@ -295,25 +461,35 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false;
-    loadTaskSystem()
+    loadTaskSystemOnce()
       .then((serverState) => {
         if (cancelled) return;
         hasLoadedServerState.current = true;
+        if (!serverState) return;
         setProgress(serverState.progress);
         setTasks(serverState.tasks);
         setLogs(serverState.logs);
         setPunishment(serverState.punishment);
         setBenefits(serverState.benefits);
         setWalletLedger(serverState.walletLedger);
-      })
-      .catch(() => {
-        hasLoadedServerState.current = true;
       });
 
     return () => {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (initialRoute === "login") {
+      preloadRouteAssets("login").catch(() => undefined);
+      return;
+    }
+
+    runLoadingAttempt(initialRoute, false, "room");
+    return () => {
+      loadingAttemptRef.current += 1;
+    };
+  }, [initialRoute, runLoadingAttempt]);
 
   useEffect(() => {
     const state = { progress, punishment, tasks, logs, benefits, walletLedger };
@@ -434,11 +610,25 @@ export default function App() {
 
   useEffect(() => {
     const handlePopState = () => {
-      setRoute(routeFromPathname(window.location.pathname));
+      const nextRoute = routeFromPathname(window.location.pathname);
+      loadingAttemptRef.current += 1;
+
+      if (nextRoute === "login") {
+        navigationLockedRef.current = false;
+        setLoadingTarget(null);
+        setLoadingPhase("loading");
+        setIsLoadingPreview(false);
+        setIsLoading(false);
+        setRoute("login");
+        preloadRouteAssets("login").catch(() => undefined);
+        return;
+      }
+
+      runLoadingAttempt(nextRoute, false, "current");
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
+  }, [runLoadingAttempt]);
 
   useEffect(() => {
     if (punishment.status === "slave") return;
@@ -968,20 +1158,68 @@ export default function App() {
   }
 
   function handleEnterRole(role: "husband" | "wife") {
-    const nextPath = role === "husband" ? "/husband" : "/wife";
-    window.history.pushState(null, "", nextPath);
-    setRoute(role);
+    if (navigationLockedRef.current) return;
+    runLoadingAttempt(role, true, "current");
   }
 
   function handleReturnToLogin() {
+    loadingAttemptRef.current += 1;
+    navigationLockedRef.current = false;
     window.history.pushState(null, "", "/");
+    setLoadingTarget(null);
+    setLoadingPhase("loading");
+    setIsLoadingPreview(false);
+    setIsLoading(false);
     setRoute("login");
+    preloadRouteAssets("login").catch(() => undefined);
+  }
+
+  function handleRetryLoading() {
+    if (
+      loadingPhase !== "error" ||
+      !loadingTarget ||
+      loadingTarget === "login"
+    ) return;
+    runLoadingAttempt(
+      loadingTarget,
+      loadingPushHistoryRef.current,
+      loadingBackdropMode,
+    );
+  }
+
+  function handleContinueLoading() {
+    if (
+      loadingPhase !== "ready" ||
+      isLoadingPreview ||
+      !loadingTarget ||
+      loadingTarget === "login"
+    ) return;
+    loadingAttemptRef.current += 1;
+    commitLoadedRoute(loadingTarget, loadingPushHistoryRef.current);
+  }
+
+  const loadingOverlay = isLoading && loadingTarget ? (
+    <AppLoadingPage
+      target={loadingTarget}
+      percent={loadingPercent}
+      phase={loadingPhase}
+      backdropMode={loadingBackdropMode}
+      onRetry={handleRetryLoading}
+      onContinue={handleContinueLoading}
+    />
+  ) : null;
+
+  if (loadingOverlay && loadingBackdropMode === "room") {
+    return (
+      loadingOverlay
+    );
   }
 
   if (route === "login") {
     return (
       <main className="app">
-        <LoginPage onEnterRole={handleEnterRole} />
+        <LoginPage onEnterRole={handleEnterRole} isEntering={isLoading} />
+        {loadingOverlay}
       </main>
     );
   }
@@ -1021,6 +1259,7 @@ export default function App() {
           onRestoreNormal={handleRestoreNormal}
         />
         <StoryModal story={story} onClose={() => setStory(null)} />
+        {loadingOverlay}
       </main>
     );
   }
@@ -1092,6 +1331,7 @@ export default function App() {
         </HusbandVerticalPager>
 
         <StoryModal story={story} onClose={() => setStory(null)} />
+        {loadingOverlay}
       </main>
     );
   }
@@ -1146,6 +1386,7 @@ export default function App() {
       </HusbandVerticalPager>
 
       <StoryModal story={story} onClose={() => setStory(null)} />
+      {loadingOverlay}
     </main>
   );
 }
