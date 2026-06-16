@@ -1,5 +1,32 @@
 export type ViewKey = "role" | "benefits" | "tasks";
 
+export type DecreeType =
+  | "experience_granted"
+  | "experience_penalty"
+  | "level_changed"
+  | "punishment_slave"
+  | "punishment_restored"
+  | "punishment_continued"
+  | "task_created"
+  | "task_approved"
+  | "task_rejected"
+  | "benefit_approved"
+  | "benefit_rejected";
+
+export interface DecreeEvent {
+  id: string;
+  type: DecreeType;
+  title: string;
+  text: string;
+  tone: "upgrade" | "down" | "punish" | "normal";
+  createdAt: string;
+  target: "husband";
+  readAt?: string;
+  acknowledgedAt?: string;
+  sourceLogId?: string;
+  payload: Record<string, unknown>;
+}
+
 export type BenefitStatus =
   | "available"
   | "cooldown"
@@ -114,6 +141,9 @@ export interface Punishment {
   durationDays: number;
   recoveryExp: number;
   requiredRecoveryExp: number;
+  restoreLevel?: number;
+  restoreExp?: number;
+  restoreWallet?: number;
 }
 
 export interface Task {

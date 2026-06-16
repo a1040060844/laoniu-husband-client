@@ -6,15 +6,18 @@ import {
   type LoadingPhase,
 } from "./components/AppLoadingPage";
 import { BenefitPage } from "./components/BenefitPage";
+import { DecreeModal } from "./components/DecreeModal";
 import {
   HUSBAND_PAGES,
   HusbandVerticalPager,
 } from "./components/HusbandVerticalPager";
 import { RolePage } from "./components/RolePage";
 import { SlavePage } from "./components/SlavePage";
+import { SlaveRulingModal } from "./components/SlaveRulingModal";
 import { StoryModal } from "./components/StoryModal";
 import { TaskPage } from "./components/TaskPage";
 import { WifeDashboard } from "./components/WifeDashboard";
+import { PixelTransition } from "./components/effects/PixelTransition";
 import { roles } from "./data/roles";
 import {
   MIN_LEVEL,
@@ -27,9 +30,12 @@ import {
 } from "./game/progression";
 import {
   createNormalPunishment,
+  createNextSlavePunishment,
   createSlavePunishment,
-  isPunishmentRecoverable,
+  isPunishmentCycleComplete,
   loadTaskSystem,
+  loadTaskSystemFresh,
+  mergeDecrees,
   persistLocalTaskSystem,
   readLocalTaskSystem,
   refreshTaskCycles,
@@ -44,6 +50,7 @@ import { taskRewardExp, taskRewardMoney, taskRewardText } from "./lib/taskReward
 import { LoginPage } from "./pages/LoginPage";
 import type {
   Benefit,
+  DecreeEvent,
   EventLog,
   StoryEvent,
   Task,
@@ -105,6 +112,14 @@ function routeFromPathname(pathname: string): RouteKey {
 
 function ledgerId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+}
+
+function decreeId() {
+  return `decree-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+}
+
+function taskSystemFingerprint(state: LoadedTaskSystem) {
+  return JSON.stringify(state);
 }
 
 function formatDateTime(value?: string) {
@@ -271,8 +286,14 @@ export default function App() {
   const [walletLedger, setWalletLedger] = useState<WalletLedgerEntry[]>(
     initialState.walletLedger,
   );
+  const [decrees, setDecrees] = useState<DecreeEvent[]>(initialState.decrees);
   const [selectedBenefit, setSelectedBenefit] = useState<Benefit | null>(null);
   const [story, setStory] = useState<StoryEvent | null>(null);
+  const [showSlaveRuling, setShowSlaveRuling] = useState(false);
+  const [husbandSyncReady, setHusbandSyncReady] = useState(false);
+  const [taskSystemReady, setTaskSystemReady] = useState(false);
+  const [decreeSaving, setDecreeSaving] = useState(false);
+  const [decreeError, setDecreeError] = useState<string>();
   const [loadingTarget, setLoadingTarget] = useState<AppRoute | null>(
     initialRoute === "login" ? null : initialRoute,
   );
@@ -288,6 +309,23 @@ export default function App() {
   const loadingAttemptRef = useRef(0);
   const navigationLockedRef = useRef(initialRoute !== "login");
   const loadingPushHistoryRef = useRef(false);
+  const pixelTransitionActionRef = useRef<(() => void) | null>(null);
+  const decreesRef = useRef(initialState.decrees);
+  const lastRemoteFingerprintRef = useRef<string | null>(null);
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const salaryProcessingRef = useRef(new Set<string>());
+  const [pixelTransitionKey, setPixelTransitionKey] = useState(0);
+
+  const runPixelTransition = useCallback((action: () => void) => {
+    pixelTransitionActionRef.current = action;
+    setPixelTransitionKey((current) => current + 1);
+  }, []);
+
+  const handlePixelCovered = useCallback(() => {
+    const action = pixelTransitionActionRef.current;
+    pixelTransitionActionRef.current = null;
+    action?.();
+  }, []);
 
   const currentRole = roleWithProgress(roles[progress.level], progress);
   const previewRole = roleWithProgress(roles[previewLevel], progress);
@@ -295,6 +333,46 @@ export default function App() {
   const sortedBenefits = useMemo(() => {
     return [...benefits].sort((a, b) => a.levelRequired - b.levelRequired);
   }, [benefits]);
+
+  const pendingDecrees = useMemo(
+    () =>
+      decrees
+        .filter((decree) => decree.target === "husband" && !decree.acknowledgedAt)
+        .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt)),
+    [decrees],
+  );
+  const activeDecree =
+    route === "husband" && husbandSyncReady ? pendingDecrees[0] ?? null : null;
+
+  const applyRemoteState = useCallback((serverState: LoadedTaskSystem) => {
+    const mergedDecrees = mergeDecrees(
+      serverState.decrees,
+      decreesRef.current,
+    );
+    lastRemoteFingerprintRef.current = taskSystemFingerprint(serverState);
+    decreesRef.current = mergedDecrees;
+    setProgress(serverState.progress);
+    setTasks(serverState.tasks);
+    setLogs(serverState.logs);
+    setPunishment(serverState.punishment);
+    setBenefits(serverState.benefits);
+    setWalletLedger(serverState.walletLedger);
+    setDecrees(mergedDecrees);
+  }, []);
+
+  const enqueueSave = useCallback(
+    <T,>(operation: () => Promise<T>) => {
+      const result = saveQueueRef.current
+        .catch(() => undefined)
+        .then(operation);
+      saveQueueRef.current = result.then(
+        () => undefined,
+        () => undefined,
+      );
+      return result;
+    },
+    [],
+  );
 
   const commitLoadedRoute = useCallback(
     (target: Exclude<AppRoute, "login">, pushHistory: boolean) => {
@@ -408,14 +486,31 @@ export default function App() {
     log: Omit<EventLog, "id" | "createdAt"> & { createdAt?: string },
   ) {
     const createdAt = log.createdAt ?? new Date().toISOString();
+    const nextLog: EventLog = {
+      ...log,
+      id: `log-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+      createdAt,
+    };
     setLogs((current) => [
-      {
-        ...log,
-        id: `log-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-        createdAt,
-      },
+      nextLog,
       ...current,
     ]);
+    return nextLog;
+  }
+
+  function appendDecree(
+    decree: Omit<DecreeEvent, "id" | "createdAt" | "target"> & {
+      createdAt?: string;
+    },
+  ) {
+    const nextDecree: DecreeEvent = {
+      ...decree,
+      id: decreeId(),
+      createdAt: decree.createdAt ?? new Date().toISOString(),
+      target: "husband",
+    };
+    setDecrees((current) => [...current, nextDecree]);
+    return nextDecree;
   }
 
   function addLedger(
@@ -433,7 +528,7 @@ export default function App() {
       },
       ...current,
     ]);
-    addLog({
+    return addLog({
       type: "wallet_ledger",
       title: entry.source,
       description: entry.note,
@@ -465,19 +560,40 @@ export default function App() {
       .then((serverState) => {
         if (cancelled) return;
         hasLoadedServerState.current = true;
-        if (!serverState) return;
-        setProgress(serverState.progress);
-        setTasks(serverState.tasks);
-        setLogs(serverState.logs);
-        setPunishment(serverState.punishment);
-        setBenefits(serverState.benefits);
-        setWalletLedger(serverState.walletLedger);
+        if (serverState) applyRemoteState(serverState);
+        setTaskSystemReady(true);
       });
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [applyRemoteState]);
+
+  useEffect(() => {
+    if (route !== "husband") {
+      setHusbandSyncReady(false);
+      return;
+    }
+
+    let cancelled = false;
+    const syncFresh = async () => {
+      try {
+        const serverState = await loadTaskSystemFresh();
+        if (!cancelled) applyRemoteState(serverState);
+      } catch {
+        // Keep the last local state when the sync service is temporarily offline.
+      } finally {
+        if (!cancelled) setHusbandSyncReady(true);
+      }
+    };
+
+    void syncFresh();
+    const timer = window.setInterval(syncFresh, 3_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [applyRemoteState, route]);
 
   useEffect(() => {
     if (initialRoute === "login") {
@@ -492,16 +608,58 @@ export default function App() {
   }, [initialRoute, runLoadingAttempt]);
 
   useEffect(() => {
-    const state = { progress, punishment, tasks, logs, benefits, walletLedger };
+    decreesRef.current = decrees;
+  }, [decrees]);
+
+  useEffect(() => {
+    const state = {
+      progress,
+      punishment,
+      tasks,
+      logs,
+      benefits,
+      walletLedger,
+      decrees,
+    };
     persistLocalTaskSystem(state);
 
+    if (taskSystemFingerprint(state) === lastRemoteFingerprintRef.current) return;
     if (!hasLoadedServerState.current) return;
     const timeout = window.setTimeout(() => {
-      saveTaskSystem(state).catch(() => undefined);
+      void enqueueSave(async () => {
+          const serverState = await loadTaskSystemFresh();
+          await saveTaskSystem({
+            ...state,
+            decrees: mergeDecrees(serverState.decrees, state.decrees),
+          });
+        }).catch(() => undefined);
     }, 250);
 
     return () => window.clearTimeout(timeout);
-  }, [benefits, logs, progress, punishment, tasks, walletLedger]);
+  }, [
+    benefits,
+    decrees,
+    enqueueSave,
+    logs,
+    progress,
+    punishment,
+    tasks,
+    walletLedger,
+  ]);
+
+  useEffect(() => {
+    if (!activeDecree || activeDecree.readAt) return;
+    const readAt = new Date().toISOString();
+    setDecrees((current) =>
+      current.map((decree) =>
+        decree.id === activeDecree.id ? { ...decree, readAt } : decree,
+      ),
+    );
+  }, [activeDecree]);
+
+  useEffect(() => {
+    setDecreeError(undefined);
+  }, [activeDecree?.id]);
 
   useEffect(() => {
     const rewardedAt = new Date().toISOString();
@@ -613,33 +771,38 @@ export default function App() {
       const nextRoute = routeFromPathname(window.location.pathname);
       loadingAttemptRef.current += 1;
 
-      if (nextRoute === "login") {
-        navigationLockedRef.current = false;
-        setLoadingTarget(null);
-        setLoadingPhase("loading");
-        setIsLoadingPreview(false);
-        setIsLoading(false);
-        setRoute("login");
-        preloadRouteAssets("login").catch(() => undefined);
-        return;
-      }
+      runPixelTransition(() => {
+        if (nextRoute === "login") {
+          navigationLockedRef.current = false;
+          setLoadingTarget(null);
+          setLoadingPhase("loading");
+          setIsLoadingPreview(false);
+          setIsLoading(false);
+          setRoute("login");
+          preloadRouteAssets("login").catch(() => undefined);
+          return;
+        }
 
-      runLoadingAttempt(nextRoute, false, "current");
+        runLoadingAttempt(nextRoute, false, "current");
+      });
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [runLoadingAttempt]);
+  }, [runLoadingAttempt, runPixelTransition]);
 
   useEffect(() => {
-    if (punishment.status === "slave") return;
+    if (!taskSystemReady || punishment.status === "slave") return;
     const monthKey = getCurrentMonthKey();
     if (
       walletLedger.some(
         (entry) => entry.type === "salary" && entry.monthKey === monthKey,
       )
     ) {
+      salaryProcessingRef.current.add(monthKey);
       return;
     }
+    if (salaryProcessingRef.current.has(monthKey)) return;
+    salaryProcessingRef.current.add(monthKey);
     const salary = currentRole.salary;
     const createdAt = new Date().toISOString();
     setProgress((current) => ({
@@ -656,7 +819,7 @@ export default function App() {
       createdAt,
       note: `${monthKey} 月薪`,
     });
-  }, [currentRole.salary, punishment.status, walletLedger]);
+  }, [currentRole.salary, punishment.status, taskSystemReady, walletLedger]);
 
   function handleSelectView(view: ViewKey) {
     const pageMap: Record<ViewKey, number> = {
@@ -722,13 +885,22 @@ export default function App() {
     const createdAt = task.createdAt ?? new Date().toISOString();
     const nextTask = { ...task, createdAt };
     setTasks((current) => [nextTask, ...current]);
-    addLog({
+    const log = addLog({
       type: "task_created",
       title: nextTask.title,
       description: nextTask.description,
       taskId: nextTask.id,
       taskTitle: nextTask.title,
       createdAt,
+    });
+    appendDecree({
+      type: "task_created",
+      title: "新任务下达",
+      text: `老妞大人发布了「${nextTask.title}」：${nextTask.description}`,
+      tone: nextTask.type === "urgent" ? "punish" : "normal",
+      createdAt,
+      sourceLogId: log.id,
+      payload: { taskId: nextTask.id, taskType: nextTask.type },
     });
     setStory({
       title: "任务已下达",
@@ -783,7 +955,7 @@ export default function App() {
       ),
     );
     if (target) {
-      addLog({
+      const log = addLog({
         type: "task_approved",
         title: target.title,
         description:
@@ -801,6 +973,22 @@ export default function App() {
         taskId: target.id,
         taskTitle: target.title,
         createdAt: confirmedAt,
+      });
+      appendDecree({
+        type: "task_approved",
+        title: "任务确认",
+        text:
+          nextCompleted < repeatTarget
+            ? `老妞大人确认「${target.title}」本周期进度：${nextCompleted}/${repeatTarget}。`
+            : `老妞大人确认「${target.title}」已经完成。${isSlave ? `恢复经验将增加 ${Math.min(30, taskRewardExp(target))}。` : `奖励为：${taskRewardText({ ...target, rewards: decision?.rewards ?? target.rewards })}。`}`,
+        tone: "normal",
+        createdAt: confirmedAt,
+        sourceLogId: log.id,
+        payload: {
+          taskId: target.id,
+          completedCount: nextCompleted,
+          repeatTarget,
+        },
       });
     }
   }
@@ -820,13 +1008,22 @@ export default function App() {
       ),
     );
     if (target) {
-      addLog({
+      const log = addLog({
         type: "task_rejected",
         title: target.title,
         description: rejectReason,
         taskId: target.id,
         taskTitle: target.title,
         createdAt: rejectedAt,
+      });
+      appendDecree({
+        type: "task_rejected",
+        title: "任务驳回",
+        text: `老妞大人驳回了「${target.title}」：${rejectReason}`,
+        tone: "punish",
+        createdAt: rejectedAt,
+        sourceLogId: log.id,
+        payload: { taskId: target.id, reason: rejectReason },
       });
     }
     setStory({
@@ -950,13 +1147,22 @@ export default function App() {
           : item,
       ),
     );
-    addLog({
+    const log = addLog({
       type: "benefit_approved",
       title: benefit.name,
       description: `已批准，冷却至 ${formatDateTime(cooldownUntil)}。`,
       benefitId: benefit.id,
       benefitName: benefit.name,
       createdAt: approvedAt,
+    });
+    appendDecree({
+      type: "benefit_approved",
+      title: `恩准：${benefit.name}`,
+      text: `老妞大人准许本次「${benefit.name}」申请。${benefit.description}`,
+      tone: benefit.levelRequired >= 8 ? "upgrade" : "normal",
+      createdAt: approvedAt,
+      sourceLogId: log.id,
+      payload: { benefitId: benefit.id, cooldownUntil },
     });
     setStory({
       title: `恩准：${benefit.name}`,
@@ -979,13 +1185,22 @@ export default function App() {
           : item,
       ),
     );
-    addLog({
+    const log = addLog({
       type: "benefit_rejected",
       title: benefit.name,
       description: rejectedReason,
       benefitId: benefit.id,
       benefitName: benefit.name,
       createdAt: rejectedAt,
+    });
+    appendDecree({
+      type: "benefit_rejected",
+      title: `暂缓：${benefit.name}`,
+      text: rejectedReason,
+      tone: "down",
+      createdAt: rejectedAt,
+      sourceLogId: log.id,
+      payload: { benefitId: benefit.id, reason: rejectedReason },
     });
     setStory({
       title: `暂缓：${benefit.name}`,
@@ -997,28 +1212,17 @@ export default function App() {
   function handleAdjustExperience(amount: number) {
     const createdAt = new Date().toISOString();
     if (amount > 0) {
-      setProgress((current) => {
-        const result = grantExperience(
-          current,
-          amount,
-          roles,
-          "老妞大人亲自赏赐",
-        );
-        if (result.stories.length) {
-          setStory(result.stories[result.stories.length - 1]);
-        }
-        if (result.progress.level !== current.level) {
-          addLog({
-            type: "level_changed",
-            title: roles[result.progress.level].title,
-            description: "经验奖励触发等级变化",
-            fromLevel: current.level,
-            toLevel: result.progress.level,
-          });
-        }
-        return result.progress;
-      });
-      addLedger({
+      const result = grantExperience(
+        progress,
+        amount,
+        roles,
+        "老妞大人亲自赏赐",
+      );
+      setProgress(result.progress);
+      if (result.stories.length) {
+        setStory(result.stories[result.stories.length - 1]);
+      }
+      const experienceLog = addLedger({
         type: "experience",
         source: "老妞赏赐",
         amount,
@@ -1026,15 +1230,45 @@ export default function App() {
         createdAt,
         note: "老婆端直接调整经验",
       });
+      appendDecree({
+        type: "experience_granted",
+        title: "老妞大人赏赐",
+        text: `老妞大人赏赐 ${amount} 点经验。`,
+        tone: "upgrade",
+        createdAt,
+        sourceLogId: experienceLog.id,
+        payload: { amount, unit: "EXP" },
+      });
+      if (result.progress.level !== progress.level) {
+        const levelCreatedAt = new Date(Date.parse(createdAt) + 1).toISOString();
+        const levelLog = addLog({
+          type: "level_changed",
+          title: roles[result.progress.level].title,
+          description: "经验奖励触发等级变化",
+          fromLevel: progress.level,
+          toLevel: result.progress.level,
+          createdAt: levelCreatedAt,
+        });
+        appendDecree({
+          type: "level_changed",
+          title: "职务晋升",
+          text: `老妞大人已赐予新职务：「${roles[result.progress.level].title}」。`,
+          tone: "upgrade",
+          createdAt: levelCreatedAt,
+          sourceLogId: levelLog.id,
+          payload: { fromLevel: progress.level, toLevel: result.progress.level },
+        });
+      }
       return;
     }
 
+    if (amount === 0) return;
     setProgress((current) => ({
       ...current,
       exp: Math.max(0, current.exp + amount),
       totalExp: Math.max(0, current.totalExp + amount),
     }));
-    addLedger({
+    const experienceLog = addLedger({
       type: "experience",
       source: "老妞扣罚",
       amount,
@@ -1042,10 +1276,15 @@ export default function App() {
       createdAt,
       note: "老婆端直接调整经验",
     });
-  }
-
-  function handleCustomExperience(amount: number) {
-    handleAdjustExperience(amount);
+    appendDecree({
+      type: "experience_penalty",
+      title: "经验扣罚",
+      text: `老妞大人扣罚 ${Math.abs(amount)} 点经验，命你认真反省。`,
+      tone: "down",
+      createdAt,
+      sourceLogId: experienceLog.id,
+      payload: { amount, unit: "EXP" },
+    });
   }
 
   function handleSetLevel(level: number, reason: string) {
@@ -1069,12 +1308,24 @@ export default function App() {
     }
     setPreviewLevel(safeLevel);
     if (safeLevel !== previousLevel) {
-      addLog({
+      const log = addLog({
         type: "level_changed",
         title: roles[safeLevel].title,
         description: reason,
         fromLevel: previousLevel,
         toLevel: safeLevel,
+      });
+      appendDecree({
+        type: "level_changed",
+        title: safeLevel > previousLevel ? "职务晋升" : "职务降级",
+        text:
+          safeLevel > previousLevel
+            ? `老妞大人已赐予新职务：「${roles[safeLevel].title}」。`
+            : `老妞大人收回原职，现降为「${roles[safeLevel].title}」。`,
+        tone: safeLevel > previousLevel ? "upgrade" : "down",
+        createdAt: log.createdAt,
+        sourceLogId: log.id,
+        payload: { fromLevel: previousLevel, toLevel: safeLevel, reason },
       });
     }
     if (previousPunishmentStatus !== "normal") {
@@ -1101,7 +1352,13 @@ export default function App() {
   function handlePunishStatus() {
     if (punishment.status === "slave") return;
     const previousPunishmentStatus = punishment.status;
-    setPunishment(createSlavePunishment());
+    setPunishment(
+      createSlavePunishment({
+        level: progress.level,
+        exp: progress.exp,
+        wallet: progress.wallet,
+      }),
+    );
     setSlaveActivePage(SLAVE_PAGES.STATUS);
     setProgress((current) => ({
       ...current,
@@ -1117,12 +1374,25 @@ export default function App() {
       note: "冻结并清空零花钱",
     });
     setPreviewLevel(MIN_LEVEL);
-    addLog({
+    const punishmentLog = addLog({
       type: "punishment_status_changed",
       title: "卖身奴隶状态",
       description: "冻结权益与零花钱，职务降至流落街头。",
       fromStatus: previousPunishmentStatus,
       toStatus: "slave",
+    });
+    appendDecree({
+      type: "punishment_slave",
+      title: "最终裁定",
+      text: "老妞大人执行卖身奴隶状态：权益冻结，零花钱清零，职务降至流落街头。",
+      tone: "punish",
+      createdAt: punishmentLog.createdAt,
+      sourceLogId: punishmentLog.id,
+      payload: {
+        fromLevel: progress.level,
+        toLevel: MIN_LEVEL,
+        clearedWallet: progress.wallet,
+      },
     });
     if (progress.level !== MIN_LEVEL) {
       addLog({
@@ -1141,37 +1411,135 @@ export default function App() {
   }
 
   function handleRestoreNormal() {
-    if (!isPunishmentRecoverable(punishment)) return;
+    if (punishment.status !== "slave") return;
+    const restoredLevel = clampLevel(punishment.restoreLevel ?? progress.level);
+    const restoredExp = Math.min(
+      punishment.restoreExp ?? progress.exp,
+      expRequiredForLevel(restoredLevel),
+    );
+    const restoredWallet = Math.max(
+      0,
+      Math.trunc(punishment.restoreWallet ?? progress.wallet),
+    );
+
     setPunishment(createNormalPunishment());
-    addLog({
+    setProgress((current) => ({
+      ...current,
+      level: restoredLevel,
+      exp: restoredExp,
+      wallet: restoredWallet,
+    }));
+    setPreviewLevel(restoredLevel);
+    if (restoredWallet !== progress.wallet) {
+      addLedger({
+        type: "punishment",
+        source: "赎回骆老哥",
+        amount: restoredWallet - progress.wallet,
+        unit: "CNY",
+        note: "返还卖身前零花钱",
+      });
+    }
+    const restoredLog = addLog({
       type: "punishment_status_changed",
-      title: "恢复正常",
-      description: "惩罚时间已结束，恢复经验已达标，卖身奴隶状态解除。",
+      title: "赎回骆老哥",
+      description: `卖身奴隶状态解除，官复原职为「${roles[restoredLevel].title}」。`,
       fromStatus: "slave",
       toStatus: "normal",
     });
-    setStory({
-      title: "恢复正常",
-      text: "老婆大人确认恢复条件已满足，卖身奴隶状态解除，重新进入正常服役。",
-      tone: "normal",
+    appendDecree({
+      type: "punishment_restored",
+      title: "官复原职",
+      text: `老妞大人解除卖身奴隶状态，恢复「${roles[restoredLevel].title}」职务、原有经验与零花钱。`,
+      tone: "upgrade",
+      createdAt: restoredLog.createdAt,
+      sourceLogId: restoredLog.id,
+      payload: { restoredLevel, restoredExp, restoredWallet },
     });
+    if (restoredLevel !== progress.level) {
+      addLog({
+        type: "level_changed",
+        title: roles[restoredLevel].title,
+        description: "赎回后官复原职",
+        fromLevel: progress.level,
+        toLevel: restoredLevel,
+      });
+    }
+    setStory({
+      title: "赎回成功",
+      text: `老婆大人已赎回骆老哥，卖身奴隶状态解除，恢复「${roles[restoredLevel].title}」职务、原有经验与零花钱。`,
+      tone: "upgrade",
+    });
+    setShowSlaveRuling(false);
+  }
+
+  function handleContinueSlaveLabor() {
+    if (punishment.status !== "slave") return;
+    setPunishment(createNextSlavePunishment(punishment));
+    const continuedLog = addLog({
+      type: "punishment_status_changed",
+      title: "继续劳作",
+      description: "老妞大人下旨开启新的奴隶周期：服役 7 天或重新收集 100 恢复经验。",
+      fromStatus: "slave",
+      toStatus: "slave",
+    });
+    appendDecree({
+      type: "punishment_continued",
+      title: "继续劳作",
+      text: "老妞大人下旨开启新的奴隶周期：继续服役 7 天，或重新收集 100 恢复经验。",
+      tone: "punish",
+      createdAt: continuedLog.createdAt,
+      sourceLogId: continuedLog.id,
+      payload: { durationDays: 7, requiredRecoveryExp: 100 },
+    });
+    setShowSlaveRuling(false);
+  }
+
+  async function handleAcknowledgeDecree() {
+    if (!activeDecree || decreeSaving) return;
+    setDecreeSaving(true);
+    setDecreeError(undefined);
+    const acknowledgedAt = new Date().toISOString();
+    const localAcknowledged = decrees.map((decree) =>
+      decree.id === activeDecree.id
+        ? { ...decree, acknowledgedAt }
+        : decree,
+    );
+    try {
+      const savedState = await enqueueSave(async () => {
+        const serverState = await loadTaskSystemFresh();
+        const nextState = {
+          ...serverState,
+          decrees: mergeDecrees(serverState.decrees, localAcknowledged),
+        };
+        await saveTaskSystem(nextState);
+        return nextState;
+      });
+      applyRemoteState(savedState);
+    } catch {
+      setDecreeError("领旨保存失败，请检查连接后重试。");
+    } finally {
+      setDecreeSaving(false);
+    }
   }
 
   function handleEnterRole(role: "husband" | "wife") {
     if (navigationLockedRef.current) return;
-    runLoadingAttempt(role, true, "current");
+    navigationLockedRef.current = true;
+    runPixelTransition(() => runLoadingAttempt(role, true, "current"));
   }
 
   function handleReturnToLogin() {
-    loadingAttemptRef.current += 1;
-    navigationLockedRef.current = false;
-    window.history.pushState(null, "", "/");
-    setLoadingTarget(null);
-    setLoadingPhase("loading");
-    setIsLoadingPreview(false);
-    setIsLoading(false);
-    setRoute("login");
-    preloadRouteAssets("login").catch(() => undefined);
+    runPixelTransition(() => {
+      loadingAttemptRef.current += 1;
+      navigationLockedRef.current = false;
+      window.history.pushState(null, "", "/");
+      setLoadingTarget(null);
+      setLoadingPhase("loading");
+      setIsLoadingPreview(false);
+      setIsLoading(false);
+      setRoute("login");
+      preloadRouteAssets("login").catch(() => undefined);
+    });
   }
 
   function handleRetryLoading() {
@@ -1194,9 +1562,23 @@ export default function App() {
       !loadingTarget ||
       loadingTarget === "login"
     ) return;
-    loadingAttemptRef.current += 1;
-    commitLoadedRoute(loadingTarget, loadingPushHistoryRef.current);
+    const target = loadingTarget;
+    const pushHistory = loadingPushHistoryRef.current;
+    runPixelTransition(() => {
+      loadingAttemptRef.current += 1;
+      commitLoadedRoute(target, pushHistory);
+      setShowSlaveRuling(
+        target === "wife" && isPunishmentCycleComplete(punishment),
+      );
+    });
   }
+
+  const pixelTransition = (
+    <PixelTransition
+      transitionKey={pixelTransitionKey}
+      onCovered={handlePixelCovered}
+    />
+  );
 
   const loadingOverlay = isLoading && loadingTarget ? (
     <AppLoadingPage
@@ -1208,10 +1590,22 @@ export default function App() {
       onContinue={handleContinueLoading}
     />
   ) : null;
+  const decreeModal = (
+    <DecreeModal
+      decree={activeDecree}
+      remainingCount={Math.max(0, pendingDecrees.length - 1)}
+      saving={decreeSaving}
+      error={decreeError}
+      onAcknowledge={handleAcknowledgeDecree}
+    />
+  );
 
   if (loadingOverlay && loadingBackdropMode === "room") {
     return (
-      loadingOverlay
+      <>
+        {loadingOverlay}
+        {pixelTransition}
+      </>
     );
   }
 
@@ -1220,6 +1614,7 @@ export default function App() {
       <main className="app">
         <LoginPage onEnterRole={handleEnterRole} isEntering={isLoading} />
         {loadingOverlay}
+        {pixelTransition}
       </main>
     );
   }
@@ -1242,7 +1637,6 @@ export default function App() {
           onApproveBenefit={handleApproveBenefit}
           onRejectBenefit={handleRejectBenefit}
           onAdjustExperience={handleAdjustExperience}
-          onCustomExperience={handleCustomExperience}
           onSetLevel={(level) =>
             handleSetLevel(
               level,
@@ -1257,9 +1651,20 @@ export default function App() {
           }
           onPunishStatus={handlePunishStatus}
           onRestoreNormal={handleRestoreNormal}
+          onReturnToLogin={handleReturnToLogin}
         />
-        <StoryModal story={story} onClose={() => setStory(null)} />
+        <StoryModal
+          story={showSlaveRuling ? null : story}
+          confirmLabel="下旨"
+          onClose={() => setStory(null)}
+        />
+        <SlaveRulingModal
+          open={showSlaveRuling}
+          onRestore={handleRestoreNormal}
+          onContinueLabor={handleContinueSlaveLabor}
+        />
         {loadingOverlay}
+        {pixelTransition}
       </main>
     );
   }
@@ -1310,6 +1715,7 @@ export default function App() {
           <SlavePage
             role={slaveRole}
             punishment={punishment}
+            onReturnToLogin={handleReturnToLogin}
             onSelectView={(view) => {
               if (view === "benefits") setSlaveActivePage(SLAVE_PAGES.BENEFIT);
               if (view === "tasks") setSlaveActivePage(SLAVE_PAGES.TASK);
@@ -1330,8 +1736,13 @@ export default function App() {
           />
         </HusbandVerticalPager>
 
-        <StoryModal story={story} onClose={() => setStory(null)} />
+        <StoryModal
+          story={activeDecree ? null : story}
+          onClose={() => setStory(null)}
+        />
+        {decreeModal}
         {loadingOverlay}
+        {pixelTransition}
       </main>
     );
   }
@@ -1369,6 +1780,7 @@ export default function App() {
           canPrev={previewLevel > 0}
           canNext={previewLevel < roles.length - 1}
           roleCount={roles.length}
+          wallet={progress.wallet}
           onPreviewPrev={handlePreviewPrev}
           onPreviewNext={handlePreviewNext}
           onReturnToLogin={handleReturnToLogin}
@@ -1385,8 +1797,13 @@ export default function App() {
         />
       </HusbandVerticalPager>
 
-      <StoryModal story={story} onClose={() => setStory(null)} />
+      <StoryModal
+        story={activeDecree ? null : story}
+        onClose={() => setStory(null)}
+      />
+      {decreeModal}
       {loadingOverlay}
+      {pixelTransition}
     </main>
   );
 }

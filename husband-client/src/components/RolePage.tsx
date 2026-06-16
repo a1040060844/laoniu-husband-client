@@ -2,6 +2,9 @@ import { ProgressBar } from "./ProgressBar";
 import { RoleNavigator } from "./RoleNavigator";
 import { publicAsset } from "../lib/assets";
 import type { Role, ViewKey } from "../types/domain";
+import { AnimatedContent } from "./effects/AnimatedContent";
+import { ClickSpark } from "./effects/ClickSpark";
+import { CountUp } from "./effects/CountUp";
 
 interface RolePageProps {
   role: Role;
@@ -10,6 +13,7 @@ interface RolePageProps {
   canPrev: boolean;
   canNext: boolean;
   roleCount: number;
+  wallet: number;
   onPreviewPrev: () => void;
   onPreviewNext: () => void;
   onReturnToLogin: () => void;
@@ -23,6 +27,7 @@ export function RolePage({
   canPrev,
   canNext,
   roleCount = 12,
+  wallet,
   onPreviewPrev,
   onPreviewNext,
   onReturnToLogin,
@@ -34,7 +39,7 @@ export function RolePage({
 
   return (
     <section
-      className={`role-page page-screen ${directionClass}${isLockedPreview ? " page-screen--locked-role" : ""}`}
+      className={`role-page page-screen role-page--level-${String(previewRole.level).padStart(2, "0")} ${directionClass}${isLockedPreview ? " page-screen--locked-role" : ""}`}
     >
       <img
         className="cinema-image"
@@ -46,28 +51,37 @@ export function RolePage({
         <div className="locked-character-mask" aria-hidden="true" />
       )}
 
-      <header
+      <AnimatedContent
+        as="header"
         key={`role-title-${previewRole.level}`}
         className="hero-title hero-title--role"
+        duration={360}
       >
         <div className="level-line">
           <span />
-          <strong>Lv. {String(previewRole.level).padStart(2, "0")}</strong>
+          <strong>
+            Lv. <CountUp value={previewRole.level} minimumIntegerDigits={2} />
+          </strong>
           <span />
         </div>
         <div className="role-title-row">
-          <button
-            className="role-return-login-button"
-            type="button"
-            aria-label="返回登录"
-            onClick={onReturnToLogin}
-          >
-            <img src={publicAsset("/assets/ui/return-login.png")} alt="" />
-          </button>
+          <ClickSpark>
+            <button
+              className="role-return-login-button"
+              type="button"
+              aria-label="返回登录"
+              onClick={onReturnToLogin}
+            >
+              <img
+                src={publicAsset("/assets/ui/return-login.png?v=3f13165c")}
+                alt=""
+              />
+            </button>
+          </ClickSpark>
           <h1>{previewRole.title}</h1>
         </div>
         <i />
-      </header>
+      </AnimatedContent>
 
       <button
         className="side-guide side-guide--image"
@@ -89,9 +103,12 @@ export function RolePage({
         onNext={onPreviewNext}
       />
 
-      <div
+      <AnimatedContent
+        as="div"
         key={`role-panel-${previewRole.level}`}
         className="bottom-panel bottom-panel--role"
+        delay={80}
+        duration={380}
       >
         <article className="bio-panel bio-panel--role">
           <p className="panel-title">
@@ -103,7 +120,8 @@ export function RolePage({
         {!isPreviewing && (
           <div className="exp-block exp-block--role">
             <strong>
-              {previewRole.expCurrent} / {previewRole.expRequired}
+              <CountUp value={previewRole.expCurrent} /> /{" "}
+              <CountUp value={previewRole.expRequired} />
             </strong>
             <ProgressBar
               current={previewRole.expCurrent}
@@ -114,6 +132,12 @@ export function RolePage({
         {isPreviewing && (
           <div className="exp-block-placeholder" aria-hidden="true" />
         )}
+
+        {!isPreviewing ? (
+          <p className="role-wallet-line">
+            零花钱 <strong>¥ <CountUp value={wallet} /></strong>
+          </p>
+        ) : null}
 
         <div className="role-dots" aria-hidden="true">
           {Array.from({ length: roleCount }).map((_, index) => (
@@ -132,7 +156,7 @@ export function RolePage({
         >
           <img src={publicAsset("/assets/ui/swipe-up.png")} alt="" />
         </button>
-      </div>
+      </AnimatedContent>
     </section>
   );
 }

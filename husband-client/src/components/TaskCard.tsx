@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { taskRewardChips } from "../lib/taskRewards";
 import type { Task } from "../types/domain";
+import { ClickSpark } from "./effects/ClickSpark";
 
 const typeLabel = {
   daily: "日任务",
@@ -43,12 +44,11 @@ const statusIcon = {
 
 interface TaskCardProps {
   task: Task;
-  index: number;
   onStart: (id: string) => void;
   onSubmit: (task: Task) => void;
 }
 
-export function TaskCard({ task, index, onStart, onSubmit }: TaskCardProps) {
+export function TaskCard({ task, onStart, onSubmit }: TaskCardProps) {
   const StatusIcon = statusIcon[task.status];
   const rewardChips = taskRewardChips(task);
   const repeatCount = task.repeatCount ?? task.timeConfig?.repeatCount ?? 1;
@@ -70,7 +70,6 @@ export function TaskCard({ task, index, onStart, onSubmit }: TaskCardProps) {
   return (
     <article
       className={`task-card task-card--${task.status}`}
-      style={{ "--task-step": index } as React.CSSProperties}
     >
       <div className="task-card__mark">
         <StatusIcon size={28} strokeWidth={1.6} />
@@ -109,15 +108,17 @@ export function TaskCard({ task, index, onStart, onSubmit }: TaskCardProps) {
           <p className="task-result">{task.resultText}</p>
         ) : null}
       </div>
-      <button
-        className="task-action"
-        type="button"
-        disabled={primary.disabled}
-        onClick={primary.action}
-      >
-        {task.status === "doing" ? <Send size={15} /> : null}
-        {primary.label}
-      </button>
+      <ClickSpark>
+        <button
+          className="task-action"
+          type="button"
+          disabled={primary.disabled}
+          onClick={primary.action}
+        >
+          {task.status === "doing" ? <Send size={15} /> : null}
+          {primary.label}
+        </button>
+      </ClickSpark>
     </article>
   );
 }

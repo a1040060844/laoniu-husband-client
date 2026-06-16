@@ -69,7 +69,7 @@ const sharedRoleAssets = [
   ...benefitAssets,
   publicAsset("/assets/tasks/task-lv01.png"),
   publicAsset("/assets/slave/slave-page-latest.png"),
-  publicAsset("/assets/ui/return-login.png"),
+  publicAsset("/assets/ui/return-login.png?v=3f13165c"),
   publicAsset("/assets/ui/swipe-up.png"),
   publicAsset("/assets/ui/swipe-down.png?v=2a55bb1a"),
   publicAsset("/assets/ui/swipe-return.png?v=b94ee0a3"),

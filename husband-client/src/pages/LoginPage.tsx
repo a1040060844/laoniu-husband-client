@@ -9,6 +9,8 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import "./LoginPage.css";
+import { ClickSpark } from "../components/effects/ClickSpark";
+import { CountUp } from "../components/effects/CountUp";
 
 import bgRoom from "../assets/login/bg-room.png";
 import cardHusband from "../assets/login/card-husband.png";
@@ -952,7 +954,7 @@ export function LoginPage({ isEntering = false, onEnterRole }: LoginPageProps) {
               : { visibility: "hidden" }
           }
         >
-          {loveDayCount}
+          <CountUp value={loveDayCount} duration={520} />
         </div>
         <div className="login-stage__top-mask" aria-hidden="true" />
         <div className="login-stage__bottom-mask" aria-hidden="true" />
@@ -1009,24 +1011,28 @@ export function LoginPage({ isEntering = false, onEnterRole }: LoginPageProps) {
           />
         )}
 
-        <button
-          className="login-card-button login-card-button--husband"
-          type="button"
-          disabled={isBusy}
-          aria-label="点击老哥本人按钮进入老公端"
-          onClick={() => beginSelect("husband")}
-        >
-          <img src={cardHusband} alt="老哥本人" draggable={false} />
-        </button>
-        <button
-          className="login-card-button login-card-button--wife"
-          type="button"
-          disabled={isBusy}
-          aria-label="点击老妞大人按钮进入老婆端"
-          onClick={() => beginSelect("wife")}
-        >
-          <img src={cardWife} alt="老妞大人" draggable={false} />
-        </button>
+        <ClickSpark>
+          <button
+            className="login-card-button login-card-button--husband"
+            type="button"
+            disabled={isBusy}
+            aria-label="点击老哥本人按钮进入老公端"
+            onClick={() => beginSelect("husband")}
+          >
+            <img src={cardHusband} alt="老哥本人" draggable={false} />
+          </button>
+        </ClickSpark>
+        <ClickSpark>
+          <button
+            className="login-card-button login-card-button--wife"
+            type="button"
+            disabled={isBusy}
+            aria-label="点击老妞大人按钮进入老婆端"
+            onClick={() => beginSelect("wife")}
+          >
+            <img src={cardWife} alt="老妞大人" draggable={false} />
+          </button>
+        </ClickSpark>
 
         <div className="login-page__fade" aria-hidden="true" />
       </div>

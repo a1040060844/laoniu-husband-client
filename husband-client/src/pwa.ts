@@ -1,5 +1,11 @@
 function updateAppHeight() {
-  const height = window.visualViewport?.height ?? window.innerHeight;
+  const layoutHeight = Math.max(
+    window.innerHeight,
+    document.documentElement.clientHeight,
+  );
+  const visualHeight = window.visualViewport?.height ?? layoutHeight;
+  const keyboardOpen = visualHeight < layoutHeight * 0.75;
+  const height = keyboardOpen ? visualHeight : layoutHeight;
   document.documentElement.style.setProperty("--app-height", `${height}px`);
 }
 

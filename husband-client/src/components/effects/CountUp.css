@@ -1,0 +1,14 @@
+.count-up {
+  display: inline-block;
+  min-width: 1ch;
+  font: inherit;
+  color: inherit;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .count-up {
+    transition: none;
+  }
+}

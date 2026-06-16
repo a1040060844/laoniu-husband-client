@@ -1,0 +1,39 @@
+.click-spark-trigger {
+  display: contents;
+}
+
+.click-spark-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 30000;
+  pointer-events: none;
+}
+
+.click-spark-layer i {
+  position: absolute;
+  width: 2px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--spark-color);
+  transform-origin: 50% 100%;
+  animation: click-spark-burst 300ms ease-out both;
+}
+
+@keyframes click-spark-burst {
+  from {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) rotate(var(--spark-angle))
+      translateY(-2px) scaleY(0.7);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--spark-angle))
+      translateY(-25px) scale(0.55, 1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .click-spark-layer {
+    display: none;
+  }
+}

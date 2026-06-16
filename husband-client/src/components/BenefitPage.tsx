@@ -6,6 +6,10 @@ import { BenefitModal } from "./BenefitModal";
 import { RoleNavigator } from "./RoleNavigator";
 import { publicAsset } from "../lib/assets";
 import type { Benefit, BenefitStatus, Role, ViewKey } from "../types/domain";
+import { AnimatedContent } from "./effects/AnimatedContent";
+
+const AUTO_SCROLL_RESUME_DELAY_MS = 1200;
+const AUTO_SCROLL_SPEED_PX_PER_MS = 0.014;
 
 interface BenefitPageProps {
   role: Role;
@@ -134,7 +138,9 @@ export function BenefitPage({
   const [burstingBenefitId, setBurstingBenefitId] = useState<string | null>(
     null,
   );
+  const cloudViewportRef = useRef<HTMLDivElement | null>(null);
   const openTimerRef = useRef<number | null>(null);
+  const autoScrollDirectionRef = useRef<1 | -1>(1);
   const isLockedPreview = role.level > currentLevel;
   const directionClass = `benefit-page--dir-${previewDirection}`;
   const visibleBenefits = showAllBenefits
@@ -164,6 +170,107 @@ export function BenefitPage({
     };
   }, []);
 
+  useEffect(() => {
+    const viewport = cloudViewportRef.current;
+    if (!viewport) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    let animationFrame: number | null = null;
+    let resumeTimer: number | null = null;
+    let scrollWriteTimer: number | null = null;
+    let isPaused = false;
+    let isAutoScrollWrite = false;
+    let lastTimestamp: number | null = null;
+    let direction = autoScrollDirectionRef.current;
+
+    const clearResumeTimer = () => {
+      if (resumeTimer !== null) {
+        window.clearTimeout(resumeTimer);
+        resumeTimer = null;
+      }
+    };
+
+    const pauseForUserInput = () => {
+      isPaused = true;
+      clearResumeTimer();
+      resumeTimer = window.setTimeout(() => {
+        isPaused = false;
+        lastTimestamp = null;
+      }, AUTO_SCROLL_RESUME_DELAY_MS);
+    };
+
+    const markAutoScrollWrite = () => {
+      isAutoScrollWrite = true;
+      if (scrollWriteTimer !== null) {
+        window.clearTimeout(scrollWriteTimer);
+      }
+      scrollWriteTimer = window.setTimeout(() => {
+        isAutoScrollWrite = false;
+        scrollWriteTimer = null;
+      }, 80);
+    };
+
+    const hasScrollableOverflow = () =>
+      viewport.scrollWidth - viewport.clientWidth > 2;
+
+    const tick = (timestamp: number) => {
+      if (lastTimestamp === null) {
+        lastTimestamp = timestamp;
+      }
+
+      if (!isPaused && hasScrollableOverflow()) {
+        const maxScrollLeft = viewport.scrollWidth - viewport.clientWidth;
+        const elapsed = Math.min(timestamp - lastTimestamp, 64);
+        let nextScrollLeft =
+          viewport.scrollLeft +
+          elapsed * AUTO_SCROLL_SPEED_PX_PER_MS * direction;
+
+        if (nextScrollLeft <= 0) {
+          nextScrollLeft = 0;
+          direction = 1;
+        } else if (nextScrollLeft >= maxScrollLeft) {
+          nextScrollLeft = maxScrollLeft;
+          direction = -1;
+        }
+
+        markAutoScrollWrite();
+        viewport.scrollLeft = nextScrollLeft;
+      }
+
+      lastTimestamp = timestamp;
+      animationFrame = window.requestAnimationFrame(tick);
+    };
+
+    const handleScroll = () => {
+      if (!isAutoScrollWrite) {
+        pauseForUserInput();
+      }
+    };
+
+    viewport.addEventListener("pointerdown", pauseForUserInput);
+    viewport.addEventListener("touchstart", pauseForUserInput, {
+      passive: true,
+    });
+    viewport.addEventListener("wheel", pauseForUserInput, { passive: true });
+    viewport.addEventListener("scroll", handleScroll, { passive: true });
+    animationFrame = window.requestAnimationFrame(tick);
+
+    return () => {
+      autoScrollDirectionRef.current = direction;
+      clearResumeTimer();
+      if (scrollWriteTimer !== null) {
+        window.clearTimeout(scrollWriteTimer);
+      }
+      if (animationFrame !== null) {
+        window.cancelAnimationFrame(animationFrame);
+      }
+      viewport.removeEventListener("pointerdown", pauseForUserInput);
+      viewport.removeEventListener("touchstart", pauseForUserInput);
+      viewport.removeEventListener("wheel", pauseForUserInput);
+      viewport.removeEventListener("scroll", handleScroll);
+    };
+  }, [cloudWidth, visibleBenefits.length]);
+
   function handleOpenBenefit(benefit: Benefit) {
     if (openTimerRef.current) {
       window.clearTimeout(openTimerRef.current);
@@ -178,7 +285,7 @@ export function BenefitPage({
 
   return (
     <section
-      className={`benefit-page page-screen ${directionClass}${isLockedPreview ? " page-screen--locked-role" : ""}${
+      className={`benefit-page page-screen benefit-page--level-${String(role.level).padStart(2, "0")} ${directionClass}${isLockedPreview ? " page-screen--locked-role" : ""}${
         isLightCurtainActive ? " benefit-page--light-curtain" : ""
       }${forceFrozen ? " benefit-page--frozen" : ""}`}
     >
@@ -192,9 +299,11 @@ export function BenefitPage({
         <div className="locked-character-mask" aria-hidden="true" />
       )}
 
-      <header
+      <AnimatedContent
+        as="header"
         key={`benefit-title-${role.level}`}
         className="hero-title hero-title--benefit"
+        duration={360}
       >
         <div className="level-line">
           <span />
@@ -202,9 +311,13 @@ export function BenefitPage({
           <span />
         </div>
         <h1>{role.title}</h1>
-      </header>
+      </AnimatedContent>
 
-      <div className={cloudViewportClassName} aria-label="权益列表">
+      <div
+        ref={cloudViewportRef}
+        className={cloudViewportClassName}
+        aria-label="权益列表"
+      >
         <div
           className="benefit-cloud-track"
           style={{ "--cloud-width": `${cloudWidth}px` } as CSSProperties}
@@ -247,13 +360,19 @@ export function BenefitPage({
         onNext={onPreviewNext}
       />
 
-      <footer className="benefit-commission" aria-label="每月佣金">
+      <AnimatedContent
+        as="footer"
+        className="benefit-commission"
+        aria-label="每月佣金"
+        delay={80}
+        duration={360}
+      >
         <span>
           <Coins size={16} />
           每月佣金
         </span>
         <strong>¥ {role.salary}</strong>
-      </footer>
+      </AnimatedContent>
 
       <button
         className="swipe-hint swipe-hint--benefit swipe-hint--image"

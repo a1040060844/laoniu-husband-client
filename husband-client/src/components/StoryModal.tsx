@@ -3,9 +3,14 @@ import type { StoryEvent } from "../types/domain";
 interface StoryModalProps {
   story: StoryEvent | null;
   onClose: () => void;
+  confirmLabel?: string;
 }
 
-export function StoryModal({ story, onClose }: StoryModalProps) {
+export function StoryModal({
+  story,
+  onClose,
+  confirmLabel = "领命",
+}: StoryModalProps) {
   if (!story) return null;
 
   return (
@@ -19,7 +24,7 @@ export function StoryModal({ story, onClose }: StoryModalProps) {
         <h2>{story.title}</h2>
         <p>{story.text}</p>
         <button className="primary-button" type="button" onClick={onClose}>
-          领命
+          {confirmLabel}
         </button>
       </section>
     </div>

@@ -20,7 +20,9 @@ VITE_API_BASE_URL=
 VITE_PUBLIC_BASE_PATH=/
 ```
 
-- `VITE_API_BASE_URL` can stay empty for same-origin `/api` requests.
+- `VITE_API_BASE_URL` can stay empty during local development. Vite then serves
+  `/api/state` itself and persists shared LAN state to `../app-data/state.json`.
+- Set `VITE_API_BASE_URL` only when an external state service is available.
 - `VITE_PUBLIC_BASE_PATH` defaults to `/`. Set it to a subpath such as `/app/` only when deploying under that subdirectory.
 
 ## SPA Fallback

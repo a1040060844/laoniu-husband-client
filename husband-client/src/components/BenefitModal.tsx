@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import type { Benefit, BenefitStatus } from "../types/domain";
+import { ClickSpark } from "./effects/ClickSpark";
 
 const iconMap = {
   "hand-heart": HandHeart,
@@ -206,14 +207,16 @@ export function BenefitModal({
         </div>
 
         <div className="benefit-modal__actions">
-          <button
-            className="primary-button benefit-modal__primary"
-            type="button"
-            disabled={computedStatus !== "available"}
-            onClick={() => onUse(benefit)}
-          >
-            {buttonText}
-          </button>
+          <ClickSpark>
+            <button
+              className="primary-button benefit-modal__primary"
+              type="button"
+              disabled={computedStatus !== "available"}
+              onClick={() => onUse(benefit)}
+            >
+              {buttonText}
+            </button>
+          </ClickSpark>
           <button
             className="benefit-modal__secondary"
             type="button"

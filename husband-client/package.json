@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "audit:login-sprites": "node scripts/audit-login-sprites.mjs",
-    "dev": "vite --host 127.0.0.1",
+    "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview --host 127.0.0.1",
-    "check": "npm run audit:login-sprites && tsc -b && vite build"
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "preview": "vite preview",
+    "check": "npm test && npm run audit:login-sprites && tsc -b && vite build"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.0",

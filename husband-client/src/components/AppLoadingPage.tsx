@@ -3,6 +3,7 @@ import bgRoom from "../assets/login/bg-room.png";
 import { publicAsset } from "../lib/assets";
 import type { AppRoute } from "../lib/preloadAssets";
 import "./AppLoadingPage.css";
+import { ClickSpark } from "./effects/ClickSpark";
 
 export type LoadingBackdropMode = "current" | "room";
 export type LoadingPhase = "loading" | "ready" | "error";
@@ -191,18 +192,20 @@ export function AppLoadingPage({
         />
 
         {phase === "ready" ? (
-          <button
-            className="loading-stage__action"
-            type="button"
-            aria-label="继续进入"
-            onClick={onContinue}
-          >
-            <img
-              src={publicAsset("/assets/loading/loading-continue-button.png")}
-              alt="继续进入"
-              onError={hideBrokenImage}
-            />
-          </button>
+          <ClickSpark>
+            <button
+              className="loading-stage__action"
+              type="button"
+              aria-label="继续进入"
+              onClick={onContinue}
+            >
+              <img
+                src={publicAsset("/assets/loading/loading-continue-button.png")}
+                alt="继续进入"
+                onError={hideBrokenImage}
+              />
+            </button>
+          </ClickSpark>
         ) : null}
 
         {phase === "error" ? (

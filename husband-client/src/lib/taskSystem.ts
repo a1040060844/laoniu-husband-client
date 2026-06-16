@@ -5,7 +5,10 @@ import {
   initialProgress,
   type GameProgress,
 } from "../game/progression";
+import { refreshTaskCycles, resolveTaskSchedule } from "./taskSchedule";
 import type {
+  DecreeEvent,
+  DecreeType,
   EventLog,
   EventLogType,
   Benefit,
@@ -32,6 +35,7 @@ export interface TaskSystemState {
   punishment: Punishment;
   benefits: Benefit[];
   walletLedger: WalletLedgerEntry[];
+  decrees: DecreeEvent[];
 }
 
 export const PROGRESS_STORAGE_KEY = "laoniu-husband-progress-v1";
@@ -40,6 +44,7 @@ export const LOGS_STORAGE_KEY = "laoniu-husband-logs-v1";
 export const PUNISHMENT_STORAGE_KEY = "laoniu-husband-punishment-v1";
 export const BENEFITS_STORAGE_KEY = "laoniu-husband-benefits-v1";
 export const WALLET_LEDGER_STORAGE_KEY = "laoniu-husband-wallet-ledger-v1";
+export const DECREES_STORAGE_KEY = "laoniu-husband-decrees-v1";
 export const DEFAULT_PUNISHMENT_DURATION_DAYS = 7;
 export const DEFAULT_REQUIRED_RECOVERY_EXP = 100;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -47,6 +52,20 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(
   /\/$/,
   "",
 );
+
+const decreeTypes = new Set<DecreeType>([
+  "experience_granted",
+  "experience_penalty",
+  "level_changed",
+  "punishment_slave",
+  "punishment_restored",
+  "punishment_continued",
+  "task_created",
+  "task_approved",
+  "task_rejected",
+  "benefit_approved",
+  "benefit_rejected",
+]);
 
 export const initialPunishment: Punishment = {
   status: "normal",
@@ -168,70 +187,6 @@ function sanitizeTaskText(value: unknown) {
   return String(value || "").split(LEGACY_COOKING_CLEANUP).join("按老妞口味来");
 }
 
-function dateKey(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
-
-function weekKey(date: Date) {
-  const target = new Date(date);
-  target.setHours(0, 0, 0, 0);
-  const day = target.getDay() || 7;
-  target.setDate(target.getDate() + 4 - day);
-  const yearStart = new Date(target.getFullYear(), 0, 1);
-  const week = Math.ceil(
-    ((target.getTime() - yearStart.getTime()) / DAY_MS + 1) / 7,
-  );
-  return `${target.getFullYear()}-W${String(week).padStart(2, "0")}`;
-}
-
-function endOfDay(date: Date) {
-  const result = new Date(date);
-  result.setHours(23, 59, 59, 999);
-  return result;
-}
-
-function endOfWeek(date: Date) {
-  const result = new Date(date);
-  const day = result.getDay() || 7;
-  result.setDate(result.getDate() + (7 - day));
-  result.setHours(23, 59, 59, 999);
-  return result;
-}
-
-function monthKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function endOfMonth(date: Date) {
-  const result = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-  result.setHours(23, 59, 59, 999);
-  return result;
-}
-
-function cycleForTask(
-  type: TaskType,
-  timeConfig: TaskTimeConfig | undefined,
-  now = new Date(),
-) {
-  const frequency = timeConfig?.repeatFrequency;
-  if (type === "daily" || frequency === "daily") {
-    return { cycleId: dateKey(now), dueAt: endOfDay(now).toISOString() };
-  }
-  if (type === "weekly" || frequency === "weekly") {
-    return { cycleId: weekKey(now), dueAt: endOfWeek(now).toISOString() };
-  }
-  if (frequency === "monthly") {
-    return { cycleId: monthKey(now), dueAt: endOfMonth(now).toISOString() };
-  }
-  if (timeConfig?.deadlineAt) {
-    const due = new Date(timeConfig.deadlineAt);
-    if (!Number.isNaN(due.getTime())) {
-      return { cycleId: dateKey(now), dueAt: due.toISOString() };
-    }
-  }
-  return { cycleId: undefined, dueAt: undefined };
-}
-
 function normalizeTimeConfig(raw: unknown): TaskTimeConfig | undefined {
   if (!raw || typeof raw !== "object") return undefined;
   const value = raw as Record<string, unknown>;
@@ -311,7 +266,7 @@ function normalizeTask(raw: unknown): Task | null {
   const type =
     typeMap[String(value.type || value.urgency || "custom")] ?? "custom";
   const timeConfig = normalizeTimeConfig(value.timeConfig);
-  const cycle = cycleForTask(type, timeConfig);
+  const cycle = resolveTaskSchedule(type, timeConfig);
   const rewardExp = Number(value.rewardExp ?? value.exp ?? 0);
   const rewardMoney = Number(value.rewardMoney ?? value.money ?? 0);
   const rawModuleId = String(value.moduleId || "");
@@ -392,56 +347,7 @@ function hydrateTasks(raw: unknown): Task[] {
   return tasks.length ? tasks : initialTasks;
 }
 
-export function refreshTaskCycles(tasks: Task[], now = new Date()): Task[] {
-  return tasks.map((task) => {
-    const cycle = cycleForTask(task.type, task.timeConfig, now);
-    const dueAt = task.dueAt ?? cycle.dueAt;
-    const dueTime = dueAt ? Date.parse(dueAt) : Number.NaN;
-    const isOpen = task.status === "todo" || task.status === "doing";
-
-    if (isOpen && !Number.isNaN(dueTime) && dueTime < now.getTime()) {
-      return {
-        ...task,
-        status: "failed_pending",
-        expiredAt: task.expiredAt ?? now.toISOString(),
-        resultText: task.resultText ?? "任务已过期，待老妞大人裁定。",
-      };
-    }
-
-    if (
-      cycle.cycleId &&
-      task.cycleId &&
-      cycle.cycleId !== task.cycleId &&
-      (task.status === "confirmed" ||
-        task.status === "completed" ||
-        task.status === "failed" ||
-        task.status === "expired" ||
-        task.status === "failed_pending")
-    ) {
-      return {
-        ...task,
-        status: "todo",
-        cycleId: cycle.cycleId,
-        dueAt: cycle.dueAt,
-        expiredAt: undefined,
-        submittedAt: undefined,
-        confirmedAt: undefined,
-        rewardedAt: undefined,
-        submitNote: undefined,
-        resultText: undefined,
-        completedCount: 0,
-      };
-    }
-
-    return {
-      ...task,
-      cycleId: task.cycleId ?? cycle.cycleId,
-      dueAt,
-      repeatCount: task.repeatCount ?? task.timeConfig?.repeatCount,
-      completedCount: task.completedCount ?? task.timeConfig?.completedCount,
-    };
-  });
-}
+export { refreshTaskCycles } from "./taskSchedule";
 
 function normalizeEventLog(raw: unknown): EventLog | null {
   if (!raw || typeof raw !== "object") return null;
@@ -594,9 +500,103 @@ function normalizeWalletLedgerEntry(raw: unknown): WalletLedgerEntry | null {
 
 function hydrateWalletLedger(raw: unknown): WalletLedgerEntry[] {
   if (!Array.isArray(raw)) return [];
-  return raw
+  const entries = raw
     .map(normalizeWalletLedgerEntry)
     .filter((entry): entry is WalletLedgerEntry => Boolean(entry));
+  const seen = new Set<string>();
+  return entries.filter((entry) => {
+    const key =
+      entry.type === "salary" && entry.monthKey
+        ? `salary:${entry.monthKey}`
+        : `id:${entry.id}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function duplicatedSalaryAmount(raw: unknown) {
+  if (!Array.isArray(raw)) return 0;
+  const seenMonths = new Set<string>();
+  let duplicatedAmount = 0;
+  for (const item of raw) {
+    const entry = normalizeWalletLedgerEntry(item);
+    if (entry?.type !== "salary" || !entry.monthKey) continue;
+    if (seenMonths.has(entry.monthKey)) {
+      duplicatedAmount += Math.max(0, entry.amount);
+      continue;
+    }
+    seenMonths.add(entry.monthKey);
+  }
+  return duplicatedAmount;
+}
+
+function normalizeDecree(raw: unknown): DecreeEvent | null {
+  if (!raw || typeof raw !== "object") return null;
+  const value = raw as Record<string, unknown>;
+  if (
+    typeof value.id !== "string" ||
+    typeof value.type !== "string" ||
+    !decreeTypes.has(value.type as DecreeType) ||
+    typeof value.title !== "string" ||
+    typeof value.text !== "string" ||
+    typeof value.createdAt !== "string" ||
+    Number.isNaN(Date.parse(value.createdAt))
+  ) {
+    return null;
+  }
+  const tone =
+    value.tone === "upgrade" ||
+    value.tone === "down" ||
+    value.tone === "punish"
+      ? value.tone
+      : "normal";
+
+  return {
+    id: value.id,
+    type: value.type as DecreeType,
+    title: value.title,
+    text: value.text,
+    tone,
+    createdAt: value.createdAt,
+    target: "husband",
+    readAt: typeof value.readAt === "string" ? value.readAt : undefined,
+    acknowledgedAt:
+      typeof value.acknowledgedAt === "string" ? value.acknowledgedAt : undefined,
+    sourceLogId:
+      typeof value.sourceLogId === "string" ? value.sourceLogId : undefined,
+    payload:
+      value.payload && typeof value.payload === "object" && !Array.isArray(value.payload)
+        ? (value.payload as Record<string, unknown>)
+        : {},
+  };
+}
+
+export function hydrateDecrees(raw: unknown): DecreeEvent[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map(normalizeDecree)
+    .filter((decree): decree is DecreeEvent => Boolean(decree));
+}
+
+export function mergeDecrees(
+  serverDecrees: DecreeEvent[],
+  localDecrees: DecreeEvent[],
+) {
+  const merged = new Map<string, DecreeEvent>();
+  for (const decree of serverDecrees) merged.set(decree.id, decree);
+  for (const local of localDecrees) {
+    const server = merged.get(local.id);
+    merged.set(local.id, {
+      ...(server ?? local),
+      ...local,
+      readAt: local.readAt ?? server?.readAt,
+      acknowledgedAt: local.acknowledgedAt ?? server?.acknowledgedAt,
+    });
+  }
+  return [...merged.values()].sort(
+    (a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt),
+  );
 }
 
 function safePositiveInt(value: unknown, fallback: number) {
@@ -611,16 +611,43 @@ function safeNonNegativeInt(value: unknown, fallback = 0) {
   return Math.max(0, Math.trunc(number));
 }
 
-export function createSlavePunishment(startedAt = new Date().toISOString()): Punishment {
+function safeOptionalNonNegativeInt(value: unknown) {
+  if (value === undefined || value === null || value === "") return undefined;
+  const number = Number(value);
+  if (!Number.isFinite(number)) return undefined;
+  return Math.max(0, Math.trunc(number));
+}
+
+export function createSlavePunishment(
+  restoreState?: Pick<GameProgress, "level" | "exp" | "wallet">,
+  startedAt = new Date().toISOString(),
+): Punishment {
   return {
     ...initialPunishment,
     status: "slave",
     startedAt,
+    restoreLevel: restoreState?.level,
+    restoreExp: restoreState?.exp,
+    restoreWallet: restoreState?.wallet,
   };
 }
 
 export function createNormalPunishment(): Punishment {
   return { ...initialPunishment };
+}
+
+export function createNextSlavePunishment(
+  punishment: Punishment,
+  startedAt = new Date().toISOString(),
+): Punishment {
+  return {
+    ...initialPunishment,
+    status: "slave",
+    startedAt,
+    restoreLevel: punishment.restoreLevel,
+    restoreExp: punishment.restoreExp,
+    restoreWallet: punishment.restoreWallet,
+  };
 }
 
 export function hydratePunishment(raw: unknown): Punishment {
@@ -654,6 +681,12 @@ export function hydratePunishment(raw: unknown): Punishment {
     durationDays,
     recoveryExp: status === "slave" ? recoveryExp : 0,
     requiredRecoveryExp,
+    restoreLevel:
+      status === "slave" ? safeOptionalNonNegativeInt(value.restoreLevel) : undefined,
+    restoreExp:
+      status === "slave" ? safeOptionalNonNegativeInt(value.restoreExp) : undefined,
+    restoreWallet:
+      status === "slave" ? safeOptionalNonNegativeInt(value.restoreWallet) : undefined,
   };
 }
 
@@ -675,14 +708,14 @@ export function isPunishmentDurationComplete(
   return punishment.status === "slave" && getPunishmentRemainingDays(punishment, now) <= 0;
 }
 
-export function isPunishmentRecoverable(
+export function isPunishmentCycleComplete(
   punishment: Punishment,
   now = Date.now(),
 ) {
   return (
     punishment.status === "slave" &&
-    punishment.recoveryExp >= punishment.requiredRecoveryExp &&
-    isPunishmentDurationComplete(punishment, now)
+    (punishment.recoveryExp >= punishment.requiredRecoveryExp ||
+      isPunishmentDurationComplete(punishment, now))
   );
 }
 
@@ -698,6 +731,7 @@ function stateFromUnknown(raw: unknown): TaskSystemState {
       punishment: hydratePunishment(readJson(PUNISHMENT_STORAGE_KEY)),
       benefits: hydrateBenefits(readJson(BENEFITS_STORAGE_KEY)),
       walletLedger: hydrateWalletLedger(readJson(WALLET_LEDGER_STORAGE_KEY)),
+      decrees: hydrateDecrees(readJson(DECREES_STORAGE_KEY)),
     };
   }
 
@@ -714,6 +748,7 @@ function stateFromUnknown(raw: unknown): TaskSystemState {
     logs,
     benefits,
     walletLedger,
+    decrees,
     totalExp,
     wallet,
     ...extras
@@ -730,13 +765,37 @@ function stateFromUnknown(raw: unknown): TaskSystemState {
           rewardedTaskIds,
         };
 
+  const hydratedProgress = hydrateProgress(progressSource);
+  const hydratedPunishment = hydratePunishment(
+    punishment ?? punishmentStatus ?? slaveStatus,
+  );
+  const duplicateSalary = duplicatedSalaryAmount(walletLedger);
+
   return {
-    progress: hydrateProgress(progressSource),
+    progress:
+      duplicateSalary > 0
+        ? {
+            ...hydratedProgress,
+            wallet: Math.max(0, hydratedProgress.wallet - duplicateSalary),
+          }
+        : hydratedProgress,
     tasks: refreshTaskCycles(hydrateTasks(tasks)),
     logs: hydrateEventLogs(logs),
-    punishment: hydratePunishment(punishment ?? punishmentStatus ?? slaveStatus),
+    punishment:
+      duplicateSalary > 0 &&
+      hydratedPunishment.status === "slave" &&
+      hydratedPunishment.restoreWallet !== undefined
+        ? {
+            ...hydratedPunishment,
+            restoreWallet: Math.max(
+              0,
+              hydratedPunishment.restoreWallet - duplicateSalary,
+            ),
+          }
+        : hydratedPunishment,
     benefits: hydrateBenefits(benefits),
     walletLedger: hydrateWalletLedger(walletLedger),
+    decrees: hydrateDecrees(decrees),
   };
 }
 
@@ -757,6 +816,7 @@ export function persistLocalTaskSystem(state: TaskSystemState) {
     WALLET_LEDGER_STORAGE_KEY,
     JSON.stringify(state.walletLedger),
   );
+  localStorage.setItem(DECREES_STORAGE_KEY, JSON.stringify(state.decrees));
 }
 
 function serializeTaskSystem(state: TaskSystemState) {
@@ -770,6 +830,7 @@ function serializeTaskSystem(state: TaskSystemState) {
     logs: state.logs,
     benefits: state.benefits,
     walletLedger: state.walletLedger,
+    decrees: state.decrees,
   };
 }
 
@@ -780,6 +841,10 @@ export async function loadTaskSystem(): Promise<TaskSystemState> {
   }
   const payload = (await response.json()) as { state?: unknown };
   return stateFromUnknown(payload.state);
+}
+
+export function loadTaskSystemFresh() {
+  return loadTaskSystem();
 }
 
 export async function saveTaskSystem(state: TaskSystemState): Promise<void> {

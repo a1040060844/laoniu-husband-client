@@ -1,15 +1,21 @@
-import { ShieldAlert } from "lucide-react";
 import { publicAsset } from "../lib/assets";
 import { getPunishmentRemainingDays } from "../lib/taskSystem";
 import type { Punishment, Role, ViewKey } from "../types/domain";
+import { ClickSpark } from "./effects/ClickSpark";
 
 interface SlavePageProps {
   role: Role;
   punishment: Punishment;
+  onReturnToLogin: () => void;
   onSelectView: (view: ViewKey) => void;
 }
 
-export function SlavePage({ role, punishment, onSelectView }: SlavePageProps) {
+export function SlavePage({
+  role,
+  punishment,
+  onReturnToLogin,
+  onSelectView,
+}: SlavePageProps) {
   const slaveImage = publicAsset("/assets/slave/slave-page-latest.png");
   const punishmentRemainingDays = getPunishmentRemainingDays(punishment);
   const recoveryPercent = Math.min(
@@ -31,14 +37,36 @@ export function SlavePage({ role, punishment, onSelectView }: SlavePageProps) {
           <strong>FINAL</strong>
           <span />
         </div>
-        <h1>卖身奴隶</h1>
+        <div className="role-title-row">
+          <ClickSpark>
+            <button
+              className="role-return-login-button"
+              type="button"
+              aria-label="返回登录"
+              onClick={onReturnToLogin}
+            >
+              <img
+                src={publicAsset("/assets/ui/return-login.png?v=3f13165c")}
+                alt=""
+              />
+            </button>
+          </ClickSpark>
+          <h1>{role.title}</h1>
+        </div>
         <i />
       </header>
 
-      <div className="side-guide side-guide--slave">
-        <ShieldAlert size={20} />
-        <span>下滑查看权益</span>
-      </div>
+      <button
+        className="side-guide side-guide--image"
+        type="button"
+        aria-label="下滑查看权益"
+        onClick={() => onSelectView("benefits")}
+      >
+        <img
+          src={publicAsset("/assets/ui/swipe-down.png?v=2a55bb1a")}
+          alt=""
+        />
+      </button>
 
       <div className="bottom-panel bottom-panel--role bottom-panel--slave">
         <article className="bio-panel bio-panel--role bio-panel--slave">
@@ -47,7 +75,7 @@ export function SlavePage({ role, punishment, onSelectView }: SlavePageProps) {
           </p>
           <div className="slave-bio-copy">
             <strong>表现太糟糕了</strong>
-            <span>奴隶市场又新增了一个奴隶。</span>
+            <span>{role.biography}</span>
           </div>
         </article>
 
@@ -66,12 +94,12 @@ export function SlavePage({ role, punishment, onSelectView }: SlavePageProps) {
         </div>
 
         <button
-          className="swipe-hint"
+          className="swipe-hint swipe-hint--image"
           type="button"
+          aria-label="上滑查看任务"
           onClick={() => onSelectView("tasks")}
         >
-          <span>∧</span>
-          上滑查看任务
+          <img src={publicAsset("/assets/ui/swipe-up.png")} alt="" />
         </button>
       </div>
     </section>

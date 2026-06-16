@@ -19,6 +19,10 @@ import type {
   TaskStatus,
   ViewKey,
 } from "../types/domain";
+import { AnimatedContent } from "./effects/AnimatedContent";
+import { AnimatedList } from "./effects/AnimatedList";
+import { ClickSpark } from "./effects/ClickSpark";
+import { CountUp } from "./effects/CountUp";
 
 type FilterKey = "all" | "todo" | "doing" | "submitted" | "completed";
 
@@ -161,7 +165,7 @@ export function TaskPage({
           />
         </button>
 
-        <header className="task-header">
+        <AnimatedContent as="header" className="task-header" duration={340}>
           <div>
             <p className="level-line level-line--small">
               {levelLabel ?? `Lv. ${String(role.level).padStart(2, "0")}`}
@@ -170,9 +174,14 @@ export function TaskPage({
             <span>老哥任务簿 · 今日待执行</span>
           </div>
           <img src={role.roleImage} alt={`${role.title}小头像`} />
-        </header>
+        </AnimatedContent>
 
-        <section className="overview-panel">
+        <AnimatedContent
+          as="section"
+          className="overview-panel"
+          delay={60}
+          duration={360}
+        >
           <p className="panel-title">
             <span /> 今日执行概况 <span />
           </p>
@@ -199,7 +208,7 @@ export function TaskPage({
               icon={<Sparkles size={19} />}
             />
           </div>
-        </section>
+        </AnimatedContent>
 
         <nav className="source-tabs" aria-label="任务来源">
           <button
@@ -231,13 +240,16 @@ export function TaskPage({
           ))}
         </div>
 
-        <div key={`${source}-${filter}`} className="task-list">
+        <AnimatedList
+          className="task-list"
+          interval={55}
+          playKey={`${source}-${filter}`}
+        >
           {visibleTasks.length ? (
-            visibleTasks.map((task, index) => (
+            visibleTasks.map((task) => (
               <TaskCard
                 key={task.id}
                 task={task}
-                index={index}
                 onStart={onStartTask}
                 onSubmit={setSubmittingTask}
               />
@@ -245,31 +257,36 @@ export function TaskPage({
           ) : (
             <p className="task-empty">暂无符合条件的任务</p>
           )}
-        </div>
+        </AnimatedList>
 
-        <section className="month-panel">
+        <AnimatedContent
+          as="section"
+          className="month-panel"
+          delay={80}
+          duration={380}
+        >
           <p className="panel-title">
             <span /> 本月收获 <span />
           </p>
           <div className="stats-grid">
             <StatCard
               label="本月获得零花钱"
-              value={`¥ ${month.money}`}
+              value={<CountUp value={month.money} prefix="¥ " />}
               icon={<CircleDollarSign size={21} />}
             />
             <StatCard
               label="本月完成任务数"
-              value={month.count}
+              value={<CountUp value={month.count} />}
               icon={<UserRoundCheck size={21} />}
             />
             <StatCard
               label="本月经验总数"
-              value={`${month.exp} EXP`}
+              value={<CountUp value={month.exp} suffix=" EXP" />}
               icon={<Sparkles size={21} />}
             />
           </div>
           <p className="month-note">本月表现正在稳步提升</p>
-        </section>
+        </AnimatedContent>
       </div>
 
       {submittingTask ? (
@@ -302,14 +319,16 @@ export function TaskPage({
               placeholder="写下完成说明，后续可扩展上传图片。"
               rows={5}
             />
-            <button
-              className={`primary-button${isSubmitting ? " primary-button--submitting" : ""}`}
-              type="button"
-              onClick={submitCurrentTaskWithFeedback}
-              disabled={isSubmitting}
-            >
-              提交给老妞确认
-            </button>
+            <ClickSpark>
+              <button
+                className={`primary-button${isSubmitting ? " primary-button--submitting" : ""}`}
+                type="button"
+                onClick={submitCurrentTaskWithFeedback}
+                disabled={isSubmitting}
+              >
+                提交给老妞确认
+              </button>
+            </ClickSpark>
           </section>
         </div>
       ) : null}

@@ -1,0 +1,52 @@
+.pixel-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  grid-template-rows: repeat(18, 1fr);
+  pointer-events: auto;
+  background: #030303;
+}
+
+.pixel-transition i {
+  display: block;
+  min-width: 0;
+  min-height: 0;
+  background: var(--pixel-color);
+  transform: scale(0);
+  will-change: transform;
+}
+
+.pixel-transition--cover,
+.pixel-transition--reveal {
+  background: transparent;
+}
+
+.pixel-transition--cover i {
+  animation: pixel-transition-cover 220ms steps(3, end) var(--pixel-delay) both;
+}
+
+.pixel-transition--reveal i {
+  transform: scale(1);
+  animation: pixel-transition-reveal 220ms steps(3, end)
+    var(--pixel-reveal-delay) both;
+}
+
+@keyframes pixel-transition-cover {
+  to {
+    transform: scale(1.02);
+  }
+}
+
+@keyframes pixel-transition-reveal {
+  to {
+    transform: scale(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pixel-transition {
+    display: none;
+  }
+}

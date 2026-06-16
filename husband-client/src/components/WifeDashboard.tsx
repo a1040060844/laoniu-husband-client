@@ -8,7 +8,6 @@ import {
   ClipboardCheck,
   ClipboardList,
   Crown,
-  Edit3,
   FilePenLine,
   Gavel,
   KeyRound,
@@ -42,8 +41,8 @@ import { expRequiredForLevel, type GameProgress } from "../game/progression";
 import { publicAsset } from "../lib/assets";
 import {
   getPunishmentRemainingDays,
-  isPunishmentRecoverable,
 } from "../lib/taskSystem";
+import { resolveTaskSchedule, taskTypeForTimeConfig } from "../lib/taskSchedule";
 import {
   taskRewardChips,
   taskRewardExp,
@@ -64,8 +63,10 @@ import type {
   TaskTimeType,
   WalletLedgerEntry,
 } from "../types/domain";
+import { AnimatedContent } from "./effects/AnimatedContent";
+import { ClickSpark } from "./effects/ClickSpark";
 
-type WifeSheet = "task" | "review" | "benefit" | "exp" | "level" | null;
+type WifeSheet = "task" | "review" | "benefit" | "level" | "redeem" | null;
 type WifePage = "today" | "main" | "growth";
 type WifeSubPage = "tasks" | "review" | "benefits" | "records" | "order";
 type RewardFormType = TaskRewardType | "experience_allowance";
@@ -85,11 +86,11 @@ interface WifeDashboardProps {
   onApproveBenefit: (benefit: Benefit) => void;
   onRejectBenefit: (benefit: Benefit, reason?: string) => void;
   onAdjustExperience: (amount: number) => void;
-  onCustomExperience: (amount: number) => void;
   onSetLevel: (level: number) => void;
   onLevelDelta: (delta: number) => void;
   onPunishStatus: () => void;
   onRestoreNormal: () => void;
+  onReturnToLogin: () => void;
 }
 
 interface TaskDraft {
@@ -196,37 +197,6 @@ function taskId() {
 
 function rewardId() {
   return `reward-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
-}
-
-function taskTypeFromDraft(draft: TaskDraft): Task["type"] {
-  if (draft.timeType === "repeat") return "repeat";
-  if (draft.timeType === "this_week") return "weekly";
-  return "daily";
-}
-
-function cycleFieldsForDraft(draft: TaskDraft, timeConfig: TaskTimeConfig) {
-  const now = new Date();
-  const dayKey = now.toISOString().slice(0, 10);
-  const weekKey = `${now.getFullYear()}-W${Math.ceil((now.getDate() + 6) / 7)}`;
-  const endOfToday = new Date(now);
-  endOfToday.setHours(23, 59, 59, 999);
-  const endOfWeek = new Date(now);
-  endOfWeek.setDate(now.getDate() + (7 - (now.getDay() || 7)));
-  endOfWeek.setHours(23, 59, 59, 999);
-
-  if (draft.timeType === "repeat" && draft.repeatFrequency === "weekly") {
-    return { cycleId: weekKey, dueAt: endOfWeek.toISOString() };
-  }
-  if (draft.timeType === "this_week") {
-    return { cycleId: weekKey, dueAt: endOfWeek.toISOString() };
-  }
-  if (timeConfig.deadlineAt) {
-    const due = new Date(timeConfig.deadlineAt);
-    if (!Number.isNaN(due.getTime())) {
-      return { cycleId: dayKey, dueAt: due.toISOString() };
-    }
-  }
-  return { cycleId: dayKey, dueAt: endOfToday.toISOString() };
 }
 
 function createDraftReward(type: TaskRewardType): TaskReward {
@@ -383,24 +353,32 @@ export function WifeDashboard({
   onApproveBenefit,
   onRejectBenefit,
   onAdjustExperience,
-  onCustomExperience,
   onSetLevel,
   onLevelDelta,
   onPunishStatus,
   onRestoreNormal,
+  onReturnToLogin,
 }: WifeDashboardProps) {
   const wifeImage = publicAsset("/assets/wife/wife-main.png");
   const [sheet, setSheet] = useState<WifeSheet>(null);
   const [activePage, setActivePage] = useState<WifePage>("main");
   const [subPage, setSubPage] = useState<WifeSubPage | null>(null);
   const [draft, setDraft] = useState<TaskDraft>(initialDraft);
-  const [customExpValue, setCustomExpValue] = useState("");
   const [targetLevel, setTargetLevel] = useState(progress.level);
   const [reviewEdits, setReviewEdits] = useState<Record<string, ReviewEdit>>({});
   const [benefitRejectReasons, setBenefitRejectReasons] = useState<Record<string, string>>({});
   const touchStart = useRef<TouchPoint | null>(null);
   const wheelLocked = useRef(false);
 
+  const isSlave = punishment.status === "slave";
+  const displayRole = isSlave
+    ? {
+        ...role,
+        title: "卖身奴隶",
+        salary: 0,
+        roleImage: publicAsset("/assets/slave/slave-page-latest.png"),
+      }
+    : role;
   const requiredExp = expRequiredForLevel(progress.level);
   const expPercent = Math.min(
     100,
@@ -408,7 +386,6 @@ export function WifeDashboard({
   );
   const expToNext = Math.max(0, requiredExp - progress.exp);
   const nextRole = roles[Math.min(roles.length - 1, role.level + 1)];
-  const isSlave = punishment.status === "slave";
   const remainingDays = getPunishmentRemainingDays(punishment);
   const recoveryPercent =
     punishment.requiredRecoveryExp > 0
@@ -419,7 +396,6 @@ export function WifeDashboard({
           ),
         )
       : 100;
-  const canRestoreNormal = isPunishmentRecoverable(punishment);
   const statusProgressLabel = isSlave ? "恢复" : "经验";
   const statusProgressCurrent = isSlave ? punishment.recoveryExp : progress.exp;
   const statusProgressRequired = isSlave
@@ -474,7 +450,7 @@ export function WifeDashboard({
     target: draftTarget,
     timeConfig: draftTimeConfig,
     title: draft.title,
-    type: taskTypeFromDraft(draft),
+    type: taskTypeForTimeConfig(draftTimeConfig),
   };
   const recentTask =
     submittedTasks[0] ??
@@ -858,7 +834,8 @@ export function WifeDashboard({
       draft.repeatCount,
     );
     const rewards = rewardsFromDraft(draft);
-    const cycleFields = cycleFieldsForDraft(draft, timeConfig);
+    const taskType = taskTypeForTimeConfig(timeConfig);
+    const cycleFields = resolveTaskSchedule(taskType, timeConfig);
     const rewardExp = rewards
       .filter((reward) => reward.type === "experience")
       .reduce((sum, reward) => sum + Math.max(0, Math.trunc(reward.value ?? 0)), 0);
@@ -881,7 +858,7 @@ export function WifeDashboard({
       description:
         draft.description.trim() ||
         buildTaskDescription(draft.moduleId, draftTarget, draftAction),
-      type: taskTypeFromDraft(draft),
+      type: taskType,
       source: "wife",
       moduleId: draft.moduleId,
       moduleLabel: selectedModule.label,
@@ -904,14 +881,6 @@ export function WifeDashboard({
     setSheet(null);
   }
 
-  function customAdjust() {
-    const amount = Number(customExpValue.trim());
-    if (!Number.isFinite(amount) || amount === 0) return;
-    onCustomExperience(amount);
-    setCustomExpValue("");
-    setSheet(null);
-  }
-
   function openLevelSheet() {
     setTargetLevel(progress.level);
     setSheet("level");
@@ -919,6 +888,11 @@ export function WifeDashboard({
 
   function confirmTargetLevel() {
     onSetLevel(targetLevel);
+    setSheet(null);
+  }
+
+  function confirmRedeem() {
+    onRestoreNormal();
     setSheet(null);
   }
 
@@ -943,29 +917,38 @@ export function WifeDashboard({
           />
           <div className="wife-growth__shade" />
 
-          <header className="wife-growth-title">
+          <AnimatedContent
+            as="header"
+            className="wife-growth-title"
+            duration={360}
+          >
             <p>老妞端</p>
             <h1>成长裁定</h1>
             <span>升降赏罚，由老妞大人决定</span>
-          </header>
+          </AnimatedContent>
 
-          <section
+          <AnimatedContent
+            as="section"
             className="wife-growth-card wife-growth-status"
             aria-label="老哥成长状态"
+            delay={50}
+            duration={360}
           >
             <div className="wife-growth-status__head">
               <div>
                 <p>老哥当前状态</p>
                 <h2>
-                  <small>Lv.{String(role.level).padStart(2, "0")}</small>
-                  {role.title}
+                  <small>
+                    {isSlave ? "FINAL" : `Lv.${String(role.level).padStart(2, "0")}`}
+                  </small>
+                  {displayRole.title}
                 </h2>
               </div>
               <div
                 className="wife-rank-seal"
-                aria-label={`当前职务插画：${role.title}`}
+                aria-label={`当前状态插画：${displayRole.title}`}
               >
-                <img src={role.roleImage} alt="" />
+                <img src={displayRole.roleImage} alt="" />
               </div>
             </div>
 
@@ -985,7 +968,7 @@ export function WifeDashboard({
             <div className="wife-growth-meta">
               <span>
                 <BadgeDollarSign size={17} />
-                月薪 {role.salary}
+                月薪 {displayRole.salary}
               </span>
               <span>
                 <ShieldCheck size={17} />
@@ -994,135 +977,134 @@ export function WifeDashboard({
             </div>
 
             <p className="wife-growth-next">
-              {role.level >= roles.length - 1
-                ? "已抵达最高职务，赏罚仍由老妞大人裁定"
-                : `距 Lv.${String(nextRole.level).padStart(2, "0")} ${nextRole.title} 还差 ${expToNext} 经验`}
+              {isSlave
+                ? "奴隶服役中，周期结束后由老妞大人重新裁定"
+                : role.level >= roles.length - 1
+                  ? "已抵达最高职务，赏罚仍由老妞大人裁定"
+                  : `距 Lv.${String(nextRole.level).padStart(2, "0")} ${nextRole.title} 还差 ${expToNext} 经验`}
             </p>
-          </section>
+          </AnimatedContent>
 
-          <section
-            className="wife-growth-card wife-exp-control"
-            aria-label="经验调整"
+          <AnimatedContent
+            as="section"
+            className="wife-growth-card wife-growth-control-card"
+            aria-label="经验与等级调整"
+            delay={80}
+            duration={360}
           >
             <div className="wife-growth-section-title">
-              <h2>经验调整</h2>
-              <p>老妞大人可直接赏赐或扣除经验</p>
+              <h2>经验与等级调整</h2>
+              <p>赏赐或扣除经验，升降与指定职务，皆由老妞大人裁定</p>
             </div>
-            <div className="wife-exp-board">
-              <button
-                className="wife-exp-button wife-exp-button--danger"
-                type="button"
-                onClick={() => onAdjustExperience(-10)}
-              >
-                -10
-              </button>
-              <button
-                className="wife-exp-button wife-exp-button--danger"
-                type="button"
-                onClick={() => onAdjustExperience(-5)}
-              >
-                -5
-              </button>
-              <div className="wife-exp-orb" aria-label="当前经验">
-                <Crown size={25} />
-                <strong>{progress.exp}</strong>
-                <span>/ {requiredExp}</span>
-                <em>当前经验</em>
+            <div className="wife-growth-control-section wife-exp-control">
+              <div className="wife-exp-board">
+                <button
+                  className="wife-exp-button wife-exp-button--danger"
+                  type="button"
+                  onClick={() => onAdjustExperience(-10)}
+                >
+                  -10
+                </button>
+                <button
+                  className="wife-exp-button wife-exp-button--danger"
+                  type="button"
+                  onClick={() => onAdjustExperience(-5)}
+                >
+                  -5
+                </button>
+                <div className="wife-exp-orb" aria-label="当前经验">
+                  <Crown size={25} />
+                  <strong>{progress.exp}</strong>
+                  <span>/ {requiredExp}</span>
+                  <em>当前经验</em>
+                </div>
+                <button
+                  type="button"
+                  className="wife-exp-button"
+                  onClick={() => onAdjustExperience(5)}
+                >
+                  +5
+                </button>
+                <button
+                  type="button"
+                  className="wife-exp-button wife-exp-button--strong"
+                  onClick={() => onAdjustExperience(10)}
+                >
+                  +10
+                </button>
               </div>
-              <button
-                type="button"
-                className="wife-exp-button"
-                onClick={() => onAdjustExperience(5)}
-              >
-                +5
-              </button>
-              <button
-                type="button"
-                className="wife-exp-button wife-exp-button--strong"
-                onClick={() => onAdjustExperience(10)}
-              >
-                +10
-              </button>
             </div>
-            <button
-              className="wife-custom-adjust"
-              type="button"
-              onClick={() => setSheet("exp")}
-            >
-              <Edit3 size={18} />
-              自定义调整
-            </button>
-          </section>
+            <div className="wife-growth-control-section wife-level-control">
+              <div className="wife-level-actions">
+                <button type="button" onClick={() => onLevelDelta(1)}>
+                  <ArrowUp size={27} />
+                  <span>升一级</span>
+                  <em>赐予新职务</em>
+                </button>
+                <button type="button" onClick={openLevelSheet}>
+                  <Crown size={27} />
+                  <span>指定等级</span>
+                  <em>直接裁定职务</em>
+                </button>
+                <button type="button" onClick={() => onLevelDelta(-1)}>
+                  <ArrowDown size={27} />
+                  <span>降一级</span>
+                  <em>收回当前职务</em>
+                </button>
+              </div>
+            </div>
+          </AnimatedContent>
 
-          <section
-            className="wife-growth-card wife-level-control"
-            aria-label="等级调整"
-          >
-            <div className="wife-growth-section-title">
-              <h2>等级调整</h2>
-              <p>升职、降级、流放，皆由老妞决定</p>
-            </div>
-            <div className="wife-level-strip">
-              <span>
-                {"\u5F53\u524D\uFF1A"} Lv.
-                {String(role.level).padStart(2, "0")} {role.title}
-              </span>
-              <i aria-hidden="true">{"\u2192"}</i>
-              <span>
-                {"\u76EE\u6807\uFF1A"} Lv.
-                {String(targetLevel).padStart(2, "0")} {" "}
-                {roles[targetLevel]?.title}
-              </span>
-            </div>
-            <div className="wife-level-actions">
-              <button type="button" onClick={() => onLevelDelta(1)}>
-                <ArrowUp size={27} />
-                <span>升一级</span>
-                <em>赐予新职务</em>
-              </button>
-              <button type="button" onClick={() => onLevelDelta(-1)}>
-                <ArrowDown size={27} />
-                <span>降一级</span>
-                <em>收回当前职务</em>
-              </button>
-              <button type="button" onClick={openLevelSheet}>
-                <Crown size={27} />
-                <span>指定等级</span>
-                <em>直接裁定职务</em>
-              </button>
-              <button type="button" onClick={() => onSetLevel(0)}>
-                <Gavel size={27} />
-                <span>打入流落街头</span>
-                <em>降至最低职务</em>
-              </button>
-            </div>
-          </section>
-
-          <section
+          <AnimatedContent
+            as="section"
             className="wife-growth-card wife-punish-card"
             aria-label="惩罚状态"
+            delay={140}
+            duration={380}
           >
             <div className="wife-growth-section-title">
               <h2>惩罚状态</h2>
               <p>严重失败时，由老妞大人执行最终裁定</p>
             </div>
-            <button
-              className="wife-punish-state"
-              type="button"
-              disabled={isSlave}
-              onClick={onPunishStatus}
-            >
-              <Shield size={32} />
-              <span>
-                <strong>{isSlave ? "已处于卖身奴隶状态" : "卖身奴隶状态"}</strong>
-                <em>
-                  {isSlave
-                    ? `恢复经验 ${punishment.recoveryExp}/${punishment.requiredRecoveryExp} · 剩余 ${remainingDays} 天`
-                    : "冻结权益与零花钱"}
-                </em>
-              </span>
-              <Gavel size={27} />
-            </button>
+            {isSlave ? (
+              <button
+                className="wife-punish-state"
+                type="button"
+                onClick={() => setSheet("redeem")}
+              >
+                <Shield size={32} />
+                <span>
+                  <strong>赎回骆老哥</strong>
+                  <em>解除奴隶状态并官复原职</em>
+                </span>
+                <Gavel size={27} />
+              </button>
+            ) : (
+              <div className="wife-punish-actions">
+                <button
+                  className="wife-punish-state wife-punish-state--street"
+                  type="button"
+                  onClick={() => onSetLevel(0)}
+                >
+                  <Gavel size={27} />
+                  <span>
+                    <strong>打入流落街头</strong>
+                    <em>降至最低职务</em>
+                  </span>
+                </button>
+                <button
+                  className="wife-punish-state wife-punish-state--slave"
+                  type="button"
+                  onClick={onPunishStatus}
+                >
+                  <Shield size={27} />
+                  <span>
+                    <strong>卖身奴隶状态</strong>
+                    <em>冻结权益与零花钱</em>
+                  </span>
+                </button>
+              </div>
+            )}
             {isSlave ? (
               <>
                 <div className="wife-punish-progress">
@@ -1130,18 +1112,9 @@ export function WifeDashboard({
                   {" · "}
                   剩余 {remainingDays} 天
                 </div>
-                {canRestoreNormal ? (
-                  <button
-                    className="wife-restore-button"
-                    type="button"
-                    onClick={onRestoreNormal}
-                  >
-                    恢复正常状态
-                  </button>
-                ) : null}
               </>
             ) : null}
-          </section>
+          </AnimatedContent>
 
           <a
             className="wife-growth-cue"
@@ -1161,7 +1134,21 @@ export function WifeDashboard({
           />
           <div className="wife-hero__shade" />
 
-          <header className="wife-title">
+          <ClickSpark>
+            <button
+              className="wife-return-login-button"
+              type="button"
+              aria-label="返回登录"
+              onClick={onReturnToLogin}
+            >
+              <img
+                src={publicAsset("/assets/ui/return-login.png?v=3f13165c")}
+                alt=""
+              />
+            </button>
+          </ClickSpark>
+
+          <AnimatedContent as="header" className="wife-title" duration={360}>
             <p>老妞端</p>
             <h1>老妞宝座</h1>
             <span>赏罚升降，皆由老妞大人裁定</span>
@@ -1173,15 +1160,23 @@ export function WifeDashboard({
               <ShieldCheck size={16} />
               <span>下滑裁定老哥成长</span>
             </a>
-          </header>
+          </AnimatedContent>
 
-          <section className="wife-status-card" aria-label="老哥当前状态">
+          <AnimatedContent
+            as="section"
+            className="wife-status-card"
+            aria-label="老哥当前状态"
+            delay={70}
+            duration={380}
+          >
             <p className="wife-panel-title">
               <span /> 老哥当前状态 <span />
             </p>
             <h2>
-              <small>Lv. {String(role.level).padStart(2, "0")}</small>
-              {role.title}
+              <small>
+                {isSlave ? "FINAL" : `Lv. ${String(role.level).padStart(2, "0")}`}
+              </small>
+              {displayRole.title}
             </h2>
 
             <div className="wife-exp-line">
@@ -1199,17 +1194,19 @@ export function WifeDashboard({
 
             <div className="wife-salary-line">
               <span>月薪</span>
-              <strong>{role.salary}</strong>
+              <strong>{displayRole.salary}</strong>
               <em className={isSlave ? "wife-salary-status--slave" : undefined}>
                 {isSlave ? "· 卖身奴隶状态" : "· 正常服役中"}
               </em>
             </div>
             <p className="wife-next-line">
-              {role.level >= 11
-                ? "已抵达最高职务，赏罚仍由老妞大人裁定"
-                : `距 Lv.${String(role.level + 1).padStart(2, "0")} 下一职务还差 ${expToNext} 经验`}
+              {isSlave
+                ? "奴隶服役中，周期结束后由老妞大人重新裁定"
+                : role.level >= 11
+                  ? "已抵达最高职务，赏罚仍由老妞大人裁定"
+                  : `距 Lv.${String(role.level + 1).padStart(2, "0")} 下一职务还差 ${expToNext} 经验`}
             </p>
-          </section>
+          </AnimatedContent>
 
           <nav className="wife-actions" aria-label="老婆端快捷操作">
             <button
@@ -1257,42 +1254,57 @@ export function WifeDashboard({
             <span>下滑返回主页</span>
           </a>
 
-          <header className="wife-today-title">
+          <AnimatedContent
+            as="header"
+            className="wife-today-title"
+            duration={360}
+          >
             <p>老妞端</p>
             <h1>今日事务</h1>
             <span>老妞大人今日需要裁定的事项</span>
-          </header>
+          </AnimatedContent>
 
-          <section
+          <AnimatedContent
+            as="section"
             className="wife-today-card wife-overview"
             aria-label="今日概览"
+            delay={50}
+            duration={360}
           >
             <h2>今日概览</h2>
             <div className="wife-overview-grid">
-              <article>
+              <AnimatedContent as="article" duration={300}>
                 <ClipboardList size={44} />
                 <span>待裁定</span>
                 <strong>{pendingRulingCount}</strong>
                 <em>项</em>
-              </article>
-              <article>
+              </AnimatedContent>
+              <AnimatedContent as="article" delay={45} duration={300}>
                 <ShieldCheck size={44} />
                 <span>待批准</span>
                 <strong>{pendingBenefitCount}</strong>
                 <em>项</em>
-              </article>
-              <article className="wife-overview-alert">
+              </AnimatedContent>
+              <AnimatedContent
+                as="article"
+                className="wife-overview-alert"
+                delay={90}
+                duration={300}
+              >
                 <AlertTriangle size={44} />
                 <span>异常</span>
                 <strong>{abnormalCount}</strong>
                 <em>条</em>
-              </article>
+              </AnimatedContent>
             </div>
-          </section>
+          </AnimatedContent>
 
-          <section
+          <AnimatedContent
+            as="section"
             className="wife-today-card wife-pending-panel"
             aria-label="待老妞处理"
+            delay={80}
+            duration={370}
           >
             <h2>待老妞处理</h2>
             <div className="wife-affair-list">
@@ -1328,26 +1340,15 @@ export function WifeDashboard({
                   <i aria-hidden="true">›</i>
                 </button>
               </article>
-              <article className="wife-affair-alert">
-                <div className="wife-affair-icon">
-                  <AlertTriangle size={31} />
-                </div>
-                <div>
-                  <h3>异常提醒</h3>
-                  <p>连续 2 天未完成任务。</p>
-                </div>
-                <span>异常</span>
-                <button type="button" onClick={() => openSubPage("records")}>
-                  查看
-                  <i aria-hidden="true">›</i>
-                </button>
-              </article>
             </div>
-          </section>
+          </AnimatedContent>
 
-          <section
+          <AnimatedContent
+            as="section"
             className="wife-today-card wife-quick-panel"
             aria-label="快速发布"
+            delay={110}
+            duration={380}
           >
             <h2>快速发布</h2>
             <button
@@ -1363,11 +1364,14 @@ export function WifeDashboard({
               <i aria-hidden="true">›</i>
             </button>
             <p>任务发布后，老哥将在任务中心收到指令。</p>
-          </section>
+          </AnimatedContent>
 
-          <section
+          <AnimatedContent
+            as="section"
             className="wife-today-card wife-recent-panel"
             aria-label="最近动态"
+            delay={140}
+            duration={390}
           >
             <h2>最近动态</h2>
             <article className="wife-recent-item">
@@ -1386,7 +1390,7 @@ export function WifeDashboard({
                 <i aria-hidden="true">›</i>
               </button>
             </article>
-          </section>
+          </AnimatedContent>
         </section>
       </div>
 
@@ -1409,11 +1413,11 @@ export function WifeDashboard({
 
           {subPage === "tasks" ? (
             <div className="wife-subpage-inner">
-              <header className="wife-subpage-title">
+              <AnimatedContent as="header" className="wife-subpage-title" duration={340}>
                 <p>老妞端</p>
                 <h1>任务殿</h1>
                 <span>老妞大人发布与查看今日差事</span>
-              </header>
+              </AnimatedContent>
               <button
                 className="wife-subpage-hero-action"
                 type="button"
@@ -1449,22 +1453,22 @@ export function WifeDashboard({
 
           {subPage === "review" ? (
             <div className="wife-subpage-inner">
-              <header className="wife-subpage-title">
+              <AnimatedContent as="header" className="wife-subpage-title" duration={340}>
                 <p>老妞端</p>
                 <h1>审核殿</h1>
                 <span>老哥提交的结果，皆待老妞裁定</span>
-              </header>
+              </AnimatedContent>
               <div className="wife-subpage-stats">
-                <article>
+                <AnimatedContent as="article" duration={300}>
                   <strong>{submittedTasks.length}</strong>
                   <span>待审核</span>
-                </article>
-                <article>
+                </AnimatedContent>
+                <AnimatedContent as="article" delay={55} duration={300}>
                   <strong>
                     {tasks.filter((task) => task.status === "confirmed").length}
                   </strong>
                   <span>已确认</span>
-                </article>
+                </AnimatedContent>
               </div>
               <div className="wife-subpage-list wife-subpage-list--review">
                 {submittedTasks.length ? (
@@ -1533,18 +1537,22 @@ export function WifeDashboard({
                         </div>
                       </div>
                       <div className="wife-subpage-actions">
-                        <button
-                          type="button"
-                          onClick={() => rejectWithReason(task)}
-                        >
-                          打回
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => approveWithEdit(task)}
-                        >
-                          确认
-                        </button>
+                        <ClickSpark>
+                          <button
+                            type="button"
+                            onClick={() => rejectWithReason(task)}
+                          >
+                            打回
+                          </button>
+                        </ClickSpark>
+                        <ClickSpark>
+                          <button
+                            type="button"
+                            onClick={() => approveWithEdit(task)}
+                          >
+                            确认
+                          </button>
+                        </ClickSpark>
                       </div>
                     </article>
                   ))
@@ -1557,11 +1565,11 @@ export function WifeDashboard({
 
           {subPage === "benefits" ? (
             <div className="wife-subpage-inner">
-              <header className="wife-subpage-title">
+              <AnimatedContent as="header" className="wife-subpage-title" duration={340}>
                 <p>老妞端</p>
                 <h1>权益殿</h1>
                 <span>恩准、暂缓，皆由老妞大人决定</span>
-              </header>
+              </AnimatedContent>
               <div className="wife-subpage-list wife-subpage-list--benefits">
                 {benefits.map((benefit) => {
                   const locked = benefit.levelRequired > progress.level;
@@ -1602,23 +1610,27 @@ export function WifeDashboard({
                         <span>未解锁</span>
                       ) : pending ? (
                         <div className="wife-subpage-actions">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              onRejectBenefit(
-                                benefit,
-                                benefitRejectReasons[benefit.id],
-                              )
-                            }
-                          >
-                            拒绝
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onApproveBenefit(benefit)}
-                          >
-                            批准
-                          </button>
+                          <ClickSpark>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onRejectBenefit(
+                                  benefit,
+                                  benefitRejectReasons[benefit.id],
+                                )
+                              }
+                            >
+                              拒绝
+                            </button>
+                          </ClickSpark>
+                          <ClickSpark>
+                            <button
+                              type="button"
+                              onClick={() => onApproveBenefit(benefit)}
+                            >
+                              批准
+                            </button>
+                          </ClickSpark>
                         </div>
                       ) : (
                         <span>
@@ -1638,21 +1650,24 @@ export function WifeDashboard({
 
           {subPage === "records" ? (
             <div className="wife-subpage-inner">
-              <header className="wife-subpage-title">
+              <AnimatedContent as="header" className="wife-subpage-title" duration={340}>
                 <p>老妞端</p>
                 <h1>裁定录</h1>
                 <span>记录老哥近期表现与老妞裁定</span>
-              </header>
+              </AnimatedContent>
               <div className="wife-record-timeline">
                 <article>
                   <span />
                   <div>
                     <h2>
-                      当前职务：Lv.{String(role.level).padStart(2, "0")}{" "}
-                      {role.title}
+                      {isSlave
+                        ? "当前状态：卖身奴隶"
+                        : `当前职务：Lv.${String(role.level).padStart(2, "0")} ${role.title}`}
                     </h2>
                     <p>
-                      经验 {progress.exp} / {requiredExp}，月薪 {role.salary}。
+                      {isSlave
+                        ? `恢复经验 ${punishment.recoveryExp} / ${punishment.requiredRecoveryExp}，月薪冻结。`
+                        : `经验 ${progress.exp} / ${requiredExp}，月薪 ${role.salary}。`}
                     </p>
                   </div>
                 </article>
@@ -1697,11 +1712,11 @@ export function WifeDashboard({
 
           {subPage === "order" ? (
             <div className="wife-subpage-inner">
-              <header className="wife-subpage-title">
+              <AnimatedContent as="header" className="wife-subpage-title" duration={340}>
                 <p>老妞端</p>
                 <h1>点餐殿</h1>
                 <span>老哥想吃什么，先由老妞大人恩准</span>
-              </header>
+              </AnimatedContent>
               <div className="wife-order-panel">
                 <div>
                   <strong>今日点餐权</strong>
@@ -2223,32 +2238,6 @@ export function WifeDashboard({
             ) : null}
 
 
-            {sheet === "exp" ? (
-              <>
-                <p className="kicker">{"\u7ECF\u9A8C\u8C03\u6574"}</p>
-                <h2>{"\u81EA\u5B9A\u4E49\u8C03\u6574\u7ECF\u9A8C"}</h2>
-                <label>
-                  {"\u8C03\u6574\u6570\u503C"}
-                  <input
-                    inputMode="text"
-                    placeholder="+8 / -6"
-                    value={customExpValue}
-                    onChange={(event) => setCustomExpValue(event.target.value)}
-                  />
-                </label>
-                <p className="wife-sheet-note">
-                  {"\u8F93\u5165\u6B63\u6570\u4E3A\u8D4F\u8D50\u7ECF\u9A8C\uFF0C\u8F93\u5165\u8D1F\u6570\u4E3A\u6263\u9664\u7ECF\u9A8C\u3002"}
-                </p>
-                <button
-                  className="primary-button"
-                  type="button"
-                  onClick={customAdjust}
-                >
-                  {"\u786E\u5B9A\u8C03\u6574"}
-                </button>
-              </>
-            ) : null}
-
             {sheet === "level" ? (
               <>
                 <p className="kicker">{"\u7B49\u7EA7\u88C1\u5B9A"}</p>
@@ -2256,7 +2245,7 @@ export function WifeDashboard({
                 <div className="wife-level-sheet-current">
                   <span>
                     {"\u5F53\u524D"} Lv.
-                    {String(role.level).padStart(2, "0")} {role.title}
+                    {String(role.level).padStart(2, "0")} {displayRole.title}
                   </span>
                   <strong>
                     {"\u76EE\u6807"} Lv.
@@ -2364,18 +2353,22 @@ export function WifeDashboard({
                           />
                         </div>
                         <div>
-                          <button
-                            type="button"
-                            onClick={() => rejectWithReason(task)}
-                          >
-                            打回
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => approveWithEdit(task)}
-                          >
-                            确认
-                          </button>
+                          <ClickSpark>
+                            <button
+                              type="button"
+                              onClick={() => rejectWithReason(task)}
+                            >
+                              打回
+                            </button>
+                          </ClickSpark>
+                          <ClickSpark>
+                            <button
+                              type="button"
+                              onClick={() => approveWithEdit(task)}
+                            >
+                              确认
+                            </button>
+                          </ClickSpark>
                         </div>
                       </article>
                     ))
@@ -2408,29 +2401,59 @@ export function WifeDashboard({
                           }
                         />
                         <div>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              onRejectBenefit(
-                                benefit,
-                                benefitRejectReasons[benefit.id],
-                              )
-                            }
-                          >
-                            拒绝
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onApproveBenefit(benefit)}
-                          >
-                            恩准
-                          </button>
+                          <ClickSpark>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onRejectBenefit(
+                                  benefit,
+                                  benefitRejectReasons[benefit.id],
+                                )
+                              }
+                            >
+                              拒绝
+                            </button>
+                          </ClickSpark>
+                          <ClickSpark>
+                            <button
+                              type="button"
+                              onClick={() => onApproveBenefit(benefit)}
+                            >
+                              恩准
+                            </button>
+                          </ClickSpark>
                         </div>
                       </article>
                     ))
                   ) : (
                     <p className="wife-empty">暂无待审批权益申请。</p>
                   )}
+                </div>
+              </>
+            ) : null}
+
+            {sheet === "redeem" ? (
+              <>
+                <p className="kicker">解除最终裁定</p>
+                <h2>赎回骆老哥</h2>
+                <div className="wife-redeem-summary">
+                  <strong>确认赎回后</strong>
+                  <p>卖身奴隶状态将立即解除，无需等待剩余天数或恢复经验达标。</p>
+                  <p>骆老哥将恢复卖身前的职务、经验与零花钱，冻结权益同步开放。</p>
+                </div>
+                <div className="wife-redeem-actions">
+                  <button type="button" onClick={() => setSheet(null)}>
+                    暂不赎回
+                  </button>
+                  <ClickSpark>
+                    <button
+                      className="primary-button"
+                      type="button"
+                      onClick={confirmRedeem}
+                    >
+                      确认赎回
+                    </button>
+                  </ClickSpark>
                 </div>
               </>
             ) : null}

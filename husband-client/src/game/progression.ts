@@ -27,7 +27,13 @@ export const initialProgress: GameProgress = {
 };
 
 export function clampLevel(level: number) {
+  if (!Number.isFinite(level)) return MIN_LEVEL;
   return Math.min(MAX_LEVEL, Math.max(MIN_LEVEL, Math.trunc(level)));
+}
+
+function finiteNumber(value: unknown, fallback: number) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
 }
 
 export function expRequiredForLevel(_level: number) {
@@ -42,19 +48,21 @@ export function salaryForLevel(level: number) {
 export function hydrateProgress(raw: unknown): GameProgress {
   if (!raw || typeof raw !== "object") return initialProgress;
   const value = raw as Partial<GameProgress>;
-  const level = clampLevel(Number(value.level ?? initialProgress.level));
+  const level = clampLevel(finiteNumber(value.level, initialProgress.level));
   const required = expRequiredForLevel(level);
 
   return {
     level,
     exp: Math.min(
       required,
-      Math.max(0, Number(value.exp ?? initialProgress.exp)),
+      Math.max(0, finiteNumber(value.exp, initialProgress.exp)),
     ),
-    totalExp: Math.max(0, Number(value.totalExp ?? initialProgress.totalExp)),
-    wallet: Math.max(0, Number(value.wallet ?? initialProgress.wallet)),
+    totalExp: Math.max(0, finiteNumber(value.totalExp, initialProgress.totalExp)),
+    wallet: Math.max(0, finiteNumber(value.wallet, initialProgress.wallet)),
     rewardedTaskIds: Array.isArray(value.rewardedTaskIds)
-      ? value.rewardedTaskIds.filter(Boolean)
+      ? value.rewardedTaskIds.filter(
+          (taskId): taskId is string => typeof taskId === "string" && Boolean(taskId),
+        )
       : [],
   };
 }
