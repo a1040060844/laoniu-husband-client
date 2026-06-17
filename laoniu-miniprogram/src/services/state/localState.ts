@@ -6,7 +6,7 @@ import { initialProgress, settleConfirmedTasks } from "../../game/progression";
 import { taskRewardExp, taskRewardMoney } from "../../domain/taskRewards";
 import { refreshTaskCycles } from "../../domain/taskSchedule";
 import { APP_STATE_STORAGE_KEY } from "../storageKeys";
-import type { Benefit, DecreeEvent, EventLog, Punishment, Task, WalletLedgerEntry } from "../../types/domain";
+import type { Benefit, DecreeEvent, EventLog, Punishment, Task, TaskReward, WalletLedgerEntry } from "../../types/domain";
 import type {
   AppState,
   ApproveBenefitPayload,
@@ -129,6 +129,32 @@ function benefitCooldownMs(frequency: string) {
   if (frequency.includes("月")) return 30 * 24 * 60 * 60 * 1000;
   if (frequency.includes("年")) return 365 * 24 * 60 * 60 * 1000;
   return 7 * 24 * 60 * 60 * 1000;
+}
+
+function rewardForTask(payload: CreateTaskPayload): { rewards: TaskReward[]; rewardExp: number; rewardMoney: number; rewardBenefit?: string } {
+  const rewardType = payload.rewardType || "experience";
+  const rewardValue = Math.max(0, Math.trunc(payload.rewardValue ?? payload.rewardExp ?? 0));
+  const rewardExp = rewardType === "experience" ? rewardValue : Math.max(0, Math.trunc(payload.rewardExp || 0));
+  const rewardMoney = rewardType === "allowance" ? rewardValue : Math.max(0, Math.trunc(payload.rewardMoney || 0));
+
+  if (rewardType === "none") return { rewards: [], rewardExp: 0, rewardMoney: 0 };
+
+  const reward: TaskReward = {
+    id: id("reward"),
+    type: rewardType,
+    label: "老妞任务奖励",
+    value: rewardValue,
+    unit: rewardType === "allowance" ? "CNY" : rewardType === "experience" ? "EXP" : rewardType === "level_up" ? "LEVEL" : "COUNT",
+    benefitName: rewardType === "benefit" ? payload.rewardBenefit || "老妞指定权益" : undefined,
+    customName: rewardType === "custom" ? payload.rewardBenefit || "老妞自定义奖励" : undefined
+  };
+
+  return {
+    rewards: [reward],
+    rewardExp,
+    rewardMoney,
+    rewardBenefit: rewardType === "benefit" ? reward.benefitName : undefined
+  };
 }
 
 function settleTask(state: AppState, task: Task) {
@@ -286,14 +312,22 @@ export const localState: StateService = {
 
   async createTask(payload: CreateTaskPayload) {
     const state = readState();
+    const reward = rewardForTask(payload);
     const task: Task = {
       id: id("task"),
       title: payload.title,
       description: payload.description,
       type: "custom",
       source: "wife",
-      rewardExp: Math.max(0, Math.trunc(payload.rewardExp || 0)),
-      rewardMoney: Math.max(0, Math.trunc(payload.rewardMoney || 0)),
+      moduleId: payload.moduleId,
+      moduleLabel: payload.moduleLabel,
+      target: payload.target,
+      action: payload.action,
+      standard: payload.standard,
+      rewards: reward.rewards,
+      rewardExp: reward.rewardExp,
+      rewardMoney: reward.rewardMoney,
+      rewardBenefit: reward.rewardBenefit,
       deadline: payload.deadline || "今天完成",
       status: "todo",
       createdAt: nowIso()
@@ -326,18 +360,8 @@ export const localState: StateService = {
       restoreExp: state.progress.exp,
       restoreWallet: state.progress.wallet
     };
-    appendLedger(state, {
-      type: "punishment",
-      source: "卖身奴隶状态",
-      amount: 0,
-      unit: "COUNT",
-      note: `开启：${reason}`
-    });
-    appendLog(state, {
-      type: "punishment_status_changed",
-      title: "进入卖身奴隶状态",
-      description: reason
-    });
+    appendLedger(state, { type: "punishment", source: "卖身奴隶状态", amount: 0, unit: "COUNT", note: `开启：${reason}` });
+    appendLog(state, { type: "punishment_status_changed", title: "进入卖身奴隶状态", description: reason });
     appendDecree(state, {
       type: "punishment_slave",
       title: "老妞裁定",
@@ -351,31 +375,10 @@ export const localState: StateService = {
   async restoreNormalMode(payload?: RestoreNormalModePayload) {
     const state = readState();
     const reason = payload?.reason || "老妞裁定恢复正常状态";
-    state.punishment = {
-      status: "normal",
-      durationDays: 7,
-      recoveryExp: 0,
-      requiredRecoveryExp: 100
-    };
-    appendLedger(state, {
-      type: "punishment",
-      source: "卖身奴隶状态",
-      amount: 0,
-      unit: "COUNT",
-      note: `恢复：${reason}`
-    });
-    appendLog(state, {
-      type: "punishment_status_changed",
-      title: "恢复正常状态",
-      description: reason
-    });
-    appendDecree(state, {
-      type: "punishment_restored",
-      title: "状态恢复",
-      text: reason,
-      tone: "normal",
-      payload: {}
-    });
+    state.punishment = { status: "normal", durationDays: 7, recoveryExp: 0, requiredRecoveryExp: 100 };
+    appendLedger(state, { type: "punishment", source: "卖身奴隶状态", amount: 0, unit: "COUNT", note: `恢复：${reason}` });
+    appendLog(state, { type: "punishment_status_changed", title: "恢复正常状态", description: reason });
+    appendDecree(state, { type: "punishment_restored", title: "状态恢复", text: reason, tone: "normal", payload: {} });
     return writeState(state);
   }
 };

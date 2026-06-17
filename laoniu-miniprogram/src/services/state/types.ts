@@ -1,4 +1,4 @@
-import type { Benefit, DecreeEvent, EventLog, Punishment, Task, WalletLedgerEntry } from "../../types/domain";
+import type { Benefit, DecreeEvent, EventLog, Punishment, Task, TaskRewardType, WalletLedgerEntry } from "../../types/domain";
 import type { GameProgress } from "../../game/progression";
 
 export type StateBackend = "local" | "http";
@@ -46,7 +46,15 @@ export interface CreateTaskPayload {
   description: string;
   rewardExp: number;
   rewardMoney?: number;
+  rewardType?: TaskRewardType;
+  rewardValue?: number;
+  rewardBenefit?: string;
   deadline?: string;
+  moduleId?: Task["moduleId"];
+  moduleLabel?: string;
+  target?: string;
+  action?: string;
+  standard?: string;
 }
 
 export interface CreateDecreePayload {

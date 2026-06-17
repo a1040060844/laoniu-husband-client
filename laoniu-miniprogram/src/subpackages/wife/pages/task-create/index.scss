@@ -1,3 +1,48 @@
-.task-create-form {
+.task-create-page {
+  padding-bottom: 48px;
+}
+
+.form-panel {
+  text-align: left;
+}
+
+.picker-line {
+  min-height: 64px;
+  padding: 16px 18px;
+  border: 2px solid rgba(90, 55, 41, .28);
+  border-radius: 8px;
+  color: #3a241a;
+  font-size: 24px;
+  line-height: 1.35;
+  background: rgba(255, 255, 255, .78);
+}
+
+.nested {
+  margin-top: 10px;
+}
+
+.preview-box {
+  margin-top: 24px;
+  padding: 18px;
+  border: 2px dashed rgba(90, 55, 41, .34);
+  border-radius: 8px;
+  background: rgba(255, 248, 237, .74);
+}
+
+.preview-title,
+.preview-text {
   display: block;
+}
+
+.preview-title {
+  color: #4b2d22;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.preview-text {
+  margin-top: 8px;
+  color: #684437;
+  font-size: 22px;
+  line-height: 1.35;
 }

@@ -1,3 +1,58 @@
-.decree-page {
-  display: block;
+.decrees-page {
+  padding-bottom: 48px;
+}
+
+.decree-form {
+  text-align: left;
+}
+
+.picker-line {
+  min-height: 64px;
+  padding: 16px 18px;
+  border: 2px solid rgba(90, 55, 41, .28);
+  border-radius: 8px;
+  color: #3a241a;
+  font-size: 24px;
+  line-height: 1.35;
+  background: rgba(255, 255, 255, .78);
+}
+
+.decree-card {
+  border-left: 8px solid rgba(111, 63, 44, .32);
+}
+
+.decree-card--upgrade {
+  border-left-color: #7aa969;
+}
+
+.decree-card--down {
+  border-left-color: #b85a4f;
+}
+
+.decree-card--punish {
+  border-left-color: #5c3428;
+  background: rgba(80, 43, 32, .92);
+  color: #fff6ea;
+}
+
+.decree-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.decree-title {
+  flex: 1;
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1.25;
+  text-align: left;
+}
+
+.decree-time {
+  flex: 0 0 auto;
+  color: inherit;
+  opacity: .72;
+  font-size: 20px;
 }

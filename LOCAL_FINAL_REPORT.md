@@ -16,6 +16,9 @@ This report records the current local-only Mini Program migration checkpoint.
 - Husband benefit page now has filter tabs, available/pending/cooldown/locked grouping, slave-mode freeze state, cooldown/request details and recent benefit logs.
 - Wife review page now has task/benefit/recent-record tabs, task approve/reject/fail actions, benefit approve/reject actions and clear confirmation dialogs.
 - Local state service has been rewritten as clean UTF-8 and now supports `failTask`, rejected-task resubmission, proper benefit cooldown parsing and slave-mode allowance pause.
+- Wife task creation now supports A/B linked selection, free text, deadline options, reward types and structured task metadata.
+- Wife decrees page now supports manually creating decrees with tone states and readable decree cards.
+- Wife logs page now supports filtering, recent 100 entries and JSON detail preview through a modal.
 - Complex H5 sprite/cinematic effects are intentionally simplified.
 
 ## Command Results

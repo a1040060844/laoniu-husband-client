@@ -36,7 +36,7 @@ Use `husband-client/` as the visual and behavior source of truth. For each migra
 - H5 source: `WifeDashboard`, `SlaveRulingModal`, task/benefit/decree/log sections.
 - Mini Program target: `src/subpackages/wife/pages/*`.
 - Status: first-pass migrated.
-- Restored: dashboard summary, task creation, task review tabs, task approve/reject/fail actions, benefit approval/rejection tabs, recent review records, decrees, punishment/slave controls, reset local data, logs.
+- Restored: dashboard summary, structured task creation with A/B selection and reward types, task review tabs, task approve/reject/fail actions, benefit approval/rejection tabs, recent review records, manual decrees, decree tone states, log filters/detail preview, punishment/slave controls, reset local data.
 - Difference: dense H5 dashboard panels are split into focused Mini Program pages; advanced wife command motion is not ported yet.
 - Needs device review: form ergonomics, picker values, and review actions after repeated state changes.
 
