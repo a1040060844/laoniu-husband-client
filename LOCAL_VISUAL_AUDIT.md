@@ -27,7 +27,7 @@ Use `husband-client/` as the visual and behavior source of truth. For each migra
 - H5 source: `RolePage`, `BenefitPage`, `TaskPage`, `SlavePage`, `HusbandVerticalPager`.
 - Mini Program target: `src/subpackages/husband/pages/*`.
 - Status: first-pass migrated.
-- Restored: role/progress/wallet display, benefit list and request flow, task list and submit flow, slave state display, wallet ledger display, vertical swipe helper.
+- Restored: role/progress/wallet display, role preview left/right switching, locked future-role state, level dot row, benefit list and request flow, task list and submit flow, slave state display, wallet ledger display, vertical swipe helper.
 - Difference: H5 micro-animations, cinematic reward flights, and full pager choreography are simplified.
 - Needs device review: long list scrolling, button density, and subpackage navigation.
 

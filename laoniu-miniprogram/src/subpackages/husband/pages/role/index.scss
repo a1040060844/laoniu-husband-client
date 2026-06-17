@@ -1,23 +1,128 @@
-.role-card {
-  text-align: center;
+.role-page {
+  padding-top: 28px;
 }
 
-.role-card__image {
-  width: 420px;
-  height: 420px;
-  margin: 0 auto;
+.role-hero {
+  position: relative;
+  height: 520px;
+  margin: 0 -24px;
+  overflow: hidden;
+}
+
+.role-hero::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 160px;
+  background: linear-gradient(0deg, rgba(255, 246, 234, .96), rgba(255, 246, 234, 0));
+  content: "";
+}
+
+.role-hero__image {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 20px 16px rgba(61, 36, 25, .26));
+}
+
+.role-hero__image.is-locked {
+  filter: grayscale(1) brightness(.55) drop-shadow(0 20px 16px rgba(61, 36, 25, .26));
+}
+
+.role-hero__lock {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff8ed;
+  font-size: 34px;
+  font-weight: 900;
+  background: rgba(24, 18, 16, .34);
+}
+
+.role-header {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) 72px;
+  align-items: center;
+  gap: 10px;
+  margin-top: -34px;
+}
+
+.role-header__text {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.level-line {
+  color: #6f3f2c;
+  font-size: 26px;
+  font-weight: 900;
+}
+
+.role-nav {
+  width: 72px;
+  height: 72px;
+  padding: 0;
+  border: 2px solid #5a3729;
+  border-radius: 50%;
+  color: #43271d;
+  font-size: 40px;
+  font-weight: 900;
+  line-height: 68px;
+  background: rgba(255, 252, 246, .9);
+}
+
+.role-card {
+  margin-top: 18px;
+}
+
+.panel-title {
+  display: block;
+  margin-bottom: 10px;
+  color: #543224;
+  font-size: 28px;
+  font-weight: 900;
 }
 
 .role-card__bar {
-  height: 28px;
-  margin-top: 20px;
-  border: 2px solid #4a3328;
-  border-radius: 6px;
+  height: 22px;
+  margin: 18px 0 8px;
   overflow: hidden;
-  background: #ead0b7;
+  border: 2px solid #5a3729;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .8);
 }
 
 .role-card__fill {
   height: 100%;
-  background: #75bd69;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #f0a84d, #7fc796);
+}
+
+.role-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.role-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(90, 55, 41, .22);
+}
+
+.role-dot.is-active {
+  background: #6f3f2c;
+  transform: scale(1.22);
+}
+
+.role-dot.is-locked {
+  background: rgba(37, 28, 24, .16);
 }
