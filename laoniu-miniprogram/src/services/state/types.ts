@@ -51,6 +51,16 @@ export interface CreateDecreePayload {
   tone?: DecreeEvent["tone"];
 }
 
+export interface StartSlaveModePayload {
+  reason?: string;
+  durationDays?: number;
+  requiredRecoveryExp?: number;
+}
+
+export interface RestoreNormalModePayload {
+  reason?: string;
+}
+
 export interface StateService {
   loadState(): Promise<AppState>;
   saveState(next: AppState): Promise<AppState>;
@@ -63,4 +73,6 @@ export interface StateService {
   rejectBenefit(benefitId: string, payload?: RejectBenefitPayload): Promise<AppState>;
   createTask(payload: CreateTaskPayload): Promise<AppState>;
   createDecree(payload: CreateDecreePayload): Promise<AppState>;
+  startSlaveMode(payload?: StartSlaveModePayload): Promise<AppState>;
+  restoreNormalMode(payload?: RestoreNormalModePayload): Promise<AppState>;
 }

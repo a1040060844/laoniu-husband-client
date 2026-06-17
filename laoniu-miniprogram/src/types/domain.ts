@@ -138,6 +138,7 @@ export type PunishmentStatus = "normal" | "slave";
 export interface Punishment {
   status: PunishmentStatus;
   startedAt?: string;
+  reason?: string;
   durationDays: number;
   recoveryExp: number;
   requiredRecoveryExp: number;

@@ -15,7 +15,9 @@ import type {
   RejectBenefitPayload,
   RejectTaskPayload,
   RequestBenefitPayload,
+  RestoreNormalModePayload,
   StateService,
+  StartSlaveModePayload,
   SubmitTaskPayload
 } from "./types";
 
@@ -276,6 +278,75 @@ export const localState: StateService = {
   async createDecree(payload: CreateDecreePayload) {
     const state = readState();
     appendDecree(state, { type: "task_created", title: payload.title, text: payload.text, tone: payload.tone || "normal", payload: {} });
+    return writeState(state);
+  },
+
+  async startSlaveMode(payload?: StartSlaveModePayload) {
+    const state = readState();
+    const reason = payload?.reason || "老妞裁定进入卖身奴隶状态";
+    const durationDays = Math.max(1, Math.trunc(payload?.durationDays || 7));
+    const requiredRecoveryExp = Math.max(1, Math.trunc(payload?.requiredRecoveryExp || 100));
+    state.punishment = {
+      status: "slave",
+      startedAt: nowIso(),
+      reason,
+      durationDays,
+      recoveryExp: 0,
+      requiredRecoveryExp,
+      restoreLevel: state.progress.level,
+      restoreExp: state.progress.exp,
+      restoreWallet: state.progress.wallet
+    };
+    appendLedger(state, {
+      type: "punishment",
+      source: "卖身奴隶状态",
+      amount: 0,
+      unit: "COUNT",
+      note: `开启：${reason}`
+    });
+    appendLog(state, {
+      type: "punishment_status_changed",
+      title: "进入卖身奴隶状态",
+      description: reason
+    });
+    appendDecree(state, {
+      type: "punishment_slave",
+      title: "老妞裁定",
+      text: `进入卖身奴隶状态：${reason}`,
+      tone: "punish",
+      payload: { durationDays, requiredRecoveryExp }
+    });
+    return writeState(state);
+  },
+
+  async restoreNormalMode(payload?: RestoreNormalModePayload) {
+    const state = readState();
+    const reason = payload?.reason || "老妞裁定恢复正常状态";
+    state.punishment = {
+      status: "normal",
+      durationDays: 7,
+      recoveryExp: 0,
+      requiredRecoveryExp: 100
+    };
+    appendLedger(state, {
+      type: "punishment",
+      source: "卖身奴隶状态",
+      amount: 0,
+      unit: "COUNT",
+      note: `恢复：${reason}`
+    });
+    appendLog(state, {
+      type: "punishment_status_changed",
+      title: "恢复正常状态",
+      description: reason
+    });
+    appendDecree(state, {
+      type: "punishment_restored",
+      title: "状态恢复",
+      text: reason,
+      tone: "normal",
+      payload: {}
+    });
     return writeState(state);
   }
 };

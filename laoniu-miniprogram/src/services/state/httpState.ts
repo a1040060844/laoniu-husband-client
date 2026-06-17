@@ -15,5 +15,7 @@ export const httpState: StateService = {
   approveBenefit: async () => unavailable(),
   rejectBenefit: async () => unavailable(),
   createTask: async () => unavailable(),
-  createDecree: async () => unavailable()
+  createDecree: async () => unavailable(),
+  startSlaveMode: async () => unavailable(),
+  restoreNormalMode: async () => unavailable()
 };

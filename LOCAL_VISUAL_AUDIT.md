@@ -9,8 +9,8 @@ Use `husband-client/` as the visual and behavior source of truth. For each migra
 - H5 source: `husband-client/src/pages/LoginPage.tsx`, `LoginPage.css`, `loginSpriteData.ts`, `public/assets/login/`, `src/assets/login-final/`.
 - Mini Program target: `laoniu-miniprogram/src/pages/login/index.tsx`, `index.scss`, `components/SpriteActor/`.
 - Status: first-pass migrated.
-- Restored: room background, title/subtitle images, husband/wife role cards, cat/reset area, pixel rendering, static role actor presentation and light floating motion.
-- Difference: the H5 sprite-sheet idle/random/click/drag/hitbox behavior is currently represented by static actors. `login-final/` was not copied into the Mini Program package to avoid a large unused asset batch.
+- Restored: room background, title/subtitle images, love-day plaque, husband/wife role cards, role selection feedback, cat/reset area, speech bubble feedback, pixel rendering, static role actor presentation and light floating motion.
+- Difference: the H5 sprite-sheet idle/random/drag/hitbox behavior is currently represented by static actors plus tap feedback. `login-final/` was not copied into the Mini Program package to avoid a large unused asset batch.
 - Needs device review: touch target size, image scaling on narrow phones, and whether sprite-sheet interaction should be reintroduced with selective frame assets.
 
 ## Loading Page
@@ -36,7 +36,7 @@ Use `husband-client/` as the visual and behavior source of truth. For each migra
 - H5 source: `WifeDashboard`, `SlaveRulingModal`, task/benefit/decree/log sections.
 - Mini Program target: `src/subpackages/wife/pages/*`.
 - Status: first-pass migrated.
-- Restored: dashboard summary, task creation, task review, benefit approval/rejection, decrees, punishment/slave controls, logs.
+- Restored: dashboard summary, task creation, task review, benefit approval/rejection, decrees, punishment/slave controls, reset local data, logs.
 - Difference: dense H5 dashboard panels are split into focused Mini Program pages; advanced wife command motion is not ported yet.
 - Needs device review: form ergonomics, picker values, and review actions after repeated state changes.
 

@@ -9,7 +9,9 @@ This report records the current local-only Mini Program migration checkpoint.
 - Runtime mode is local-only. It uses Taro storage through `services/state/index.ts`; no CloudBase, server, API, `web-view`, ReactDOM, browser storage, or browser routing is required.
 - Main pages and husband/wife subpackage pages are implemented.
 - Domain data and pure logic were copied from the H5 project where suitable: roles, benefits, task presets, task modules, progression, task schedule and task reward helpers.
-- The visual migration is a first-pass Mini Program version: structure, assets, state, flows and core UI are present; complex H5 sprite/cinematic effects are intentionally simplified.
+- The visual migration is a first-pass Mini Program version: structure, assets, state, flows and core UI are present; login now includes love-day display, speech feedback, role selection feedback and reset confirmation.
+- Slave mode is operable from the wife dashboard and visible on the husband slave page. Opening/restoring the state writes logs, decrees and punishment ledger entries.
+- Complex H5 sprite/cinematic effects are intentionally simplified.
 
 ## Command Results
 
@@ -55,6 +57,7 @@ This report records the current local-only Mini Program migration checkpoint.
 ## Known Gaps
 
 - Login sprite-sheet drag, random idle, click hitbox and exact H5 sprite behavior are not fully restored.
+- Login role selection, speech bubble feedback and love-day display are restored, but full sprite-sheet dragging is still pending.
 - H5 cinematic effects such as upgrade, slave state, reward flight and wife command motion are represented by lightweight placeholders.
 - Visual parity still needs WeChat DevTools and real-device review.
 - Asset payload is under 20 MB now, but close enough to the limit that a production/upload pass should still move large images to remote assets or stricter subpackage groups.
