@@ -1,3 +1,85 @@
-.task-status {
-  color: #735949;
+.husband-task-page {
+  padding-bottom: 48px;
+}
+
+.task-filter-row {
+  display: flex;
+  gap: 10px;
+  margin: 20px 0 8px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.filter-chip {
+  flex: 0 0 auto;
+  min-width: 118px;
+  height: 58px;
+  padding: 0 18px;
+  border: 2px solid rgba(90, 55, 41, .34);
+  border-radius: 999px;
+  color: #4b2d22;
+  font-size: 22px;
+  line-height: 54px;
+  background: rgba(255, 253, 248, .86);
+}
+
+.filter-chip.is-active {
+  color: #fff6ea;
+  background: #6f3f2c;
+}
+
+.task-card {
+  border-left: 8px solid rgba(111, 63, 44, .32);
+}
+
+.task-card--submitted {
+  border-left-color: #d59d4c;
+}
+
+.task-card--confirmed,
+.task-card--completed {
+  border-left-color: #73a86b;
+}
+
+.task-card--failed,
+.task-card--failed_pending,
+.task-card--expired {
+  border-left-color: #b85a4f;
+}
+
+.task-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.task-card__title {
+  flex: 1;
+  color: #2d1d17;
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1.25;
+  text-align: left;
+}
+
+.status-pill {
+  flex: 0 0 auto;
+  max-width: 188px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  color: #fff6ea;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.2;
+  background: #6f3f2c;
+}
+
+.task-meta {
+  display: block;
+  margin-top: 8px;
+  color: #684437;
+  font-size: 22px;
+  line-height: 1.35;
 }

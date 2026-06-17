@@ -12,6 +12,8 @@ This report records the current local-only Mini Program migration checkpoint.
 - The visual migration is a first-pass Mini Program version: structure, assets, state, flows and core UI are present; login now includes love-day display, speech feedback, role selection feedback and reset confirmation.
 - Slave mode is operable from the wife dashboard and visible on the husband slave page. Opening/restoring the state writes logs, decrees and punishment ledger entries.
 - Husband role page now restores the H5-style role preview loop: left/right level switching, locked future roles, level dots, hero image and progress/wallet panel.
+- Husband task page now has local status filtering, task status cards, submit confirmation, submitted/confirmed timestamps and clean reward text.
+- Husband benefit page now has filter tabs, available/pending/cooldown/locked grouping, slave-mode freeze state, cooldown/request details and recent benefit logs.
 - Complex H5 sprite/cinematic effects are intentionally simplified.
 
 ## Command Results
