@@ -45,8 +45,8 @@ Use `husband-client/` as the visual and behavior source of truth. For each migra
 - H5 source: `src/components/effects/*`.
 - Mini Program target: `src/components/PixelTransition`, `ClickSpark`, `CountUp`, `StoryModal`, `DecreeModal`, `OverlayRoot`.
 - Status: baseline migrated.
-- Restored: overlay shell, story/decree modal shell, count-up component API, 10 x 18 pixel transition grid, click spark placeholder, swipe hint.
-- Difference: `RoleUpgradeCinematic`, `SlaveStateCinematic`, `TaskRewardFlight`, `WifeCommandMotion` remain TODO for a later visual parity pass.
+- Restored: overlay shell, story modal shell, tone-aware decree modal, upgrade/down/punish decree styling, lightweight decree aura/particle motion, count-up component API, 10 x 18 pixel transition grid, click spark placeholder, swipe hint.
+- Difference: full `RoleUpgradeCinematic`, `SlaveStateCinematic`, `TaskRewardFlight`, `WifeCommandMotion` choreography remains simplified into Mini Program-safe decree feedback and lightweight motion.
 - Needs device review: z-index stacking over native page elements and transition smoothness.
 
 ## Package Notes

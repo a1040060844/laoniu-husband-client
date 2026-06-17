@@ -19,6 +19,7 @@ This report records the current local-only Mini Program migration checkpoint.
 - Wife task creation supports A/B linked selection, free text, deadline options, reward types and structured task metadata.
 - Wife decrees page supports manually creating decrees with tone states and readable decree cards.
 - Wife logs page supports filtering, recent 100 entries and JSON detail preview through a modal.
+- Husband pages now surface unread decrees through a tone-aware Mini Program modal with upgrade, down, punish and normal states.
 - Complex H5 sprite/cinematic effects are intentionally simplified.
 
 ## Command Results
@@ -66,7 +67,7 @@ This report records the current local-only Mini Program migration checkpoint.
 
 - Login sprite-sheet drag, random idle, click hitbox and exact H5 sprite behavior are not fully restored.
 - Login role selection, speech bubble feedback and love-day display are restored, but full sprite-sheet dragging is still pending.
-- H5 cinematic effects such as upgrade, slave state, reward flight and wife command motion are represented by lightweight placeholders.
+- H5 cinematic effects such as upgrade, slave state, reward flight and wife command motion are represented by lightweight Mini Program-safe decree feedback; full choreography is still pending.
 - Role preview visuals are implemented, but final animation timing and phone framing still need WeChat DevTools review.
 - Visual parity still needs WeChat DevTools and real-device review.
 - Asset payload is under 20 MB now, but close enough to the limit that a production/upload pass should still move large images to remote assets or stricter subpackage groups.
