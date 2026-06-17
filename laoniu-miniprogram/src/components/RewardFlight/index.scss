@@ -1,0 +1,103 @@
+.reward-flight {
+  box-sizing: border-box;
+  padding: 18px;
+  border: 2px solid rgba(90, 55, 41, 0.32);
+  border-radius: 8px;
+  background: rgba(255, 253, 248, 0.9);
+  box-shadow: 4px 4px 0 rgba(74, 51, 40, 0.1);
+}
+
+.reward-flight__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.reward-flight__eyebrow,
+.reward-flight__hint,
+.reward-flight__amount,
+.reward-flight__source {
+  display: block;
+}
+
+.reward-flight__eyebrow {
+  color: #4a3328;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.reward-flight__hint {
+  color: #806655;
+  font-size: 20px;
+}
+
+.reward-flight__items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reward-flight__item {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #fff7e8;
+  animation: rewardFlightIn 520ms ease-out both;
+}
+
+.reward-flight__amount {
+  color: #fff8ec;
+  font-size: 24px;
+  font-weight: 900;
+  text-align: center;
+  border-radius: 999px;
+  background: #6f3f2c;
+  line-height: 44px;
+}
+
+.reward-flight__source {
+  color: #5f4234;
+  font-size: 22px;
+  line-height: 1.35;
+}
+
+.reward-flight__item--money {
+  background: #fff0d0;
+}
+
+.reward-flight__item--money .reward-flight__amount {
+  background: #9a681d;
+}
+
+.reward-flight__item--benefit {
+  background: #edf7e7;
+}
+
+.reward-flight__item--benefit .reward-flight__amount {
+  background: #5f8f4a;
+}
+
+.reward-flight__item--level {
+  background: #fff8dc;
+}
+
+.reward-flight__item--level .reward-flight__amount {
+  background: #b27722;
+}
+
+@keyframes rewardFlightIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

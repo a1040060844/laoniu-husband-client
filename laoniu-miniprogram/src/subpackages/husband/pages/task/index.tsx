@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import Taro, { useDidShow } from "@tarojs/taro";
 import { Button, Text, View } from "@tarojs/components";
 import { HusbandDecreeNotice } from "../../../../components/HusbandDecreeNotice";
+import { RewardFlight } from "../../../../components/RewardFlight";
 import { taskRewardText } from "../../../../domain/taskRewards";
 import { stateService } from "../../../../services/state";
 import type { AppState } from "../../../../services/state";
@@ -83,6 +84,7 @@ export default function HusbandTaskPage() {
     <View className="page scene-page husband-task-page">
       <Text className="title">任务</Text>
       <Text className="subtitle">待完成 {activeCount} / 待确认 {submittedCount} / 已完成 {confirmedCount}</Text>
+      <RewardFlight entries={state.walletLedger} />
 
       <View className="task-filter-row">
         {filters.map((item) => (

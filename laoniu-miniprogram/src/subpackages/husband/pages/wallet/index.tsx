@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useDidShow } from "@tarojs/taro";
 import { Text, View } from "@tarojs/components";
 import { HusbandDecreeNotice } from "../../../../components/HusbandDecreeNotice";
+import { RewardFlight } from "../../../../components/RewardFlight";
 import { stateService } from "../../../../services/state";
 import type { AppState } from "../../../../services/state";
 
@@ -18,6 +19,7 @@ export default function HusbandWalletPage() {
     <View className="page scene-page">
       <Text className="title">钱包 / 流水</Text>
       <Text className="subtitle">当前零花钱：{state.punishment.status === "slave" ? "暂停" : `${state.progress.wallet} 元`}</Text>
+      <RewardFlight entries={state.walletLedger} />
       {state.walletLedger.length ? state.walletLedger.map((entry) => (
         <View className="panel section" key={entry.id}>
           <Text className="title">{entry.source}</Text>

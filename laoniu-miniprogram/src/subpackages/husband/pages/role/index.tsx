@@ -4,6 +4,7 @@ import { Button, Image, Text, View } from "@tarojs/components";
 import { ReturnButton } from "../../../../components/ReturnButton";
 import { SwipeHint } from "../../../../components/SwipeHint";
 import { HusbandDecreeNotice } from "../../../../components/HusbandDecreeNotice";
+import { RewardFlight } from "../../../../components/RewardFlight";
 import { roles } from "../../../../data/roles";
 import { expRequiredForLevel, roleWithProgress } from "../../../../game/progression";
 import { stateService } from "../../../../services/state";
@@ -74,6 +75,8 @@ export default function HusbandRolePage() {
           ))}
         </View>
       </View>
+
+      <RewardFlight entries={state.walletLedger} />
 
       <View className="section row-wrap">
         <Button className="btn" onClick={() => Taro.navigateTo({ url: "/subpackages/husband/pages/benefit/index" })}>权益</Button>
