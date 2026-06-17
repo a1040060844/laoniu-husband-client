@@ -8,7 +8,9 @@ function safeCount(value: number | undefined, fallback: number) {
 export function rewardChipLabel(reward: TaskReward) {
   if (reward.type === "experience") return `+${safeCount(reward.value, 0)} EXP`;
   if (reward.type === "allowance") return `+${safeCount(reward.value, 0)} 零花钱`;
-  if (reward.type === "level_up") return `直接升级 ${Math.max(1, safeCount(reward.value, 1))} 级`;
+  if (reward.type === "level_up") {
+    return `直接升级 ${Math.max(1, safeCount(reward.value, 1))} 级`;
+  }
   if (reward.type === "benefit") {
     return `${reward.benefitName || reward.label || "权益"} ${Math.max(1, safeCount(reward.value, 1))} 次`;
   }

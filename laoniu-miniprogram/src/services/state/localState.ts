@@ -497,6 +497,16 @@ export const localState: StateService = {
     return writeState(state);
   },
 
+  async acknowledgeDecree(decreeId: string) {
+    const state = readState();
+    const decree = state.decrees.find((item) => item.id === decreeId);
+    if (!decree) throw new Error("裁定不存在");
+    const acknowledgedAt = nowIso();
+    decree.acknowledgedAt = acknowledgedAt;
+    decree.readAt = decree.readAt || acknowledgedAt;
+    return writeState(state);
+  },
+
   async startSlaveMode(payload?: StartSlaveModePayload) {
     const state = readState();
     const reason = payload?.reason || "老妞裁定进入卖身奴隶状态";

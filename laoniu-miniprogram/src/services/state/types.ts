@@ -86,6 +86,7 @@ export interface StateService {
   rejectBenefit(benefitId: string, payload?: RejectBenefitPayload): Promise<AppState>;
   createTask(payload: CreateTaskPayload): Promise<AppState>;
   createDecree(payload: CreateDecreePayload): Promise<AppState>;
+  acknowledgeDecree(decreeId: string): Promise<AppState>;
   startSlaveMode(payload?: StartSlaveModePayload): Promise<AppState>;
   restoreNormalMode(payload?: RestoreNormalModePayload): Promise<AppState>;
 }

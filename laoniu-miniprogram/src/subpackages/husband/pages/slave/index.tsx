@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useDidShow } from "@tarojs/taro";
 import { Image, Text, View } from "@tarojs/components";
+import { HusbandDecreeNotice } from "../../../../components/HusbandDecreeNotice";
 import { stateService } from "../../../../services/state";
 import { publicAsset } from "../../../../services/assets";
 import type { AppState } from "../../../../services/state";
@@ -15,7 +16,11 @@ function formatTime(value?: string) {
 
 export default function HusbandSlavePage() {
   const [state, setState] = useState<AppState>();
-  useDidShow(() => { stateService.loadState().then(setState); });
+
+  useDidShow(() => {
+    stateService.loadState().then(setState);
+  });
+
   if (!state) return <View className="page"><Text>加载中...</Text></View>;
 
   const slaveMode = state.punishment.status === "slave";
@@ -37,6 +42,7 @@ export default function HusbandSlavePage() {
           <Text className="subtitle">当前没有惩罚状态，权益和零花钱正常启用。</Text>
         )}
       </View>
+      <HusbandDecreeNotice state={state} onStateChange={setState} />
     </View>
   );
 }

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import Taro, { useDidShow } from "@tarojs/taro";
 import { Button, Text, View } from "@tarojs/components";
+import { HusbandDecreeNotice } from "../../../../components/HusbandDecreeNotice";
 import { taskRewardText } from "../../../../domain/taskRewards";
 import { stateService } from "../../../../services/state";
 import type { AppState } from "../../../../services/state";
@@ -14,7 +15,7 @@ const filters: Array<{ key: TaskFilter; label: string }> = [
   { key: "submitted", label: "待确认" },
   { key: "confirmed", label: "已完成" },
   { key: "failed", label: "失败/驳回" },
-  { key: "all", label: "全部" }
+  { key: "all", label: "全部" },
 ];
 
 const statusText: Record<TaskStatus, string> = {
@@ -25,7 +26,7 @@ const statusText: Record<TaskStatus, string> = {
   failed: "已失败",
   expired: "已过期",
   failed_pending: "被驳回，需重做",
-  completed: "已完成"
+  completed: "已完成",
 };
 
 function formatTime(value?: string) {
@@ -46,7 +47,9 @@ export default function HusbandTaskPage() {
   const [state, setState] = useState<AppState>();
   const [filter, setFilter] = useState<TaskFilter>("active");
 
-  useDidShow(() => { stateService.loadState().then(setState); });
+  useDidShow(() => {
+    stateService.loadState().then(setState);
+  });
 
   const visibleTasks = useMemo(() => {
     if (!state) return [];
@@ -58,9 +61,9 @@ export default function HusbandTaskPage() {
   async function submit(task: Task) {
     const result = await Taro.showModal({
       title: "提交任务",
-      content: `确认提交《${task.title}》给老妞验收吗？`,
+      content: `确认提交“${task.title}”给老妞验收吗？`,
       confirmText: "提交",
-      confirmColor: "#6f3f2c"
+      confirmColor: "#6f3f2c",
     });
     if (!result.confirm) return;
     try {
@@ -79,7 +82,7 @@ export default function HusbandTaskPage() {
   return (
     <View className="page scene-page husband-task-page">
       <Text className="title">任务</Text>
-      <Text className="subtitle">待完成 {activeCount} · 待确认 {submittedCount} · 已完成 {confirmedCount}</Text>
+      <Text className="subtitle">待完成 {activeCount} / 待确认 {submittedCount} / 已完成 {confirmedCount}</Text>
 
       <View className="task-filter-row">
         {filters.map((item) => (
@@ -98,7 +101,7 @@ export default function HusbandTaskPage() {
           <Text className="subtitle">{task.description}</Text>
           <Text className="task-meta">奖励：{taskRewardText(task)}</Text>
           <Text className="task-meta">截止：{task.deadline}</Text>
-          {task.submittedAt ? <Text className="task-meta">提交：{formatTime(task.submittedAt)} · {task.submitNote}</Text> : null}
+          {task.submittedAt ? <Text className="task-meta">提交：{formatTime(task.submittedAt)} / {task.submitNote}</Text> : null}
           {task.confirmedAt ? <Text className="task-meta">确认：{formatTime(task.confirmedAt)}</Text> : null}
           {task.resultText ? <Text className="task-meta">结果：{task.resultText}</Text> : null}
           {["todo", "doing", "failed_pending"].includes(task.status) ? (
@@ -106,6 +109,7 @@ export default function HusbandTaskPage() {
           ) : null}
         </View>
       )) : <View className="empty">当前筛选下没有任务</View>}
+      <HusbandDecreeNotice state={state} onStateChange={setState} />
     </View>
   );
 }

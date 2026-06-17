@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import Taro, { useDidShow } from "@tarojs/taro";
 import { Button, Image, Text, View } from "@tarojs/components";
+import { HusbandDecreeNotice } from "../../../../components/HusbandDecreeNotice";
 import { roles } from "../../../../data/roles";
 import { stateService } from "../../../../services/state";
 import type { AppState } from "../../../../services/state";
@@ -14,7 +15,7 @@ const filters: Array<{ key: BenefitFilter; label: string }> = [
   { key: "pending", label: "待审批" },
   { key: "cooldown", label: "冷却中" },
   { key: "locked", label: "未解锁" },
-  { key: "all", label: "全部" }
+  { key: "all", label: "全部" },
 ];
 
 function benefitKind(state: AppState, benefit: Benefit): BenefitFilter {
@@ -30,14 +31,16 @@ function benefitStateLabel(state: AppState, benefit: Benefit) {
   if (kind === "locked") return `Lv.${benefit.levelRequired} 解锁`;
   if (kind === "pending") return "等待老妞审批";
   if (kind === "cooldown") return benefit.cooldownText || "冷却中";
-  return `可申请 · ${benefit.frequency}`;
+  return `可申请 / ${benefit.frequency}`;
 }
 
 export default function HusbandBenefitPage() {
   const [state, setState] = useState<AppState>();
   const [filter, setFilter] = useState<BenefitFilter>("available");
 
-  useDidShow(() => { stateService.loadState().then(setState); });
+  useDidShow(() => {
+    stateService.loadState().then(setState);
+  });
 
   const visibleBenefits = useMemo(() => {
     if (!state) return [];
@@ -49,9 +52,9 @@ export default function HusbandBenefitPage() {
   async function request(benefit: Benefit) {
     const result = await Taro.showModal({
       title: "申请权益",
-      content: `确认申请《${benefit.name}》吗？`,
+      content: `确认申请“${benefit.name}”吗？`,
       confirmText: "申请",
-      confirmColor: "#6f3f2c"
+      confirmColor: "#6f3f2c",
     });
     if (!result.confirm) return;
     try {
@@ -73,7 +76,7 @@ export default function HusbandBenefitPage() {
   return (
     <View className="page scene-page benefit-page">
       <Text className="title">权益</Text>
-      <Text className="subtitle">当前职务：{currentRole.title} · 可申请 {availableCount} · 待审批 {pendingCount}</Text>
+      <Text className="subtitle">当前职务：{currentRole.title} / 可申请 {availableCount} / 待审批 {pendingCount}</Text>
       {state.punishment.status === "slave" ? <View className="empty benefit-freeze">卖身奴隶状态下权益暂停。</View> : null}
 
       <View className="benefit-filter-row">
@@ -97,7 +100,7 @@ export default function HusbandBenefitPage() {
                 <Text className="status-pill">{benefitStateLabel(state, benefit)}</Text>
               </View>
               <Text className="subtitle">{benefit.description}</Text>
-              <Text className="benefit-meta">解锁等级：Lv.{benefit.levelRequired} · 频次：{benefit.frequency}</Text>
+              <Text className="benefit-meta">解锁等级：Lv.{benefit.levelRequired} / 频次：{benefit.frequency}</Text>
               {benefit.pendingRequest ? <Text className="benefit-meta">申请理由：{benefit.pendingRequest.reason}</Text> : null}
               {benefit.cooldownUntil ? <Text className="benefit-meta">冷却到：{benefit.cooldownUntil.slice(0, 10)}</Text> : null}
               {canRequest ? <Button className="btn section" onClick={() => request(benefit)}>申请使用</Button> : null}
@@ -115,6 +118,7 @@ export default function HusbandBenefitPage() {
           </View>
         )) : <Text className="subtitle">暂无权益记录</Text>}
       </View>
+      <HusbandDecreeNotice state={state} onStateChange={setState} />
     </View>
   );
 }

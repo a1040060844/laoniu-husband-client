@@ -3,6 +3,7 @@ import Taro, { useDidShow } from "@tarojs/taro";
 import { Button, Image, Text, View } from "@tarojs/components";
 import { ReturnButton } from "../../../../components/ReturnButton";
 import { SwipeHint } from "../../../../components/SwipeHint";
+import { HusbandDecreeNotice } from "../../../../components/HusbandDecreeNotice";
 import { roles } from "../../../../data/roles";
 import { expRequiredForLevel, roleWithProgress } from "../../../../game/progression";
 import { stateService } from "../../../../services/state";
@@ -61,7 +62,7 @@ export default function HusbandRolePage() {
           <>
             <View className="role-card__bar"><View className="role-card__fill" style={{ width: `${expPercent}%` }} /></View>
             <Text className="subtitle">EXP {state.progress.exp}/{currentRole.expRequired}</Text>
-            <Text className="subtitle">零花钱：{slaveMode ? "暂停" : `${state.progress.wallet} 元`} · 月标准 {currentRole.salary} 元</Text>
+            <Text className="subtitle">零花钱：{slaveMode ? "暂停" : `${state.progress.wallet} 元`} / 月标准 {currentRole.salary} 元</Text>
           </>
         ) : (
           <Text className="subtitle">这个职务还没解锁，继续完成任务升级。</Text>
@@ -78,10 +79,11 @@ export default function HusbandRolePage() {
         <Button className="btn" onClick={() => Taro.navigateTo({ url: "/subpackages/husband/pages/benefit/index" })}>权益</Button>
         <Button className="btn" onClick={() => Taro.navigateTo({ url: "/subpackages/husband/pages/task/index" })}>任务</Button>
         <Button className="btn btn-secondary" onClick={() => Taro.navigateTo({ url: "/subpackages/husband/pages/wallet/index" })}>流水</Button>
-        {slaveMode ? <Button className="btn btn-secondary" onClick={() => Taro.navigateTo({ url: "/subpackages/husband/pages/slave/index" })}>奴役状态</Button> : null}
+        {slaveMode ? <Button className="btn btn-secondary" onClick={() => Taro.navigateTo({ url: "/subpackages/husband/pages/slave/index" })}>奴隶状态</Button> : null}
         <ReturnButton />
       </View>
       <SwipeHint text="左右切换预览职务；继续完成任务解锁更高等级。" />
+      <HusbandDecreeNotice state={state} onStateChange={setState} />
     </View>
   );
 }
