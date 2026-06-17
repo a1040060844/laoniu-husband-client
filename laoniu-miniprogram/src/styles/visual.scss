@@ -1,0 +1,13 @@
+$brown: #4a3328;
+$paper: #fff5e7;
+$panel: rgba(255, 255, 255, 0.92);
+
+.pixelated {
+  image-rendering: pixelated;
+}
+
+.safe-stage {
+  min-height: 100vh;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}

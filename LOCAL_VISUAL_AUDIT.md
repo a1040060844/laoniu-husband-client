@@ -8,29 +8,50 @@ Use `husband-client/` as the visual and behavior source of truth. For each migra
 
 - H5 source: `husband-client/src/pages/LoginPage.tsx`, `LoginPage.css`, `loginSpriteData.ts`, `public/assets/login/`, `src/assets/login-final/`.
 - Mini Program target: `laoniu-miniprogram/src/pages/login/index.tsx`, `index.scss`, `components/SpriteActor/`.
-- Status: pending migration.
-- Known risk: sprite-sheet CSS and drag/hitbox need touch-based implementation.
+- Status: first-pass migrated.
+- Restored: room background, title/subtitle images, husband/wife role cards, cat/reset area, pixel rendering, static role actor presentation and light floating motion.
+- Difference: the H5 sprite-sheet idle/random/click/drag/hitbox behavior is currently represented by static actors. `login-final/` was not copied into the Mini Program package to avoid a large unused asset batch.
+- Needs device review: touch target size, image scaling on narrow phones, and whether sprite-sheet interaction should be reintroduced with selective frame assets.
 
 ## Loading Page
 
 - H5 source: `husband-client/src/components/AppLoadingPage.tsx`, `AppLoadingPage.css`, `public/assets/loading/`.
 - Mini Program target: `laoniu-miniprogram/src/pages/loading/index.tsx`, `components/LoadingStage/`.
-- Status: pending migration.
+- Status: first-pass migrated.
+- Restored: loading page route, local preload flow, progress bar, ready/error state, retry/continue buttons.
+- Difference: the H5 13-step visual rhythm and source PSD/panel details are simplified to Taro-native blocks and text.
+- Needs device review: first-load timing, asset availability from `dist/assets`, and transition into husband/wife subpackages.
 
 ## Husband Pages
 
 - H5 source: `RolePage`, `BenefitPage`, `TaskPage`, `SlavePage`, `HusbandVerticalPager`.
 - Mini Program target: `src/subpackages/husband/pages/*`.
-- Status: pending migration.
+- Status: first-pass migrated.
+- Restored: role/progress/wallet display, benefit list and request flow, task list and submit flow, slave state display, wallet ledger display, vertical swipe helper.
+- Difference: H5 micro-animations, cinematic reward flights, and full pager choreography are simplified.
+- Needs device review: long list scrolling, button density, and subpackage navigation.
 
 ## Wife Pages
 
 - H5 source: `WifeDashboard`, `SlaveRulingModal`, task/benefit/decree/log sections.
 - Mini Program target: `src/subpackages/wife/pages/*`.
-- Status: pending migration.
+- Status: first-pass migrated.
+- Restored: dashboard summary, task creation, task review, benefit approval/rejection, decrees, punishment/slave controls, logs.
+- Difference: dense H5 dashboard panels are split into focused Mini Program pages; advanced wife command motion is not ported yet.
+- Needs device review: form ergonomics, picker values, and review actions after repeated state changes.
 
 ## Effects
 
 - H5 source: `src/components/effects/*`.
 - Mini Program target: `src/components/PixelTransition`, `ClickSpark`, `CountUp`, `StoryModal`, `DecreeModal`, `OverlayRoot`.
-- Status: pending migration.
+- Status: baseline migrated.
+- Restored: overlay shell, story/decree modal shell, count-up component API, 10 x 18 pixel transition grid, click spark placeholder, swipe hint.
+- Difference: `RoleUpgradeCinematic`, `SlaveStateCinematic`, `TaskRewardFlight`, `WifeCommandMotion` remain TODO for a later visual parity pass.
+- Needs device review: z-index stacking over native page elements and transition smoothness.
+
+## Package Notes
+
+- `scripts/copy-assets.mjs` copies filtered local assets into `dist/assets` after Taro build.
+- Source-only directories such as loading PSD files and the unused `login-final/` batch were removed from `laoniu-miniprogram/src/assets`.
+- Unused full-page task/wife/reference images were not kept in the baseline package; current asset payload is 63 files, about 18.82 MB after resizing.
+- Future production packaging should move large role/benefit images behind remote assets or stricter subpackage asset groups if WeChat package size becomes tight.

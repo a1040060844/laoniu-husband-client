@@ -1,0 +1,9 @@
+.sprite-actor {
+  animation: floatSoft 3s ease-in-out infinite;
+}
+
+.sprite-actor__image {
+  width: 160px;
+  height: 220px;
+  image-rendering: pixelated;
+}

@@ -1,0 +1,132 @@
+@import "./styles/visual.scss";
+@import "./styles/layers.scss";
+@import "./styles/animations.scss";
+
+page {
+  min-height: 100%;
+  color: #2d211c;
+  background: #fff5e7;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.page {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: calc(24px + env(safe-area-inset-top)) 24px calc(28px + env(safe-area-inset-bottom));
+}
+
+.scene-page {
+  background:
+    linear-gradient(180deg, rgba(255, 246, 232, 0.82), rgba(255, 247, 236, 0.96)),
+    #fff5e7;
+}
+
+.title {
+  display: block;
+  font-size: 36px;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.subtitle {
+  display: block;
+  margin-top: 8px;
+  color: #735949;
+  font-size: 24px;
+  line-height: 1.45;
+}
+
+.section {
+  margin-top: 22px;
+}
+
+.panel {
+  box-sizing: border-box;
+  padding: 22px;
+  border: 2px solid #4a3328;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 5px 5px 0 rgba(74, 51, 40, 0.12);
+}
+
+.row-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.btn {
+  height: 74px;
+  padding: 0 24px;
+  border-radius: 8px;
+  background: #4a3328;
+  color: #fff;
+  font-size: 26px;
+  line-height: 74px;
+}
+
+.btn::after {
+  border: 0;
+}
+
+.btn-secondary {
+  border: 2px solid #4a3328;
+  background: #fffdf9;
+  color: #4a3328;
+}
+
+.field {
+  margin-top: 18px;
+}
+
+.label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.input,
+.textarea,
+.picker {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 72px;
+  padding: 16px;
+  border: 2px solid #d7bfa9;
+  border-radius: 8px;
+  background: #fffdf9;
+  font-size: 26px;
+}
+
+.textarea {
+  min-height: 150px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.stat-number {
+  display: block;
+  font-size: 40px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.stat-label {
+  display: block;
+  margin-top: 6px;
+  color: #735949;
+  font-size: 22px;
+  text-align: center;
+}
+
+.empty {
+  padding: 28px;
+  color: #806655;
+  text-align: center;
+  font-size: 24px;
+}

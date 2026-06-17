@@ -11,7 +11,7 @@ The Mini Program must read and write all app state through `services/state/index
 ## Future Replacement Points
 
 - Replace `STATE_BACKEND` with `"http"` in `services/state/index.ts`.
-- Implement `services/state/httpState.ts`.
+- Implement `services/state/httpState.ts`. The file already exists as a no-network placeholder and intentionally throws a clear error.
 - Keep page code unchanged.
 - Move reward settlement, approval, punishment, identity and ledger integrity to server-side endpoints.
 
@@ -43,6 +43,8 @@ The Mini Program must read and write all app state through `services/state/index
 ## Asset/CDN Plan
 
 Large role, benefit, loading and sprite images can later move to CDN. Keep all references behind `services/assets.ts` so `ASSET_MODE` can switch from `local` to `remote`.
+
+Current local build uses `scripts/copy-assets.mjs` after `taro build` to copy filtered `src/assets` files into `dist/assets`. Source PSD folders and unused sprite batches are excluded from this Mini Program baseline.
 
 ## WeChat Production Requirements
 

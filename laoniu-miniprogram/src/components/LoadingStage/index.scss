@@ -1,0 +1,25 @@
+.loading-stage {
+  margin: 160px 24px 0;
+  text-align: center;
+}
+
+.loading-stage__logo {
+  width: 320px;
+  height: 120px;
+  margin: 0 auto 20px;
+}
+
+.loading-stage__bar {
+  height: 28px;
+  margin-top: 24px;
+  border: 2px solid #4a3328;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #ead0b7;
+}
+
+.loading-stage__fill {
+  height: 100%;
+  background: #7ac36a;
+  transition: width 180ms ease;
+}
