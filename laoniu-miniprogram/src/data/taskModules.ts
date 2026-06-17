@@ -52,10 +52,8 @@ export const taskModules: TaskModuleOption[] = [
     freeAction: true,
     targetLabel: "洗衣内容",
     actionLabel: "具体要求",
-    targetPlaceholder:
-      "请输入要洗/整理的内容，例如：床单被套、今天的衣服、毛巾",
-    actionPlaceholder:
-      "请输入具体要求，例如：洗完晾好、收衣服并叠好、完整洗晒收",
+    targetPlaceholder: "例如：床单被套、今天的衣服、毛巾",
+    actionPlaceholder: "例如：洗完晾好、收衣服并叠好、完整洗晒收",
   },
   {
     id: "cooking",
@@ -64,10 +62,8 @@ export const taskModules: TaskModuleOption[] = [
     freeAction: true,
     targetLabel: "做饭内容",
     actionLabel: "具体要求",
-    targetPlaceholder:
-      "请输入要做什么，例如：煮面、炒菜、做晚饭、准备早餐",
-    actionPlaceholder:
-      "请输入老妞要求，例如：不要太油、按老妞口味来、摆盘好看一点",
+    targetPlaceholder: "例如：煮面、炒菜、晚饭、准备早餐",
+    actionPlaceholder: "例如：不要太油、按老妞口味来、摆盘好看一点",
   },
   {
     id: "shopping",
@@ -76,10 +72,8 @@ export const taskModules: TaskModuleOption[] = [
     freeAction: true,
     targetLabel: "要买什么",
     actionLabel: "购买要求",
-    targetPlaceholder:
-      "请输入要买的东西，例如：饮料、零食、日用品、水果",
-    actionPlaceholder:
-      "请输入具体要求，例如：买指定品牌、买便宜的、买老妞喜欢的、送到家",
+    targetPlaceholder: "例如：饮料、零食、日用品、水果",
+    actionPlaceholder: "例如：买指定品牌、买便宜的、买老妞喜欢的、送到家",
   },
   {
     id: "movie",
@@ -88,10 +82,8 @@ export const taskModules: TaskModuleOption[] = [
     freeAction: true,
     targetLabel: "电影内容",
     actionLabel: "陪看要求",
-    targetPlaceholder:
-      "请输入电影名称或类型，例如：恐怖片、爱情片、老妞指定电影",
-    actionPlaceholder:
-      "请输入具体要求，例如：不许玩手机、认真陪看、看完一起讨论",
+    targetPlaceholder: "例如：恐怖片、爱情片、老妞指定电影",
+    actionPlaceholder: "例如：不许玩手机、认真陪看、看完一起讨论",
   },
   {
     id: "game",
@@ -100,10 +92,8 @@ export const taskModules: TaskModuleOption[] = [
     freeAction: true,
     targetLabel: "游戏内容",
     actionLabel: "陪玩要求",
-    targetPlaceholder:
-      "请输入游戏名称或类型，例如：双人成行、王者荣耀、老妞指定游戏",
-    actionPlaceholder:
-      "请输入具体要求，例如：不许摆烂、不许嫌弃、认真配合老妞",
+    targetPlaceholder: "例如：双人成行、王者荣耀、老妞指定游戏",
+    actionPlaceholder: "例如：不许摆烂、不许嫌弃、认真配合老妞",
   },
   {
     id: "photo",
@@ -112,10 +102,8 @@ export const taskModules: TaskModuleOption[] = [
     freeAction: true,
     targetLabel: "拍照内容",
     actionLabel: "拍照要求",
-    targetPlaceholder:
-      "请输入拍什么，例如：帮老妞拍照、拍穿搭、拍产品图",
-    actionPlaceholder:
-      "请输入具体要求，例如：拍到老妞满意、帮忙选图、简单修图",
+    targetPlaceholder: "例如：帮老妞拍照、拍穿搭、拍产品图",
+    actionPlaceholder: "例如：拍到老妞满意、帮忙选图、简单修图",
   },
   {
     id: "custom",
@@ -157,11 +145,11 @@ export const benefitRewardNames = [
   "奶茶",
   "大餐",
   "自由娱乐",
-  "不要生气了",
+  "不要生气券",
   "老哥也爱美",
   "经济补助",
   "规则申诉权",
-  "cos时刻",
+  "cos 时刻",
   "恩爱奖励",
   "自定义权益",
 ];
@@ -211,9 +199,9 @@ export function createTaskTimeConfig(
     this_week: "本周日 23:59 前",
     today: "今日 23:59 前",
     tomorrow: "明日 23:59 前",
-    within_24h: "24小时内完成",
-    within_3d: "3天内完成",
-    within_7d: "7天内完成",
+    within_24h: "24 小时内完成",
+    within_3d: "3 天内完成",
+    within_7d: "7 天内完成",
   };
 
   return { type, label: labelMap[type] };
@@ -274,56 +262,44 @@ export function buildTaskDescription(
     if (safeTarget === "卫生间" && safeAction === "深度清洁") {
       return "请完成卫生间深度清洁，包括地面、台面、明显污渍和死角清理。完成后提交给老妞大人确认。";
     }
-    return `请完成「${safeTarget || "指定区域"}」的「${safeAction || "老妞指定标准"}」，验收标准以老妞大人最终裁定为准。`;
+    return `请完成“${safeTarget || "指定区域"}”的“${safeAction || "老妞指定标准"}”，验收标准以老妞大人最终裁定为准。`;
   }
 
   if (moduleId === "laundry") {
-    if (!safeTarget) {
-      return "请按老妞大人的要求完成洗衣整理任务。完成后提交确认。";
-    }
+    if (!safeTarget) return "请按老妞大人的要求完成洗衣整理任务。完成后提交确认。";
     return safeAction
-      ? `请完成洗衣整理任务，内容为「${safeTarget}」。具体要求：「${safeAction}」。完成后提交给老妞大人确认。`
-      : `请完成洗衣整理任务，内容为「${safeTarget}」。完成后提交给老妞大人确认。`;
+      ? `请完成洗衣整理任务，内容为“${safeTarget}”。具体要求：“${safeAction}”。完成后提交给老妞大人确认。`
+      : `请完成洗衣整理任务，内容为“${safeTarget}”。完成后提交给老妞大人确认。`;
   }
 
   if (moduleId === "cooking") {
-    if (!safeTarget) {
-      return "请按老妞大人的要求完成做饭任务。完成后提交确认。";
-    }
-    const extra = safeAction ? `具体要求：「${safeAction}」。` : "";
-    return `请按老妞大人的要求完成做饭任务，具体内容为「${safeTarget}」。${extra}完成后提交给老妞大人确认。`;
+    if (!safeTarget) return "请按老妞大人的要求完成做饭任务。完成后提交确认。";
+    const extra = safeAction ? `具体要求：“${safeAction}”。` : "";
+    return `请按老妞大人的要求完成做饭任务，具体内容为“${safeTarget}”。${extra}完成后提交给老妞大人确认。`;
   }
 
   if (moduleId === "shopping") {
-    if (!safeTarget) {
-      return "请按老妞大人的要求完成买东西任务。完成后提交确认。";
-    }
-    const extra = safeAction ? `购买要求：「${safeAction}」。` : "";
-    return `请按老妞大人的要求完成购买任务，购买内容为「${safeTarget}」。${extra}完成后提交给老妞大人确认。`;
+    if (!safeTarget) return "请按老妞大人的要求完成买东西任务。完成后提交确认。";
+    const extra = safeAction ? `购买要求：“${safeAction}”。` : "";
+    return `请按老妞大人的要求完成购买任务，购买内容为“${safeTarget}”。${extra}完成后提交给老妞大人确认。`;
   }
 
   if (moduleId === "movie") {
-    if (!safeTarget) {
-      return "请陪老妞大人完成看电影任务，期间不许敷衍。";
-    }
-    const extra = safeAction ? `陪看要求：「${safeAction}」。` : "";
-    return `请陪老妞大人完成看电影任务，电影内容为「${safeTarget}」。期间按老妞要求执行，不许敷衍。${extra}`;
+    if (!safeTarget) return "请陪老妞大人完成看电影任务，期间不许敷衍。";
+    const extra = safeAction ? `陪看要求：“${safeAction}”。` : "";
+    return `请陪老妞大人完成看电影任务，电影内容为“${safeTarget}”。期间按老妞要求执行，不许敷衍。${extra}`;
   }
 
   if (moduleId === "game") {
-    if (!safeTarget) {
-      return "请陪老妞大人完成打游戏任务，过程里要认真配合。";
-    }
-    const extra = safeAction ? `陪玩要求：「${safeAction}」。` : "";
-    return `请陪老妞大人完成打游戏任务，游戏内容为「${safeTarget}」。过程里要认真配合，不许敷衍。${extra}`;
+    if (!safeTarget) return "请陪老妞大人完成打游戏任务，过程里要认真配合。";
+    const extra = safeAction ? `陪玩要求：“${safeAction}”。` : "";
+    return `请陪老妞大人完成打游戏任务，游戏内容为“${safeTarget}”。过程里要认真配合，不许敷衍。${extra}`;
   }
 
   if (moduleId === "photo") {
-    if (!safeTarget) {
-      return "请按老妞大人的要求完成拍照任务，以老妞大人满意为准。";
-    }
-    const extra = safeAction ? `拍照要求：「${safeAction}」。` : "";
-    return `请按老妞大人的要求完成拍照任务，拍照内容为「${safeTarget}」。以老妞大人满意为准。${extra}`;
+    if (!safeTarget) return "请按老妞大人的要求完成拍照任务，以老妞大人满意为准。";
+    const extra = safeAction ? `拍照要求：“${safeAction}”。` : "";
+    return `请按老妞大人的要求完成拍照任务，拍照内容为“${safeTarget}”。以老妞大人满意为准。${extra}`;
   }
 
   return "由老妞大人亲自发布，验收标准以老妞大人最终裁定为准。";
@@ -331,16 +307,16 @@ export function buildTaskDescription(
 
 export function createRewardLabel(reward: TaskReward) {
   if (reward.type === "experience") {
-    return `${Math.min(30, Math.max(0, Math.trunc(reward.value ?? 0)))}经验`;
+    return `${Math.min(30, Math.max(0, Math.trunc(reward.value ?? 0)))} 经验`;
   }
   if (reward.type === "allowance") {
-    return `${Math.max(0, Math.trunc(reward.value ?? 0))}元`;
+    return `${Math.max(0, Math.trunc(reward.value ?? 0))} 元`;
   }
   if (reward.type === "level_up") {
-    return `直接升级${Math.min(1, Math.max(1, Math.trunc(reward.value ?? 1)))}级`;
+    return `直接升级 ${Math.min(1, Math.max(1, Math.trunc(reward.value ?? 1)))} 级`;
   }
   if (reward.type === "benefit") {
-    return `${reward.benefitName || "权益"} ${Math.max(1, Math.trunc(reward.value ?? 1))}次`;
+    return `${reward.benefitName || "权益"} ${Math.max(1, Math.trunc(reward.value ?? 1))} 次`;
   }
   if (reward.type === "custom") return reward.customName || "自定义奖励";
   return "无奖励";

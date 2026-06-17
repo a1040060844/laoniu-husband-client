@@ -17,7 +17,7 @@ export const initialTasks: Task[] = [
       {
         id: "reward-clean-living-room-exp",
         type: "experience",
-        label: "15经验",
+        label: "15 经验",
         value: 15,
         unit: "经验",
       },
@@ -31,7 +31,7 @@ export const initialTasks: Task[] = [
     id: "wife-laundry-bedding",
     title: "整理床单被套",
     description:
-      "请完成洗衣整理任务，内容为「床单被套」。具体要求：「洗完晾好」。完成后提交给老妞大人确认。",
+      "请完成洗衣整理任务，内容为“床单被套”。具体要求：“洗完晾好”。完成后提交给老妞大人确认。",
     type: "daily",
     source: "wife",
     moduleId: "laundry",
@@ -43,7 +43,7 @@ export const initialTasks: Task[] = [
       {
         id: "reward-laundry-bedding-exp",
         type: "experience",
-        label: "12经验",
+        label: "12 经验",
         value: 12,
         unit: "经验",
       },
@@ -57,7 +57,7 @@ export const initialTasks: Task[] = [
     id: "wife-cooking-dinner",
     title: "做晚饭",
     description:
-      "请按老妞大人的要求完成做饭任务，具体内容为「晚饭」。具体要求：「按老妞口味来」。完成后提交给老妞大人确认。",
+      "请按老妞大人的要求完成做饭任务，具体内容为“晚饭”。具体要求：“按老妞口味来”。完成后提交给老妞大人确认。",
     type: "daily",
     source: "wife",
     moduleId: "cooking",
@@ -69,7 +69,7 @@ export const initialTasks: Task[] = [
       {
         id: "reward-cooking-dinner-exp",
         type: "experience",
-        label: "15经验",
+        label: "15 经验",
         value: 15,
         unit: "经验",
       },
@@ -83,7 +83,7 @@ export const initialTasks: Task[] = [
     id: "wife-shopping-fruit",
     title: "买水果",
     description:
-      "请按老妞大人的要求完成购买任务，购买内容为「水果」。购买要求：「买老妞喜欢的」。完成后提交给老妞大人确认。",
+      "请按老妞大人的要求完成购买任务，购买内容为“水果”。购买要求：“买老妞喜欢的”。完成后提交给老妞大人确认。",
     type: "daily",
     source: "wife",
     moduleId: "shopping",
@@ -95,7 +95,7 @@ export const initialTasks: Task[] = [
       {
         id: "reward-shopping-fruit-exp",
         type: "experience",
-        label: "8经验",
+        label: "8 经验",
         value: 8,
         unit: "经验",
       },
@@ -109,7 +109,7 @@ export const initialTasks: Task[] = [
     id: "wife-movie-assigned",
     title: "看老妞指定电影",
     description:
-      "请陪老妞大人完成看电影任务，电影内容为「老妞指定电影」。期间按老妞要求执行，不许敷衍。陪看要求：「不许玩手机」。",
+      "请陪老妞大人完成看电影任务，电影内容为“老妞指定电影”。期间按老妞要求执行，不许敷衍。陪看要求：“不许玩手机”。",
     type: "daily",
     source: "wife",
     moduleId: "movie",
@@ -121,7 +121,7 @@ export const initialTasks: Task[] = [
       {
         id: "reward-movie-assigned-exp",
         type: "experience",
-        label: "10经验",
+        label: "10 经验",
         value: 10,
         unit: "经验",
       },
@@ -133,9 +133,9 @@ export const initialTasks: Task[] = [
   },
   {
     id: "wife-game-assigned",
-    title: "陪老妞打老妞指定游戏",
+    title: "陪老妞打指定游戏",
     description:
-      "请陪老妞大人完成打游戏任务，游戏内容为「老妞指定游戏」。过程里要认真配合，不许敷衍。陪玩要求：「认真配合」。",
+      "请陪老妞大人完成打游戏任务，游戏内容为“老妞指定游戏”。过程里要认真配合，不许敷衍。陪玩要求：“认真配合”。",
     type: "daily",
     source: "wife",
     moduleId: "game",
@@ -147,7 +147,7 @@ export const initialTasks: Task[] = [
       {
         id: "reward-game-assigned-exp",
         type: "experience",
-        label: "10经验",
+        label: "10 经验",
         value: 10,
         unit: "经验",
       },
@@ -161,26 +161,26 @@ export const initialTasks: Task[] = [
     id: "wife-photo-portrait",
     title: "帮老妞拍照",
     description:
-      "请按老妞大人的要求完成拍照任务，拍照内容为「帮老妞拍照」。以老妞大人满意为准。拍照要求：「拍到满意」。",
+      "请按老妞大人的要求完成拍照任务，拍照内容为“帮老妞拍照”。以老妞大人满意为准。拍照要求：“拍到满意”。",
     type: "daily",
     source: "wife",
     moduleId: "photo",
     moduleLabel: "拍照",
     target: "帮老妞拍照",
     action: "拍到满意",
-    timeConfig: { type: "within_7d", label: "7天内完成" },
+    timeConfig: { type: "within_7d", label: "7 天内完成" },
     rewards: [
       {
         id: "reward-photo-portrait-exp",
         type: "experience",
-        label: "15经验",
+        label: "15 经验",
         value: 15,
         unit: "经验",
       },
     ],
     rewardExp: 15,
     rewardMoney: 0,
-    deadline: "7天内完成",
+    deadline: "7 天内完成",
     status: "todo",
   },
 ];

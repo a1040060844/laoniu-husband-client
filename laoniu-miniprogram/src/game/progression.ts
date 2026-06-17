@@ -104,7 +104,7 @@ export function grantExperience(
     const to = roles[level];
     stories.push({
       title: "职务晋升",
-      text: `老妞大人对你点了点头：${reason}，从「${from.title}」升为「${to.title}」。`,
+      text: `老妞大人对你点了点头：${reason}，从“${from.title}”升为“${to.title}”。`,
       tone: "upgrade",
     });
   }
@@ -144,7 +144,7 @@ export function settleTaskReward(
         {
           id: `${task.id}-legacy-exp`,
           type: "experience",
-          label: `${task.rewardExp}经验`,
+          label: `${task.rewardExp} 经验`,
           value: task.rewardExp,
           unit: "经验",
         },
@@ -153,7 +153,7 @@ export function settleTaskReward(
               {
                 id: `${task.id}-legacy-money`,
                 type: "allowance" as const,
-                label: `${task.rewardMoney}元`,
+                label: `${task.rewardMoney} 元`,
                 value: task.rewardMoney,
                 unit: "元",
               },
@@ -180,7 +180,7 @@ export function settleTaskReward(
   rewards.forEach((reward) => {
     if (reward.type === "experience") {
       const amount = Math.min(30, Math.max(0, Math.trunc(reward.value ?? 0)));
-      const expResult = grantExperience(progress, amount, roles, `完成「${task.title}」`);
+      const expResult = grantExperience(progress, amount, roles, `完成“${task.title}”`);
       progress = expResult.progress;
       stories.push(...expResult.stories);
       if (amount > 0) resultTexts.push(`获得 ${amount} EXP`);
@@ -190,7 +190,7 @@ export function settleTaskReward(
     if (reward.type === "allowance") {
       const amount = Math.max(0, Math.trunc(reward.value ?? 0));
       progress = { ...progress, wallet: progress.wallet + amount };
-      if (amount > 0) resultTexts.push(`获得 ¥${amount} 零花钱`);
+      if (amount > 0) resultTexts.push(`获得 ${amount} 元零花钱`);
       return;
     }
 
@@ -206,7 +206,7 @@ export function settleTaskReward(
       if (level !== fromLevel) {
         stories.push({
           title: "老妞大人直接赐予晋升",
-          text: `「${task.title}」已确认，老妞大人直接赐予晋升：Lv.${String(fromLevel).padStart(2, "0")} → Lv.${String(level).padStart(2, "0")}。`,
+          text: `“${task.title}”已确认，老妞大人直接赐予晋升：Lv.${String(fromLevel).padStart(2, "0")} -> Lv.${String(level).padStart(2, "0")}。`,
           tone: "upgrade",
         });
       }
@@ -245,8 +245,8 @@ export function settleTaskReward(
   const rewardStory: StoryEvent = {
     title: "奖励入账",
     text: resultTexts.length
-      ? `「${task.title}」已确认，${resultTexts.join("，")}。`
-      : `「${task.title}」已确认，本次无额外奖励。`,
+      ? `“${task.title}”已确认，${resultTexts.join("；")}。`
+      : `“${task.title}”已确认，本次无额外奖励。`,
     tone: stories.some((story) => story.tone === "upgrade") ? "upgrade" : "normal",
   };
 
