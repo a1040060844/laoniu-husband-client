@@ -8,17 +8,17 @@ This report records the current local-only Mini Program migration checkpoint.
 - `laoniu-miniprogram/` has been created as an independent Taro + React + TypeScript + SCSS Mini Program.
 - Runtime mode is local-only. It uses Taro storage through `services/state/index.ts`; no CloudBase, server, API, `web-view`, ReactDOM, browser storage, or browser routing is required.
 - Main pages and husband/wife subpackage pages are implemented.
-- Domain data and pure logic were copied from the H5 project where suitable: roles, benefits, task presets, task modules, progression, task schedule and task reward helpers.
-- The visual migration is a first-pass Mini Program version: structure, assets, state, flows and core UI are present; login now includes love-day display, speech feedback, role selection feedback and reset confirmation.
+- Domain data and pure logic were copied from the H5 project where suitable: roles, benefits, task presets, task modules, progression, task schedule and task reward helpers. User-facing role, benefit, task and reward copy is now clean UTF-8 Chinese.
+- The visual migration is a first-pass Mini Program version: structure, assets, state, flows and core UI are present; login includes love-day display, speech feedback, role selection feedback and reset confirmation.
 - Slave mode is operable from the wife dashboard and visible on the husband slave page. Opening/restoring the state writes logs, decrees and punishment ledger entries.
-- Husband role page now restores the H5-style role preview loop: left/right level switching, locked future roles, level dots, hero image and progress/wallet panel.
-- Husband task page now has local status filtering, task status cards, submit confirmation, submitted/confirmed timestamps and clean reward text.
-- Husband benefit page now has filter tabs, available/pending/cooldown/locked grouping, slave-mode freeze state, cooldown/request details and recent benefit logs.
-- Wife review page now has task/benefit/recent-record tabs, task approve/reject/fail actions, benefit approve/reject actions and clear confirmation dialogs.
-- Local state service has been rewritten as clean UTF-8 and now supports `failTask`, rejected-task resubmission, proper benefit cooldown parsing and slave-mode allowance pause.
-- Wife task creation now supports A/B linked selection, free text, deadline options, reward types and structured task metadata.
-- Wife decrees page now supports manually creating decrees with tone states and readable decree cards.
-- Wife logs page now supports filtering, recent 100 entries and JSON detail preview through a modal.
+- Husband role page restores the H5-style role preview loop: left/right level switching, locked future roles, level dots, hero image and progress/wallet panel.
+- Husband task page has local status filtering, task status cards, submit confirmation, submitted/confirmed timestamps and clean reward text.
+- Husband benefit page has filter tabs, available/pending/cooldown/locked grouping, slave-mode freeze state, cooldown/request details and recent benefit logs.
+- Wife review page has task/benefit/recent-record tabs, task approve/reject/fail actions, benefit approve/reject actions and clear confirmation dialogs.
+- Local state service is clean UTF-8 and supports `failTask`, rejected-task resubmission, proper benefit cooldown parsing and slave-mode allowance pause.
+- Wife task creation supports A/B linked selection, free text, deadline options, reward types and structured task metadata.
+- Wife decrees page supports manually creating decrees with tone states and readable decree cards.
+- Wife logs page supports filtering, recent 100 entries and JSON detail preview through a modal.
 - Complex H5 sprite/cinematic effects are intentionally simplified.
 
 ## Command Results
