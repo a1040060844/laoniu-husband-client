@@ -13,7 +13,7 @@ const filters: Array<{ key: LogFilter; label: string }> = [
   { key: "task", label: "任务" },
   { key: "benefit", label: "权益" },
   { key: "wallet", label: "流水" },
-  { key: "punishment", label: "状态" }
+  { key: "punishment", label: "状态" },
 ];
 
 const typeLabel: Record<EventLogType, string> = {
@@ -28,7 +28,7 @@ const typeLabel: Record<EventLogType, string> = {
   benefit_approved: "权益批准",
   benefit_rejected: "权益驳回",
   wallet_ledger: "钱包/经验流水",
-  punishment_status_changed: "状态变化"
+  punishment_status_changed: "状态变化",
 };
 
 function formatTime(value: string) {
@@ -49,7 +49,9 @@ export default function WifeLogsPage() {
   const [state, setState] = useState<AppState>();
   const [filter, setFilter] = useState<LogFilter>("all");
 
-  useDidShow(() => { stateService.loadState().then(setState); });
+  useDidShow(() => {
+    stateService.loadState().then(setState);
+  });
 
   const visibleLogs = useMemo(() => {
     if (!state) return [];
@@ -61,7 +63,7 @@ export default function WifeLogsPage() {
       title: typeLabel[log.type] || log.type,
       content: JSON.stringify(log, null, 2).slice(0, 900),
       showCancel: false,
-      confirmText: "知道了"
+      confirmText: "知道了",
     });
   }
 
@@ -87,7 +89,7 @@ export default function WifeLogsPage() {
             <Text className="status-pill">{typeLabel[log.type] || log.type}</Text>
           </View>
           <Text className="subtitle">{log.description || "无备注"}</Text>
-          <Text className="log-meta">{formatTime(log.createdAt)}{log.amount !== undefined ? ` · ${log.amount}${log.unit || ""}` : ""}</Text>
+          <Text className="log-meta">{formatTime(log.createdAt)}{log.amount !== undefined ? ` / ${log.amount}${log.unit || ""}` : ""}</Text>
         </View>
       )) : <View className="empty">当前筛选下暂无日志</View>}
     </View>

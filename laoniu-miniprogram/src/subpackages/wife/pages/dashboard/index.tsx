@@ -13,23 +13,25 @@ export default function WifeDashboardPage() {
     setState(await stateService.loadState());
   }
 
-  useDidShow(() => { void reload(); });
+  useDidShow(() => {
+    void reload();
+  });
 
   async function startSlaveMode() {
     const result = await Taro.showModal({
       title: "开启卖身奴隶状态",
-      content: "开启后权益和零花钱暂停，任务仍可完成并获得经验。",
+      content: "开启后权益和零花钱暂停；任务仍可完成并获得经验。",
       confirmText: "开启",
-      confirmColor: "#6f3f2c"
+      confirmColor: "#6f3f2c",
     });
     if (!result.confirm) return;
     const next = await stateService.startSlaveMode({
       reason: "老妞后台手动裁定",
       durationDays: 7,
-      requiredRecoveryExp: 100
+      requiredRecoveryExp: 100,
     });
     setState(next);
-    Taro.showToast({ title: "已开启", icon: "success" });
+    await Taro.showToast({ title: "已开启", icon: "success" });
   }
 
   async function restoreNormalMode() {
@@ -37,12 +39,12 @@ export default function WifeDashboardPage() {
       title: "恢复正常状态",
       content: "恢复后权益和零花钱重新启用。",
       confirmText: "恢复",
-      confirmColor: "#6f3f2c"
+      confirmColor: "#6f3f2c",
     });
     if (!result.confirm) return;
     const next = await stateService.restoreNormalMode({ reason: "老妞后台手动恢复" });
     setState(next);
-    Taro.showToast({ title: "已恢复", icon: "success" });
+    await Taro.showToast({ title: "已恢复", icon: "success" });
   }
 
   async function resetLocalData() {
@@ -50,12 +52,12 @@ export default function WifeDashboardPage() {
       title: "重置全部本地数据",
       content: "会清空当前进度、任务、权益申请、流水和日志，恢复到初始数据。",
       confirmText: "重置",
-      confirmColor: "#b4472f"
+      confirmColor: "#b4472f",
     });
     if (!result.confirm) return;
     const next = await stateService.resetState();
     setState(next);
-    Taro.showToast({ title: "已重置", icon: "success" });
+    await Taro.showToast({ title: "已重置", icon: "success" });
   }
 
   if (!state) return <View className="page"><Text>加载中...</Text></View>;
@@ -69,7 +71,7 @@ export default function WifeDashboardPage() {
   return (
     <View className="page scene-page wife-dashboard">
       <Text className="title">老妞后台</Text>
-      <Text className="subtitle">当前老哥职务：{role.title} · Lv.{state.progress.level} · EXP {state.progress.exp}</Text>
+      <Text className="subtitle">当前老哥职务：{role.title} / Lv.{state.progress.level} / EXP {state.progress.exp}</Text>
 
       <View className="stats-grid section">
         <View className="panel"><Text className="stat-number">{pendingTasks}</Text><Text className="stat-label">待确认任务</Text></View>

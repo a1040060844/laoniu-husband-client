@@ -12,7 +12,7 @@ type ReviewTab = "tasks" | "benefits" | "records";
 const tabs: Array<{ key: ReviewTab; label: string }> = [
   { key: "tasks", label: "任务确认" },
   { key: "benefits", label: "权益审批" },
-  { key: "records", label: "最近处理" }
+  { key: "records", label: "最近处理" },
 ];
 
 function formatTime(value?: string) {
@@ -26,7 +26,9 @@ export default function WifeReviewPage() {
   const [state, setState] = useState<AppState>();
   const [tab, setTab] = useState<ReviewTab>("tasks");
 
-  useDidShow(() => { stateService.loadState().then(setState); });
+  useDidShow(() => {
+    stateService.loadState().then(setState);
+  });
 
   const submitted = useMemo(() => state?.tasks.filter((task) => task.status === "submitted") || [], [state]);
   const activeTasks = useMemo(() => state?.tasks.filter((task) => ["todo", "doing", "failed_pending"].includes(task.status)).slice(0, 5) || [], [state]);
@@ -40,13 +42,13 @@ export default function WifeReviewPage() {
       title,
       content,
       confirmText,
-      confirmColor: "#6f3f2c"
+      confirmColor: "#6f3f2c",
     });
     return result.confirm;
   }
 
   async function approveTask(task: Task) {
-    if (!await confirmAction("确认任务", `确认《${task.title}》完成并发放奖励吗？`, "确认")) return;
+    if (!await confirmAction("确认任务", `确认“${task.title}”完成并发放奖励吗？`, "确认")) return;
     try {
       setState(await stateService.approveTask(task.id));
       await Taro.showToast({ title: "已确认", icon: "success" });
@@ -56,7 +58,7 @@ export default function WifeReviewPage() {
   }
 
   async function rejectTask(task: Task) {
-    if (!await confirmAction("驳回任务", `驳回《${task.title}》，让老哥重新做吗？`, "驳回")) return;
+    if (!await confirmAction("驳回任务", `驳回“${task.title}”，让老哥重新做吗？`, "驳回")) return;
     try {
       setState(await stateService.rejectTask(task.id, { reason: "老妞驳回，需要重做。" }));
       await Taro.showToast({ title: "已驳回", icon: "none" });
@@ -66,7 +68,7 @@ export default function WifeReviewPage() {
   }
 
   async function failTask(task: Task) {
-    if (!await confirmAction("判定失败", `判定《${task.title}》失败，本次不会发放奖励。`, "判失败")) return;
+    if (!await confirmAction("判定失败", `判定“${task.title}”失败，本次不会发放奖励。`, "判失败")) return;
     try {
       setState(await stateService.failTask(task.id, { reason: "老妞判定失败，本次不发放奖励。" }));
       await Taro.showToast({ title: "已判失败", icon: "none" });
@@ -76,7 +78,7 @@ export default function WifeReviewPage() {
   }
 
   async function approveBenefit(benefit: Benefit) {
-    if (!await confirmAction("批准权益", `批准老哥使用《${benefit.name}》吗？`, "批准")) return;
+    if (!await confirmAction("批准权益", `批准老哥使用“${benefit.name}”吗？`, "批准")) return;
     try {
       setState(await stateService.approveBenefit(benefit.id));
       await Taro.showToast({ title: "已批准", icon: "success" });
@@ -86,7 +88,7 @@ export default function WifeReviewPage() {
   }
 
   async function rejectBenefit(benefit: Benefit) {
-    if (!await confirmAction("驳回权益", `驳回《${benefit.name}》申请吗？`, "驳回")) return;
+    if (!await confirmAction("驳回权益", `驳回“${benefit.name}”申请吗？`, "驳回")) return;
     try {
       setState(await stateService.rejectBenefit(benefit.id, { reason: "老妞暂缓批准。" }));
       await Taro.showToast({ title: "已驳回", icon: "none" });
@@ -98,7 +100,7 @@ export default function WifeReviewPage() {
   return (
     <View className="page scene-page wife-review-page">
       <Text className="title">审核</Text>
-      <Text className="subtitle">待确认任务 {submitted.length} · 待审批权益 {requests.length}</Text>
+      <Text className="subtitle">待确认任务 {submitted.length} / 待审批权益 {requests.length}</Text>
 
       <View className="review-tabs">
         {tabs.map((item) => (
@@ -133,7 +135,7 @@ export default function WifeReviewPage() {
             <View className="panel section review-card muted" key={task.id}>
               <Text className="review-title">{task.title}</Text>
               <Text className="subtitle">{task.description}</Text>
-              <Text className="review-meta">状态：{task.status} · 奖励：{taskRewardText(task)}</Text>
+              <Text className="review-meta">状态：{task.status} / 奖励：{taskRewardText(task)}</Text>
               <Button className="btn btn-secondary danger section" onClick={() => failTask(task)}>直接判失败</Button>
             </View>
           )) : <View className="empty">暂无进行中任务</View>}
@@ -151,7 +153,7 @@ export default function WifeReviewPage() {
               </View>
               <Text className="subtitle">{benefit.description}</Text>
               <Text className="review-meta">申请理由：{benefit.pendingRequest?.reason || "老哥申请使用权益"}</Text>
-              <Text className="review-meta">频次：{benefit.frequency} · 解锁 Lv.{benefit.levelRequired}</Text>
+              <Text className="review-meta">频次：{benefit.frequency} / 解锁 Lv.{benefit.levelRequired}</Text>
               <View className="row-wrap section">
                 <Button className="btn" onClick={() => approveBenefit(benefit)}>批准</Button>
                 <Button className="btn btn-secondary" onClick={() => rejectBenefit(benefit)}>驳回</Button>
@@ -168,7 +170,7 @@ export default function WifeReviewPage() {
             <View className="panel section review-log" key={log.id}>
               <Text className="review-title">{log.title}</Text>
               <Text className="subtitle">{log.description}</Text>
-              <Text className="review-meta">{formatTime(log.createdAt)} · {log.type}</Text>
+              <Text className="review-meta">{formatTime(log.createdAt)} / {log.type}</Text>
             </View>
           )) : <View className="empty">暂无处理记录</View>}
         </>

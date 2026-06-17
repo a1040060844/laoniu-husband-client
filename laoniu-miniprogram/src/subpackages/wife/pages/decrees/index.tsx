@@ -10,7 +10,7 @@ const toneOptions: Array<{ tone: DecreeEvent["tone"]; label: string }> = [
   { tone: "normal", label: "普通裁定" },
   { tone: "upgrade", label: "表扬晋升" },
   { tone: "down", label: "警告驳回" },
-  { tone: "punish", label: "惩罚裁定" }
+  { tone: "punish", label: "惩罚裁定" },
 ];
 
 function formatTime(value: string) {
@@ -29,7 +29,9 @@ export default function WifeDecreesPage() {
     setState(await stateService.loadState());
   }
 
-  useDidShow(() => { void reload(); });
+  useDidShow(() => {
+    void reload();
+  });
 
   async function createDecree() {
     if (!title.trim() && !text.trim()) {
@@ -39,7 +41,7 @@ export default function WifeDecreesPage() {
     const next = await stateService.createDecree({
       title: title.trim() || toneOptions[toneIndex].label,
       text: text.trim() || "老妞大人已作出裁定。",
-      tone: toneOptions[toneIndex].tone
+      tone: toneOptions[toneIndex].tone,
     });
     setState(next);
     setTitle("");
@@ -74,6 +76,7 @@ export default function WifeDecreesPage() {
             <Text className="decree-time">{formatTime(decree.createdAt)}</Text>
           </View>
           <Text className="subtitle">{decree.text}</Text>
+          <Text className="small-text">{decree.acknowledgedAt ? "老哥已领命" : "等待老哥领命"}</Text>
         </View>
       )) : <View className="empty">暂无圣旨</View>}
     </View>

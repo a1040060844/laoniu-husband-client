@@ -12,25 +12,27 @@ interface MiniTaskModule {
   actions: string[];
 }
 
+const CUSTOM = "自定义";
+
 const modules: MiniTaskModule[] = [
   { id: "cleaning", label: "打扫卫生", targets: ["卧室", "客厅", "厨房", "卫生间", "全屋"], actions: ["简单整理", "标准清洁", "深度清洁", "老妞指定标准"] },
-  { id: "laundry", label: "洗衣整理", targets: ["今日衣物", "床单被套", "毛巾", "自定义"], actions: ["洗好晾好", "收纳叠好", "分类整理"] },
-  { id: "cooking", label: "做饭", targets: ["早餐", "午餐", "晚餐", "夜宵", "自定义"], actions: ["按老妞口味", "少油少盐", "摆盘好看"] },
-  { id: "shopping", label: "买东西", targets: ["饮料", "零食", "日用品", "水果", "自定义"], actions: ["买指定品牌", "买性价比高的", "送到家"] },
-  { id: "movie", label: "看电影", targets: ["老妞指定电影", "爱情片", "恐怖片", "自定义"], actions: ["认真陪看", "不玩手机", "看完一起讨论"] },
-  { id: "game", label: "打游戏", targets: ["双人游戏", "老妞指定游戏", "自定义"], actions: ["认真配合", "不摆烂", "不急眼"] },
-  { id: "photo", label: "拍照", targets: ["帮老妞拍照", "拍穿搭", "拍产品", "自定义"], actions: ["拍到满意", "帮忙选图", "简单修图"] },
-  { id: "custom", label: "自定义任务", targets: ["自定义"], actions: ["自定义"] }
+  { id: "laundry", label: "洗衣整理", targets: ["今日衣物", "床单被套", "毛巾", CUSTOM], actions: ["洗好晾好", "收纳叠好", "分类整理"] },
+  { id: "cooking", label: "做饭", targets: ["早餐", "午餐", "晚餐", "夜宵", CUSTOM], actions: ["按老妞口味", "少油少盐", "摆盘好看"] },
+  { id: "shopping", label: "买东西", targets: ["饮料", "零食", "日用品", "水果", CUSTOM], actions: ["买指定品牌", "买性价比高的", "送到家"] },
+  { id: "movie", label: "看电影", targets: ["老妞指定电影", "爱情片", "恐怖片", CUSTOM], actions: ["认真陪看", "不玩手机", "看完一起讨论"] },
+  { id: "game", label: "打游戏", targets: ["双人游戏", "老妞指定游戏", CUSTOM], actions: ["认真配合", "不摆烂", "不急眼"] },
+  { id: "photo", label: "拍照", targets: ["帮老妞拍照", "拍穿搭", "拍产品", CUSTOM], actions: ["拍到满意", "帮忙选图", "简单修图"] },
+  { id: "custom", label: "自定义任务", targets: [CUSTOM], actions: [CUSTOM] },
 ];
 
-const deadlineOptions = ["今天完成", "一天内完成", "一周内完成", "本月内完成", "自定义"];
+const deadlineOptions = ["今天完成", "一天内完成", "一周内完成", "本月内完成", CUSTOM];
 const rewardOptions: Array<{ type: TaskRewardType; label: string; defaultValue: string }> = [
   { type: "experience", label: "经验", defaultValue: "10" },
   { type: "allowance", label: "零花钱", defaultValue: "20" },
   { type: "benefit", label: "权益", defaultValue: "1" },
   { type: "level_up", label: "直接升级", defaultValue: "1" },
   { type: "custom", label: "自定义奖励", defaultValue: "1" },
-  { type: "none", label: "无奖励", defaultValue: "0" }
+  { type: "none", label: "无奖励", defaultValue: "0" },
 ];
 
 export default function WifeTaskCreatePage() {
@@ -49,12 +51,12 @@ export default function WifeTaskCreatePage() {
 
   const module = modules[moduleIndex];
   const reward = rewardOptions[rewardIndex];
-  const target = module.targets[targetIndex] === "自定义" ? customTarget : module.targets[targetIndex];
-  const action = module.actions[actionIndex] === "自定义" ? customAction : module.actions[actionIndex];
+  const target = module.targets[targetIndex] === CUSTOM ? customTarget : module.targets[targetIndex];
+  const action = module.actions[actionIndex] === CUSTOM ? customAction : module.actions[actionIndex];
 
   const preview = useMemo(() => {
     const parts = [module.label, target, action, customText].filter(Boolean);
-    return parts.join(" · ");
+    return parts.join(" / ");
   }, [action, customText, module.label, target]);
 
   function onModuleChange(index: number) {
@@ -75,7 +77,9 @@ export default function WifeTaskCreatePage() {
     }
 
     const finalTitle = title.trim() || `${module.label}任务`;
-    const deadline = deadlineOptions[deadlineIndex] === "自定义" ? customDeadline.trim() || "老妞自定义截止时间" : deadlineOptions[deadlineIndex];
+    const deadline = deadlineOptions[deadlineIndex] === CUSTOM
+      ? customDeadline.trim() || "老妞自定义截止时间"
+      : deadlineOptions[deadlineIndex];
     const description = customText.trim() || preview || "按老妞大人要求完成，完成后提交验收。";
     const value = Number(rewardValue) || 0;
 
@@ -92,7 +96,7 @@ export default function WifeTaskCreatePage() {
       rewardExp: reward.type === "experience" ? value : 0,
       rewardMoney: reward.type === "allowance" ? value : 0,
       rewardBenefit: rewardName.trim() || reward.label,
-      deadline
+      deadline,
     });
     await Taro.showToast({ title: "任务已发布", icon: "success" });
     await Taro.navigateBack();
@@ -121,7 +125,7 @@ export default function WifeTaskCreatePage() {
           <Picker mode="selector" range={module.targets} value={targetIndex} onChange={(event) => setTargetIndex(Number(event.detail.value))}>
             <View className="picker-line">{module.targets[targetIndex]}</View>
           </Picker>
-          {module.targets[targetIndex] === "自定义" ? <Input className="input nested" value={customTarget} placeholder="输入具体对象" onInput={(event) => setCustomTarget(String(event.detail.value))} /> : null}
+          {module.targets[targetIndex] === CUSTOM ? <Input className="input nested" value={customTarget} placeholder="输入具体对象" onInput={(event) => setCustomTarget(String(event.detail.value))} /> : null}
         </View>
 
         <View className="field">
@@ -129,7 +133,7 @@ export default function WifeTaskCreatePage() {
           <Picker mode="selector" range={module.actions} value={actionIndex} onChange={(event) => setActionIndex(Number(event.detail.value))}>
             <View className="picker-line">{module.actions[actionIndex]}</View>
           </Picker>
-          {module.actions[actionIndex] === "自定义" ? <Input className="input nested" value={customAction} placeholder="输入具体要求" onInput={(event) => setCustomAction(String(event.detail.value))} /> : null}
+          {module.actions[actionIndex] === CUSTOM ? <Input className="input nested" value={customAction} placeholder="输入具体要求" onInput={(event) => setCustomAction(String(event.detail.value))} /> : null}
         </View>
 
         <View className="field">
@@ -142,7 +146,7 @@ export default function WifeTaskCreatePage() {
           <Picker mode="selector" range={deadlineOptions} value={deadlineIndex} onChange={(event) => setDeadlineIndex(Number(event.detail.value))}>
             <View className="picker-line">{deadlineOptions[deadlineIndex]}</View>
           </Picker>
-          {deadlineOptions[deadlineIndex] === "自定义" ? <Input className="input nested" value={customDeadline} placeholder="例如：周五晚上前" onInput={(event) => setCustomDeadline(String(event.detail.value))} /> : null}
+          {deadlineOptions[deadlineIndex] === CUSTOM ? <Input className="input nested" value={customDeadline} placeholder="例如：周五晚上前" onInput={(event) => setCustomDeadline(String(event.detail.value))} /> : null}
         </View>
 
         <View className="field">
