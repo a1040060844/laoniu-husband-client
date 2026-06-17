@@ -25,6 +25,10 @@ export interface RejectTaskPayload {
   reason?: string;
 }
 
+export interface FailTaskPayload {
+  reason?: string;
+}
+
 export interface RequestBenefitPayload {
   reason?: string;
 }
@@ -68,6 +72,7 @@ export interface StateService {
   submitTask(taskId: string, payload: SubmitTaskPayload): Promise<AppState>;
   approveTask(taskId: string, payload?: ApproveTaskPayload): Promise<AppState>;
   rejectTask(taskId: string, payload?: RejectTaskPayload): Promise<AppState>;
+  failTask(taskId: string, payload?: FailTaskPayload): Promise<AppState>;
   requestBenefit(benefitId: string, payload?: RequestBenefitPayload): Promise<AppState>;
   approveBenefit(benefitId: string, payload?: ApproveBenefitPayload): Promise<AppState>;
   rejectBenefit(benefitId: string, payload?: RejectBenefitPayload): Promise<AppState>;

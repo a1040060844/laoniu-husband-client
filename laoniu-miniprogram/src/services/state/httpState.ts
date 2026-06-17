@@ -11,6 +11,7 @@ export const httpState: StateService = {
   submitTask: async () => unavailable(),
   approveTask: async () => unavailable(),
   rejectTask: async () => unavailable(),
+  failTask: async () => unavailable(),
   requestBenefit: async () => unavailable(),
   approveBenefit: async () => unavailable(),
   rejectBenefit: async () => unavailable(),

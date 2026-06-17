@@ -2,7 +2,8 @@ import Taro from "@tarojs/taro";
 import { benefits as initialBenefits } from "../../data/benefits";
 import { initialTasks } from "../../data/tasks";
 import { roles } from "../../data/roles";
-import { grantExperience, initialProgress, settleConfirmedTasks } from "../../game/progression";
+import { initialProgress, settleConfirmedTasks } from "../../game/progression";
+import { taskRewardExp, taskRewardMoney } from "../../domain/taskRewards";
 import { refreshTaskCycles } from "../../domain/taskSchedule";
 import { APP_STATE_STORAGE_KEY } from "../storageKeys";
 import type { Benefit, DecreeEvent, EventLog, Punishment, Task, WalletLedgerEntry } from "../../types/domain";
@@ -12,6 +13,7 @@ import type {
   ApproveTaskPayload,
   CreateDecreePayload,
   CreateTaskPayload,
+  FailTaskPayload,
   RejectBenefitPayload,
   RejectTaskPayload,
   RequestBenefitPayload,
@@ -28,6 +30,10 @@ const DEFAULT_PUNISHMENT: Punishment = {
   requiredRecoveryExp: 100
 };
 
+function clone<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
 function id(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 }
@@ -38,29 +44,29 @@ function nowIso() {
 
 function defaultState(): AppState {
   return {
-    progress: initialProgress,
-    tasks: refreshTaskCycles(initialTasks),
-    benefits: initialBenefits,
+    progress: clone(initialProgress),
+    tasks: refreshTaskCycles(clone(initialTasks)),
+    benefits: clone(initialBenefits),
     logs: [],
-    punishment: DEFAULT_PUNISHMENT,
+    punishment: { ...DEFAULT_PUNISHMENT },
     walletLedger: [],
     decrees: []
   };
 }
 
 function safeArray<T>(value: unknown, fallback: T[]) {
-  return Array.isArray(value) ? value as T[] : fallback;
+  return Array.isArray(value) ? value as T[] : clone(fallback);
 }
 
 function hydrate(raw: unknown): AppState {
   if (!raw || typeof raw !== "object") return defaultState();
   const value = raw as Partial<AppState>;
   return {
-    progress: value.progress || initialProgress,
+    progress: value.progress || clone(initialProgress),
     tasks: refreshTaskCycles(safeArray<Task>(value.tasks, initialTasks)),
     benefits: safeArray<Benefit>(value.benefits, initialBenefits),
     logs: safeArray<EventLog>(value.logs, []),
-    punishment: value.punishment || DEFAULT_PUNISHMENT,
+    punishment: value.punishment || { ...DEFAULT_PUNISHMENT },
     walletLedger: safeArray<WalletLedgerEntry>(value.walletLedger, []),
     decrees: safeArray<DecreeEvent>(value.decrees, [])
   };
@@ -92,7 +98,7 @@ function appendDecree(state: AppState, decree: Omit<DecreeEvent, "id" | "created
     target: "husband",
     createdAt: decree.createdAt || nowIso()
   };
-  state.decrees = [...state.decrees, next];
+  state.decrees = [next, ...state.decrees];
   return next;
 }
 
@@ -119,37 +125,47 @@ function appendLedger(state: AppState, entry: Omit<WalletLedgerEntry, "id" | "cr
 
 function benefitCooldownMs(frequency: string) {
   if (frequency.includes("2")) return 14 * 24 * 60 * 60 * 1000;
-  if (frequency.includes("季")) return 90 * 24 * 60 * 60 * 1000;
+  if (frequency.includes("季度")) return 90 * 24 * 60 * 60 * 1000;
   if (frequency.includes("月")) return 30 * 24 * 60 * 60 * 1000;
+  if (frequency.includes("年")) return 365 * 24 * 60 * 60 * 1000;
   return 7 * 24 * 60 * 60 * 1000;
 }
 
 function settleTask(state: AppState, task: Task) {
+  const beforeWallet = state.progress.wallet;
   const result = settleConfirmedTasks(state.progress, [task], roles);
-  state.progress = result.progress;
+  const pausedAllowance = state.punishment.status === "slave" ? taskRewardMoney(task) : 0;
+  state.progress = pausedAllowance > 0
+    ? { ...result.progress, wallet: Math.max(0, result.progress.wallet - pausedAllowance) }
+    : result.progress;
   task.rewardedAt = nowIso();
-  if (task.rewardExp > 0) {
+
+  const expAmount = taskRewardExp(task);
+  if (expAmount > 0) {
     appendLedger(state, {
       type: "experience",
       source: "任务奖励",
-      amount: task.rewardExp,
+      amount: expAmount,
       unit: "EXP",
       taskId: task.id,
       taskTitle: task.title,
       note: `完成《${task.title}》`
     });
   }
-  if (task.rewardMoney > 0 && state.punishment.status !== "slave") {
+
+  const moneyAmount = taskRewardMoney(task);
+  if (moneyAmount > 0) {
     appendLedger(state, {
       type: "allowance",
-      source: "任务奖励",
-      amount: task.rewardMoney,
+      source: state.punishment.status === "slave" ? "零花钱暂停" : "任务奖励",
+      amount: state.punishment.status === "slave" ? 0 : state.progress.wallet - beforeWallet,
       unit: "CNY",
       taskId: task.id,
       taskTitle: task.title,
-      note: `完成《${task.title}》`
+      note: state.punishment.status === "slave" ? "卖身奴隶状态下零花钱奖励暂停" : `完成《${task.title}》`
     });
   }
+
   result.stories.forEach((story) => {
     appendDecree(state, {
       type: story.tone === "upgrade" ? "level_changed" : "task_approved",
@@ -180,7 +196,7 @@ export const localState: StateService = {
     const state = readState();
     const task = state.tasks.find((item) => item.id === taskId);
     if (!task) throw new Error("任务不存在");
-    if (!["todo", "doing"].includes(task.status)) throw new Error("当前任务不能提交");
+    if (!["todo", "doing", "failed_pending"].includes(task.status)) throw new Error("当前任务不能提交");
     task.status = "submitted";
     task.submittedAt = nowIso();
     task.submitNote = payload.note || "已完成，请老妞验收";
@@ -211,6 +227,19 @@ export const localState: StateService = {
     task.resultText = payload?.reason || "老妞驳回，需要重做。";
     appendLog(state, { type: "task_rejected", title: task.title, description: task.resultText, taskId: task.id, taskTitle: task.title });
     appendDecree(state, { type: "task_rejected", title: "任务驳回", text: task.resultText, tone: "down", payload: { taskId } });
+    return writeState(state);
+  },
+
+  async failTask(taskId: string, payload?: FailTaskPayload) {
+    const state = readState();
+    const task = state.tasks.find((item) => item.id === taskId);
+    if (!task) throw new Error("任务不存在");
+    if (task.status === "confirmed") throw new Error("已确认任务不能判失败");
+    if (task.status === "failed") throw new Error("任务已经失败");
+    task.status = "failed";
+    task.resultText = payload?.reason || "老妞判定任务失败，本次不发放奖励。";
+    appendLog(state, { type: "task_failed", title: task.title, description: task.resultText, taskId: task.id, taskTitle: task.title });
+    appendDecree(state, { type: "task_rejected", title: "任务失败", text: task.resultText, tone: "down", payload: { taskId } });
     return writeState(state);
   },
 

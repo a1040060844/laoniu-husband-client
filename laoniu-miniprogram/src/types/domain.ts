@@ -183,6 +183,7 @@ export type EventLogType =
   | "task_submitted"
   | "task_approved"
   | "task_rejected"
+  | "task_failed"
   | "task_expired"
   | "level_changed"
   | "benefit_requested"

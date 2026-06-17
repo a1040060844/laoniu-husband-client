@@ -1,3 +1,81 @@
-.review-page {
+.wife-review-page {
+  padding-bottom: 48px;
+}
+
+.review-tabs {
+  display: flex;
+  gap: 10px;
+  margin: 20px 0 8px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.filter-chip {
+  flex: 0 0 auto;
+  min-width: 138px;
+  height: 58px;
+  padding: 0 18px;
+  border: 2px solid rgba(90, 55, 41, .34);
+  border-radius: 999px;
+  color: #4b2d22;
+  font-size: 22px;
+  line-height: 54px;
+  background: rgba(255, 253, 248, .86);
+}
+
+.filter-chip.is-active {
+  color: #fff6ea;
+  background: #6f3f2c;
+}
+
+.review-card {
+  border-left: 8px solid #d59d4c;
+}
+
+.review-card.muted {
+  border-left-color: rgba(111, 63, 44, .28);
+}
+
+.review-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.review-title {
+  flex: 1;
+  color: #2d1d17;
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1.25;
+  text-align: left;
+}
+
+.status-pill {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  padding: 7px 12px;
+  border-radius: 999px;
+  color: #fff6ea;
+  font-size: 20px;
+  font-weight: 800;
+  background: #6f3f2c;
+}
+
+.review-meta {
   display: block;
+  margin-top: 8px;
+  color: #684437;
+  font-size: 22px;
+  line-height: 1.35;
+}
+
+.danger {
+  border-color: #9d493e;
+  color: #7f3029;
+}
+
+.review-log {
+  border-left: 8px solid rgba(111, 63, 44, .28);
 }

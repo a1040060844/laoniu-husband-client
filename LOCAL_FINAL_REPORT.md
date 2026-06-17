@@ -14,6 +14,8 @@ This report records the current local-only Mini Program migration checkpoint.
 - Husband role page now restores the H5-style role preview loop: left/right level switching, locked future roles, level dots, hero image and progress/wallet panel.
 - Husband task page now has local status filtering, task status cards, submit confirmation, submitted/confirmed timestamps and clean reward text.
 - Husband benefit page now has filter tabs, available/pending/cooldown/locked grouping, slave-mode freeze state, cooldown/request details and recent benefit logs.
+- Wife review page now has task/benefit/recent-record tabs, task approve/reject/fail actions, benefit approve/reject actions and clear confirmation dialogs.
+- Local state service has been rewritten as clean UTF-8 and now supports `failTask`, rejected-task resubmission, proper benefit cooldown parsing and slave-mode allowance pause.
 - Complex H5 sprite/cinematic effects are intentionally simplified.
 
 ## Command Results
