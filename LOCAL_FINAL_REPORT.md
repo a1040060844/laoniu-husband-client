@@ -21,8 +21,8 @@ This report records the current local-only Mini Program migration checkpoint.
 - Wife task creation supports A/B linked selection, free text, deadline options, reward types and structured task metadata.
 - Wife decrees page supports manually creating decrees with tone states and readable decree cards.
 - Wife logs page supports filtering, recent 100 entries and JSON detail preview through a modal.
-- Husband pages now surface unread decrees through a tone-aware Mini Program modal with upgrade, down, punish and normal states.
-- Complex H5 sprite/cinematic effects are intentionally simplified.
+- Husband pages now surface unread decrees through a tone-aware Mini Program modal with upgrade, down, punish and normal states. Unread upgrade decrees first play a Mini Program-safe role upgrade cinematic with old/new role imagery.
+- Complex H5 sprite/cinematic effects are still intentionally lighter than the H5 version where full choreography would add package or runtime risk.
 
 ## Command Results
 
@@ -69,7 +69,7 @@ This report records the current local-only Mini Program migration checkpoint.
 
 - Login role selection, speech bubble feedback, love-day display, bounded actor/cat dragging, random idle bubble rotation and Mini Program-safe actor/cat tap feedback are restored.
 - Exact H5 sprite-sheet frame playback and rich hitbox choreography are still pending because the full `login-final/` sprite batch was kept out of the Mini Program package for size control.
-- H5 cinematic effects such as upgrade, reward flight and wife command motion are represented by lightweight Mini Program-safe decree/status/reward feedback; slave state enter/restore now has a dedicated Mini Program-safe cinematic, while full H5 choreography is still pending.
+- H5 cinematic effects now include Mini Program-safe role upgrade and slave enter/restore cinematics. Full H5 choreography for reward flight and wife command motion is still represented by lighter decree/status/reward feedback.
 - Role preview visuals are implemented, but final animation timing and phone framing still need WeChat DevTools review.
 - Visual parity still needs WeChat DevTools and real-device review.
 - Asset payload is under 20 MB now, but close enough to the limit that a production/upload pass should still move large images to remote assets or stricter subpackage groups.

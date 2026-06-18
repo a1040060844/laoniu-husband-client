@@ -43,10 +43,10 @@ Use `husband-client/` as the visual and behavior source of truth. For each migra
 ## Effects
 
 - H5 source: `src/components/effects/*`.
-- Mini Program target: `src/components/PixelTransition`, `ClickSpark`, `CountUp`, `StoryModal`, `DecreeModal`, `OverlayRoot`.
+- Mini Program target: `src/components/PixelTransition`, `ClickSpark`, `CountUp`, `StoryModal`, `DecreeModal`, `OverlayRoot`, `RoleUpgradeCinematic`, `SlaveStateCinematic`.
 - Status: baseline migrated.
-- Restored: overlay shell, story modal shell, tone-aware decree modal, upgrade/down/punish decree styling, lightweight decree aura/particle motion, slave enter/restore cinematic overlay, slave ambient overlay, recent reward flight panel, count-up component API, 10 x 18 pixel transition grid, click spark placeholder, swipe hint.
-- Difference: full `RoleUpgradeCinematic`, full projectile `TaskRewardFlight`, and `WifeCommandMotion` choreography remain simplified into Mini Program-safe decree/reward/status feedback and lightweight motion.
+- Restored: overlay shell, story modal shell, tone-aware decree modal, upgrade/down/punish decree styling, Mini Program-safe role upgrade cinematic, lightweight decree aura/particle motion, slave enter/restore cinematic overlay, slave ambient overlay, recent reward flight panel, count-up component API, 10 x 18 pixel transition grid, click spark placeholder, swipe hint.
+- Difference: `RoleUpgradeCinematic` and `SlaveStateCinematic` now exist as Mini Program-safe variants, while the full H5 choreography, full projectile `TaskRewardFlight`, and `WifeCommandMotion` remain simplified into Mini Program-safe decree/reward/status feedback and lightweight motion.
 - Needs device review: z-index stacking over native page elements and transition smoothness.
 
 ## Package Notes

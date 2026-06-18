@@ -200,6 +200,7 @@ function rewardForTask(payload: CreateTaskPayload): {
 }
 
 function settleTask(state: AppState, task: Task) {
+  const beforeLevel = state.progress.level;
   const beforeWallet = state.progress.wallet;
   const result = settleConfirmedTasks(state.progress, [task], roles);
   const pausedAllowance =
@@ -213,6 +214,7 @@ function settleTask(state: AppState, task: Task) {
         }
       : result.progress;
   task.rewardedAt = nowIso();
+  const afterLevel = state.progress.level;
 
   const expAmount = taskRewardExp(task);
   if (expAmount > 0) {
@@ -243,13 +245,27 @@ function settleTask(state: AppState, task: Task) {
     });
   }
 
+  if (afterLevel !== beforeLevel) {
+    appendLog(state, {
+      type: "level_changed",
+      title: "职务晋升",
+      description: `完成“${task.title}”后从 Lv.${String(beforeLevel).padStart(2, "0")} 晋升到 Lv.${String(afterLevel).padStart(2, "0")}`,
+      fromLevel: beforeLevel,
+      toLevel: afterLevel,
+      taskId: task.id,
+      taskTitle: task.title,
+    });
+  }
+
   result.stories.forEach((story) => {
     appendDecree(state, {
       type: story.tone === "upgrade" ? "level_changed" : "task_approved",
       title: story.title,
       text: story.text,
       tone: story.tone || "normal",
-      payload: { taskId: task.id },
+      payload: story.tone === "upgrade"
+        ? { taskId: task.id, fromLevel: beforeLevel, toLevel: afterLevel }
+        : { taskId: task.id },
     });
   });
 }
