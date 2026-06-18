@@ -79,5 +79,5 @@ This report records the current local-only Mini Program migration checkpoint.
 - `scripts/audit-package.mjs` now guards future work by failing over the hard package limit and warning when new assets push the package near the limit.
 - Remote asset switching is now centralized in `laoniu-miniprogram/src/config/assets.ts`; full sprite sheets can later move to a CDN/HTTPS static host without changing page code.
 - `scripts/export-remote-assets.mjs` can generate a remote upload bundle containing the current Mini Program assets plus the complete H5 `login-final` sprite batch under `assets/login-sprites-full/`.
-- Login remote sprite wiring is in place for husband select/drag/adjust-glasses, wife select/drag/thinking and cat-blue drag/yawn actions. Local mode still uses lightweight blink sheets to keep the package previewable.
+- Login remote sprite wiring is in place for husband select/drag plus random blink/adjust-glasses/nervous idle actions, wife select/drag plus random blink/thinking/helpless idle actions, and cat-blue drag plus random blink/lick/tail/yawn/lift idle actions. Local mode still uses lightweight blink sheets to keep the package previewable.
 - Future server mode is only documented and stubbed; this checkpoint is intentionally local-only.

@@ -55,6 +55,12 @@ const initialOffsets: Record<BubbleTarget, Position> = {
   cat: { x: 0, y: 0 }
 };
 
+const remoteIdleActions: Record<BubbleTarget, string[]> = {
+  husband: ["blink", "adjust-glasses", "nervous"],
+  wife: ["blink", "thinking", "helpless"],
+  cat: ["blink", "lick", "tail", "yawn", "lift"]
+};
+
 function getLoveDayCount(now = new Date()) {
   const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
   return Math.min(9999, Math.max(1, Math.floor((todayUtc - LOVE_START_UTC) / DAY_MS) + 1));
@@ -71,6 +77,11 @@ function getTouch(event: any) {
 function pickLine(target: BubbleTarget) {
   const lines = bubbleLines[target];
   return lines[Math.floor(Math.random() * lines.length)] ?? lines[0];
+}
+
+function pickIdleAction(target: BubbleTarget) {
+  const actions = remoteIdleActions[target];
+  return actions[Math.floor(Math.random() * actions.length)] ?? "blink";
 }
 
 function dragLimit(target: BubbleTarget) {
@@ -100,6 +111,11 @@ export default function LoginPage() {
   const [activeTarget, setActiveTarget] = useState<BubbleTarget>("husband");
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [offsets, setOffsets] = useState<Record<BubbleTarget, Position>>(initialOffsets);
+  const [idleActions, setIdleActions] = useState<Record<BubbleTarget, string>>({
+    husband: "blink",
+    wife: "blink",
+    cat: "blink"
+  });
   const [selecting, setSelecting] = useState<RoleRoute | null>(null);
   const loveDays = getLoveDayCount();
 
@@ -107,6 +123,7 @@ export default function LoginPage() {
     setBubble(target);
     setBubbleLine(pickLine(target));
     setActiveTarget(target);
+    setIdleActions((current) => ({ ...current, [target]: pickIdleAction(target) }));
   }
 
   useEffect(() => {
@@ -172,9 +189,9 @@ export default function LoginPage() {
     Taro.showToast({ title: "已重置", icon: "success" });
   }
 
-  const husbandAction = selecting === "husband" ? "select" : dragState?.target === "husband" ? "drag" : activeTarget === "husband" ? "adjust-glasses" : "blink";
-  const wifeAction = selecting === "wife" ? "select" : dragState?.target === "wife" ? "drag" : activeTarget === "wife" ? "thinking" : "blink";
-  const catAction = dragState?.target === "cat" ? "drag" : activeTarget === "cat" ? "yawn" : "blink";
+  const husbandAction = selecting === "husband" ? "select" : dragState?.target === "husband" ? "drag" : activeTarget === "husband" ? idleActions.husband : "blink";
+  const wifeAction = selecting === "wife" ? "select" : dragState?.target === "wife" ? "drag" : activeTarget === "wife" ? idleActions.wife : "blink";
+  const catAction = dragState?.target === "cat" ? "drag" : activeTarget === "cat" ? idleActions.cat : "blink";
 
   return (
     <DesignStage className={`login-page ${selecting ? "is-selecting" : ""}`}>

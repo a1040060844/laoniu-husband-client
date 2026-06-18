@@ -94,6 +94,6 @@
 
 ## Known Follow-Up
 
-- Login now has selected husband/wife/cat blink sprite-sheet playback, bounded actor/cat dragging, idle bubble rotation and tap feedback; remote mode can load full drag/select/action sprite sheets from `assets/login-sprites-full/`, while exact random action choreography and hitbox polish remain a real-device follow-up.
+- Login now has selected husband/wife/cat blink sprite-sheet playback, bounded actor/cat dragging, idle bubble rotation and tap feedback; remote mode can load full drag/select/action sprite sheets from `assets/login-sprites-full/` and randomly choose role/cat idle actions, while exact H5 hitbox choreography remains a real-device follow-up.
 - H5 cinematic effects are approximated by lightweight Taro components and need real-device timing polish.
 - H5 source package still has unrelated dirty changes; this migration avoided editing `husband-client/`.
