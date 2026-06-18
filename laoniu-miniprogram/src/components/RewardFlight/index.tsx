@@ -1,4 +1,5 @@
 import { Text, View } from "@tarojs/components";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { WalletLedgerEntry } from "../../types/domain";
 import "./index.scss";
 
@@ -23,15 +24,57 @@ function amountLabel(entry: WalletLedgerEntry) {
   return `+${entry.amount}${unitLabel(entry)}`;
 }
 
+function flightEnd(tone: string, index: number) {
+  if (tone === "money") return { x: `${72 + index * 2}vw`, y: "26vh" };
+  if (tone === "benefit") return { x: `${50 + index * 3}vw`, y: "44vh" };
+  if (tone === "level") return { x: `${48 + index * 2}vw`, y: "20vh" };
+  return { x: `${48 + index * 2}vw`, y: "30vh" };
+}
+
 export function RewardFlight({ entries }: { entries: WalletLedgerEntry[] }) {
-  const rewards = entries
-    .filter((entry) => rewardTypes.has(entry.type))
-    .slice(0, 3);
+  const rewards = useMemo(
+    () => entries
+      .filter((entry) => rewardTypes.has(entry.type))
+      .slice(0, 3),
+    [entries],
+  );
+  const [showFlights, setShowFlights] = useState(false);
+  const flightKey = rewards.map((entry) => entry.id).join(":");
+
+  useEffect(() => {
+    if (!rewards.length) return undefined;
+    setShowFlights(true);
+    const timer = setTimeout(() => setShowFlights(false), 1480);
+    return () => clearTimeout(timer);
+  }, [flightKey, rewards.length]);
 
   if (!rewards.length) return null;
 
   return (
     <View className="reward-flight section">
+      {showFlights ? (
+        <View className="reward-flight-layer">
+          {rewards.map((entry, index) => {
+            const tone = toneFor(entry);
+            const end = flightEnd(tone, index);
+            return (
+              <View
+                className={`reward-flight-chip reward-flight-chip--${tone}`}
+                key={entry.id}
+                style={{
+                  "--flight-delay": `${index * 110}ms`,
+                  "--flight-end-x": end.x,
+                  "--flight-end-y": end.y,
+                  "--flight-start-x": `${34 + index * 5}vw`,
+                  "--flight-start-y": `${64 + index * 2}vh`,
+                } as CSSProperties}
+              >
+                <Text>{amountLabel(entry)}</Text>
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
       <View className="reward-flight__header">
         <Text className="reward-flight__eyebrow">奖励到账</Text>
         <Text className="reward-flight__hint">最近 {rewards.length} 条</Text>

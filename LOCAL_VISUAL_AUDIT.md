@@ -27,8 +27,8 @@ Use `husband-client/` as the visual and behavior source of truth. For each migra
 - H5 source: `RolePage`, `BenefitPage`, `TaskPage`, `SlavePage`, `HusbandVerticalPager`.
 - Mini Program target: `src/subpackages/husband/pages/*`.
 - Status: first-pass migrated.
-- Restored: role/progress/wallet display, role preview left/right switching, locked future-role state, level dot row, task filter tabs, task status cards, submit confirmation, benefit filter tabs, locked/cooldown/pending/available benefit states, recent benefit records, slave state display, slave-mode ambient overlay, wallet ledger display, recent reward flight panel, vertical swipe helper.
-- Difference: H5 micro-animations, full reward projectile path animation, and full pager choreography are simplified into Mini Program-safe reward cards and page motion.
+- Restored: role/progress/wallet display, role preview left/right switching, locked future-role state, level dot row, task filter tabs, task status cards, submit confirmation, benefit filter tabs, locked/cooldown/pending/available benefit states, recent benefit records, slave state display, slave-mode ambient overlay, wallet ledger display, recent reward flight panel, Mini Program-safe reward flight overlay, vertical swipe helper.
+- Difference: H5 micro-animations, exact DOM-to-target reward projectile paths, and full pager choreography are simplified into Mini Program-safe reward cards, viewport-based reward flight chips and page motion.
 - Needs device review: long list scrolling, button density, and subpackage navigation.
 
 ## Wife Pages
@@ -43,10 +43,10 @@ Use `husband-client/` as the visual and behavior source of truth. For each migra
 ## Effects
 
 - H5 source: `src/components/effects/*`.
-- Mini Program target: `src/components/PixelTransition`, `ClickSpark`, `CountUp`, `StoryModal`, `DecreeModal`, `OverlayRoot`, `RoleUpgradeCinematic`, `SlaveStateCinematic`.
+- Mini Program target: `src/components/PixelTransition`, `ClickSpark`, `CountUp`, `StoryModal`, `DecreeModal`, `OverlayRoot`, `RoleUpgradeCinematic`, `SlaveStateCinematic`, `RewardFlight`.
 - Status: baseline migrated.
-- Restored: overlay shell, story modal shell, tone-aware decree modal, upgrade/down/punish decree styling, Mini Program-safe role upgrade cinematic, lightweight decree aura/particle motion, slave enter/restore cinematic overlay, slave ambient overlay, recent reward flight panel, count-up component API, 10 x 18 pixel transition grid, click spark placeholder, swipe hint.
-- Difference: `RoleUpgradeCinematic` and `SlaveStateCinematic` now exist as Mini Program-safe variants, while the full H5 choreography, full projectile `TaskRewardFlight`, and `WifeCommandMotion` remain simplified into Mini Program-safe decree/reward/status feedback and lightweight motion.
+- Restored: overlay shell, story modal shell, tone-aware decree modal, upgrade/down/punish decree styling, Mini Program-safe role upgrade cinematic, lightweight decree aura/particle motion, slave enter/restore cinematic overlay, slave ambient overlay, recent reward flight panel plus fixed reward flight chips, count-up component API, 10 x 18 pixel transition grid, click spark placeholder, swipe hint.
+- Difference: `RoleUpgradeCinematic`, `SlaveStateCinematic`, and reward flight now exist as Mini Program-safe variants, while exact H5 DOM-target reward paths and `WifeCommandMotion` remain simplified into viewport-based/status feedback and lightweight motion.
 - Needs device review: z-index stacking over native page elements and transition smoothness.
 
 ## Package Notes

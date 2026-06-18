@@ -7,6 +7,71 @@
   box-shadow: 4px 4px 0 rgba(74, 51, 40, 0.1);
 }
 
+.reward-flight-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 23000;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.reward-flight-chip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  padding: 0 18px;
+  border: 2px solid rgba(248, 223, 172, .46);
+  border-radius: 4px;
+  background:
+    linear-gradient(180deg, rgba(248, 223, 172, .16), transparent 70%),
+    rgba(10, 7, 4, .88);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 244, 212, .08),
+    0 12px 28px rgba(0, 0, 0, .48);
+  color: #fff0d4;
+  transform: translate(var(--flight-start-x), var(--flight-start-y)) scale(.92);
+  animation: taskRewardFlight 980ms cubic-bezier(.2, .8, .24, 1) var(--flight-delay) both;
+}
+
+.reward-flight-chip::after {
+  content: "";
+  position: absolute;
+  left: -28px;
+  top: 50%;
+  width: 24px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(248, 223, 172, .78));
+  transform: translateY(-50%);
+}
+
+.reward-flight-chip Text,
+.reward-flight-chip text {
+  display: block;
+  color: inherit;
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.reward-flight-chip--money {
+  border-color: rgba(217, 181, 109, .62);
+  color: #fff4c9;
+}
+
+.reward-flight-chip--benefit {
+  border-color: rgba(140, 182, 98, .58);
+  color: #ecffd8;
+}
+
+.reward-flight-chip--level {
+  border-color: rgba(248, 223, 172, .78);
+  color: #fff4d8;
+}
+
 .reward-flight__header {
   display: flex;
   align-items: center;
@@ -99,5 +164,26 @@
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes taskRewardFlight {
+  0% {
+    opacity: 0;
+    transform: translate(var(--flight-start-x), var(--flight-start-y)) scale(.92);
+  }
+
+  14% {
+    opacity: 1;
+  }
+
+  58% {
+    opacity: 1;
+    transform: translate(var(--flight-start-x), calc(var(--flight-start-y) - 58px)) scale(1.02);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(var(--flight-end-x), var(--flight-end-y)) scale(.72);
   }
 }

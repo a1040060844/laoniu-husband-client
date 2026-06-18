@@ -15,7 +15,7 @@ This report records the current local-only Mini Program migration checkpoint.
 - Husband role page restores the H5-style role preview loop: left/right level switching, locked future roles, level dots, hero image and progress/wallet panel.
 - Husband task page has local status filtering, task status cards, submit confirmation, submitted/confirmed timestamps and clean reward text.
 - Husband benefit page has filter tabs, available/pending/cooldown/locked grouping, slave-mode freeze state, cooldown/request details and recent benefit logs.
-- Husband role, task and wallet pages now show a Mini Program-safe recent reward flight panel from local wallet/experience ledger entries.
+- Husband role, task and wallet pages now show a Mini Program-safe recent reward flight panel and fixed reward flight chips from local wallet/experience ledger entries.
 - Wife review page has task/benefit/recent-record tabs, task approve/reject/fail actions, benefit approve/reject actions and clear confirmation dialogs.
 - Local state service is clean UTF-8 and supports `failTask`, rejected-task resubmission, proper benefit cooldown parsing and slave-mode allowance pause.
 - Wife task creation supports A/B linked selection, free text, deadline options, reward types and structured task metadata.
@@ -69,7 +69,7 @@ This report records the current local-only Mini Program migration checkpoint.
 
 - Login role selection, speech bubble feedback, love-day display, bounded actor/cat dragging, random idle bubble rotation and Mini Program-safe actor/cat tap feedback are restored.
 - Exact H5 sprite-sheet frame playback and rich hitbox choreography are still pending because the full `login-final/` sprite batch was kept out of the Mini Program package for size control.
-- H5 cinematic effects now include Mini Program-safe role upgrade and slave enter/restore cinematics. Full H5 choreography for reward flight and wife command motion is still represented by lighter decree/status/reward feedback.
+- H5 cinematic effects now include Mini Program-safe role upgrade, slave enter/restore and reward flight variants. Exact H5 DOM-target reward paths and wife command motion are still represented by lighter viewport-based/status feedback.
 - Role preview visuals are implemented, but final animation timing and phone framing still need WeChat DevTools review.
 - Visual parity still needs WeChat DevTools and real-device review.
 - Asset payload is under 20 MB now, but close enough to the limit that a production/upload pass should still move large images to remote assets or stricter subpackage groups.
