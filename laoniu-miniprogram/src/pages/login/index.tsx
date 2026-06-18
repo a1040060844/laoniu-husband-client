@@ -3,7 +3,11 @@ import { Button, Image, Text, View } from "@tarojs/components";
 import { useEffect, useState, type CSSProperties } from "react";
 import { DesignStage } from "../../components/DesignStage";
 import { SpriteActor } from "../../components/SpriteActor";
-import { loginAsset } from "../../services/assets";
+import { SpriteSheetActor } from "../../components/SpriteSheetActor";
+import husbandBlinkMeta from "../../assets/login-sprites/husband/blink/index.json";
+import wifeBlinkMeta from "../../assets/login-sprites/wife/blink/index.json";
+import catBlueBlinkMeta from "../../assets/login-sprites/cat-blue/blink/index.json";
+import { loginAsset, loginSpriteAsset } from "../../services/assets";
 import { stateService } from "../../services/state";
 import "./index.scss";
 
@@ -187,7 +191,9 @@ export default function LoginPage() {
               onTouchStart={(event) => beginDrag("husband", event)}
               style={dragStyle(offsets.husband)}
             >
-              <SpriteActor src={loginAsset("husband.png")} mood="happy" active={activeTarget === "husband"} dragging={dragState?.target === "husband"} onTap={() => nudge("husband")} />
+              <SpriteActor mood="happy" active={activeTarget === "husband"} dragging={dragState?.target === "husband"} onTap={() => nudge("husband")}>
+                <SpriteSheetActor displayWidth={160} meta={husbandBlinkMeta} playbackRate={2} src={loginSpriteAsset("husband/blink/sprite.png")} />
+              </SpriteActor>
             </View>
             <Button className="btn" loading={selecting === "husband"} onClick={() => handleEnter("husband")}>我是老哥</Button>
           </View>
@@ -200,7 +206,9 @@ export default function LoginPage() {
               onTouchStart={(event) => beginDrag("wife", event)}
               style={dragStyle(offsets.wife)}
             >
-              <SpriteActor src={loginAsset("wife.png")} mood="proud" active={activeTarget === "wife"} dragging={dragState?.target === "wife"} onTap={() => nudge("wife")} />
+              <SpriteActor mood="proud" active={activeTarget === "wife"} dragging={dragState?.target === "wife"} onTap={() => nudge("wife")}>
+                <SpriteSheetActor displayWidth={160} meta={wifeBlinkMeta} playbackRate={2} src={loginSpriteAsset("wife/blink/sprite.png")} />
+              </SpriteActor>
             </View>
             <Button className="btn" loading={selecting === "wife"} onClick={() => handleEnter("wife")}>我是老妞</Button>
           </View>
@@ -214,7 +222,7 @@ export default function LoginPage() {
           style={dragStyle(offsets.cat)}
         >
           <View className={`login-page__cat-wrap ${activeTarget === "cat" ? "is-active" : ""}`} onClick={() => nudge("cat")}>
-            <Image className="login-page__cat pixelated" src={loginAsset("cat-blue.png")} mode="aspectFit" />
+            <SpriteSheetActor className="login-page__cat" displayWidth={104} meta={catBlueBlinkMeta} playbackRate={2} src={loginSpriteAsset("cat-blue/blink/sprite.png")} />
             <View className="login-page__cat-spark" />
           </View>
         </View>

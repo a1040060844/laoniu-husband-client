@@ -1,9 +1,10 @@
 import { Image, View } from "@tarojs/components";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import "./index.scss";
 
 export function SpriteActor({
   active = false,
+  children,
   dragging = false,
   mood = "normal",
   src,
@@ -14,9 +15,10 @@ export function SpriteActor({
   style,
 }: {
   active?: boolean;
+  children?: ReactNode;
   dragging?: boolean;
   mood?: "normal" | "happy" | "proud";
-  src: string;
+  src?: string;
   onTap?: (event: any) => void;
   onTouchEnd?: (event: any) => void;
   onTouchMove?: (event: any) => void;
@@ -32,7 +34,7 @@ export function SpriteActor({
       onTouchStart={onTouchStart}
       style={style}
     >
-      <Image className="sprite-actor__image" src={src} mode="aspectFit" />
+      {children || (src ? <Image className="sprite-actor__image" src={src} mode="aspectFit" /> : null)}
       <View className="sprite-actor__spark sprite-actor__spark--one" />
       <View className="sprite-actor__spark sprite-actor__spark--two" />
       <View className="sprite-actor__spark sprite-actor__spark--three" />

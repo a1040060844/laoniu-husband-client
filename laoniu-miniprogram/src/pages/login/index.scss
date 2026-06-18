@@ -173,7 +173,7 @@
 .login-page__cat-drag {
   position: relative;
   width: 120px;
-  height: 120px;
+  height: 142px;
   margin: 22px auto 0;
   transform: translate(var(--drag-x), var(--drag-y));
   transition: transform .18s ease;
@@ -188,7 +188,7 @@
 .login-page__cat-wrap {
   position: relative;
   width: 120px;
-  height: 120px;
+  height: 142px;
   animation: floatSoft 3.4s ease-in-out infinite;
 }
 
@@ -197,8 +197,7 @@
 }
 
 .login-page__cat {
-  width: 120px;
-  height: 120px;
+  margin: 0 auto;
 }
 
 .login-page__cat-spark {

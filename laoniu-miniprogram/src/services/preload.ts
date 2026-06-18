@@ -10,15 +10,12 @@ const routeAssets: Record<AppRoute, string[]> = {
     loginAsset("subtitle.png"),
     loginAsset("card-husband.png"),
     loginAsset("card-wife.png"),
-    loginAsset("husband.png"),
-    loginAsset("wife.png"),
-    loginAsset("cat-blue.png"),
     loginAsset("speech-husband.png"),
     loginAsset("speech-wife.png")
   ],
   loading: [
     loadingAsset("loading-logo.png"),
-    loadingAsset("loading-panel.png"),
+    loadingAsset("loading-psd-panel.png"),
     loadingAsset("loading-progress-track.png"),
     loadingAsset("loading-progress-block.png")
   ],

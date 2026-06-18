@@ -31,3 +31,7 @@ export function loginAsset(name: string): string {
 export function loadingAsset(name: string): string {
   return publicAsset(`/loading/${name}`);
 }
+
+export function loginSpriteAsset(path: string): string {
+  return publicAsset(`/login-sprites/${path}`);
+}

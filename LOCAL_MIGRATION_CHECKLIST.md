@@ -51,7 +51,7 @@
 - [x] Swipe direction and thresholds reviewed.
 - [x] Modal layering reviewed.
 - [x] Loading states reviewed.
-- [ ] Login sprite-sheet drag and hitbox interactions need second-pass real-device work.
+- [ ] Login full drag/select/random sprite sheets and hitbox choreography need second-pass real-device/package work.
 
 ## Package Checklist
 
@@ -75,7 +75,7 @@
 - `npx tsc --noEmit` in `laoniu-miniprogram/`: passed.
 - `npm run build:weapp` in `laoniu-miniprogram/`: passed and generated `dist/`. Sass `@import` deprecation warnings were cleared by switching the app stylesheet entry to `@use`.
 - Browser API scan in `laoniu-miniprogram/src`: no `ReactDOM`, `localStorage`, `history`, `location`, `web-view`, `document`; only `app.config.ts` contains Taro's `window` config key.
-- Filtered and optimized local assets: `src/assets` and generated `dist/assets` currently contain 63 files, about 18.82 MB.
+- Filtered and optimized local assets: generated `dist` currently contains 124 files, about 19.51 MB total; `dist/assets` contains 55 files, about 19.04 MB after adding selected blink sprite sheets and removing unused loading/static login images.
 
 ## WeChat DevTools Preview
 
@@ -88,6 +88,6 @@
 
 ## Known Follow-Up
 
-- Login now has bounded actor/cat dragging, idle bubble rotation and tap feedback; exact sprite-sheet frame playback remains a package-size-sensitive follow-up.
+- Login now has selected husband/wife/cat blink sprite-sheet playback, bounded actor/cat dragging, idle bubble rotation and tap feedback; full drag/select/random sprite sheets remain a package-size-sensitive follow-up.
 - H5 cinematic effects are approximated by lightweight Taro components and need real-device timing polish.
 - H5 source package still has unrelated dirty changes; this migration avoided editing `husband-client/`.

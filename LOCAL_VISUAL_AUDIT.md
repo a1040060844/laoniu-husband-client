@@ -7,11 +7,11 @@ Use `husband-client/` as the visual and behavior source of truth. For each migra
 ## Login Page
 
 - H5 source: `husband-client/src/pages/LoginPage.tsx`, `LoginPage.css`, `loginSpriteData.ts`, `public/assets/login/`, `src/assets/login-final/`.
-- Mini Program target: `laoniu-miniprogram/src/pages/login/index.tsx`, `index.scss`, `components/SpriteActor/`.
-- Status: first-pass migrated.
-- Restored: room background, title/subtitle images, love-day plaque, husband/wife role cards, role selection feedback, cat/reset area, speech bubble feedback, pixel rendering, role actor tap-pop feedback, cat tap feedback, bounded actor/cat dragging, random idle bubble rotation and light floating motion.
-- Difference: the H5 sprite-sheet frame playback is still represented by static actors plus Mini Program-safe drag/pop/spark/idle feedback. `login-final/` was not copied into the Mini Program package to avoid a large unused asset batch.
-- Needs device review: drag feel on real touch screens, touch target size, image scaling on narrow phones, and whether selective sprite-sheet frame assets should be reintroduced without blowing up package size.
+- Mini Program target: `laoniu-miniprogram/src/pages/login/index.tsx`, `index.scss`, `components/SpriteActor/`, `components/SpriteSheetActor/`.
+- Status: second-pass migrated.
+- Restored: room background, title/subtitle images, love-day plaque, husband/wife role cards, role selection feedback, cat/reset area, speech bubble feedback, pixel rendering, selected husband/wife/cat blink sprite-sheet playback, role actor tap-pop feedback, cat tap feedback, bounded actor/cat dragging, random idle bubble rotation and light floating motion.
+- Difference: selected blink sprite sheets are packaged, but the full `login-final/` batch, drag sheets, select sheets, random action sheets and exact H5 hitbox choreography are still omitted for package-size control.
+- Needs device review: sprite playback smoothness, drag feel on real touch screens, touch target size, image scaling on narrow phones, and whether additional sprite-sheet frame assets should move to remote assets or stricter package groups.
 
 ## Loading Page
 
@@ -52,6 +52,6 @@ Use `husband-client/` as the visual and behavior source of truth. For each migra
 ## Package Notes
 
 - `scripts/copy-assets.mjs` copies filtered local assets into `dist/assets` after Taro build.
-- Source-only directories such as loading PSD files and the unused `login-final/` batch were removed from `laoniu-miniprogram/src/assets`.
-- Unused full-page task/wife/reference images were not kept in the baseline package; current asset payload is 63 files, about 18.82 MB after resizing.
+- Source-only directories such as loading PSD files and the full `login-final/` batch were kept out of `laoniu-miniprogram/src/assets`; only selected blink sprite sheets are packaged under `login-sprites/`.
+- Unused full-page task/wife/reference images and unused loading/login static images were not kept in the baseline package; generated `dist` currently has 124 files, about 19.51 MB total, with `dist/assets` at about 19.04 MB.
 - Future production packaging should move large role/benefit images behind remote assets or stricter subpackage asset groups if WeChat package size becomes tight.
