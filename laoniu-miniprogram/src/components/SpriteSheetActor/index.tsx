@@ -1,4 +1,5 @@
 import { Image, View } from "@tarojs/components";
+import Taro from "@tarojs/taro";
 import { useEffect, useMemo, useState } from "react";
 import "./index.scss";
 
@@ -17,6 +18,23 @@ export interface SpriteSheetMeta {
   frames: SpriteSheetFrame[];
 }
 
+const remoteMetaCache = new Map<string, SpriteSheetMeta>();
+
+function isSpriteSheetMeta(value: unknown): value is SpriteSheetMeta {
+  const meta = value as SpriteSheetMeta;
+  return Boolean(
+    meta &&
+      meta.frame_size &&
+      typeof meta.frame_size.w === "number" &&
+      typeof meta.frame_size.h === "number" &&
+      meta.sheet_size &&
+      typeof meta.sheet_size.w === "number" &&
+      typeof meta.sheet_size.h === "number" &&
+      Array.isArray(meta.frames) &&
+      meta.frames.length > 0,
+  );
+}
+
 function frameDelay(meta: SpriteSheetMeta, frameIndex: number, fps: number, playbackRate: number) {
   const fallback = 1000 / fps;
   const current = meta.frames[frameIndex];
@@ -26,6 +44,76 @@ function frameDelay(meta: SpriteSheetMeta, frameIndex: number, fps: number, play
   const delay = raw > 0 && raw < 10 ? raw * 1000 : raw;
   if (!Number.isFinite(delay) || delay < 16 || delay > 2500) return fallback;
   return delay / Math.max(playbackRate, 0.1);
+}
+
+export function RemoteSpriteSheetActor({
+  className = "",
+  displayWidth,
+  fallbackMeta,
+  fallbackSrc,
+  fps = 5,
+  metaUrl,
+  playbackRate = 1,
+  src,
+}: {
+  className?: string;
+  displayWidth: number;
+  fallbackMeta: SpriteSheetMeta;
+  fallbackSrc: string;
+  fps?: number;
+  metaUrl?: string;
+  playbackRate?: number;
+  src?: string;
+}) {
+  const [remoteMeta, setRemoteMeta] = useState<SpriteSheetMeta | null>(() => {
+    if (!metaUrl) return null;
+    return remoteMetaCache.get(metaUrl) ?? null;
+  });
+
+  useEffect(() => {
+    if (!metaUrl || !src) {
+      setRemoteMeta(null);
+      return undefined;
+    }
+
+    const cached = remoteMetaCache.get(metaUrl);
+    if (cached) {
+      setRemoteMeta(cached);
+      return undefined;
+    }
+
+    setRemoteMeta(null);
+    let cancelled = false;
+    Taro.request({ url: metaUrl })
+      .then((response) => {
+        if (cancelled) return;
+        if (isSpriteSheetMeta(response.data)) {
+          remoteMetaCache.set(metaUrl, response.data);
+          setRemoteMeta(response.data);
+        } else {
+          setRemoteMeta(null);
+        }
+      })
+      .catch((error) => {
+        console.warn("remote sprite meta load failed", metaUrl, error);
+        if (!cancelled) setRemoteMeta(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [metaUrl, src]);
+
+  return (
+    <SpriteSheetActor
+      className={className}
+      displayWidth={displayWidth}
+      fps={fps}
+      meta={remoteMeta ?? fallbackMeta}
+      playbackRate={playbackRate}
+      src={remoteMeta && src ? src : fallbackSrc}
+    />
+  );
 }
 
 export function SpriteSheetActor({

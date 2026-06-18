@@ -3,16 +3,18 @@ import { Button, Image, Text, View } from "@tarojs/components";
 import { useEffect, useState, type CSSProperties } from "react";
 import { DesignStage } from "../../components/DesignStage";
 import { SpriteActor } from "../../components/SpriteActor";
-import { SpriteSheetActor } from "../../components/SpriteSheetActor";
+import { RemoteSpriteSheetActor } from "../../components/SpriteSheetActor";
 import husbandBlinkMeta from "../../assets/login-sprites/husband/blink/index.json";
 import wifeBlinkMeta from "../../assets/login-sprites/wife/blink/index.json";
 import catBlueBlinkMeta from "../../assets/login-sprites/cat-blue/blink/index.json";
-import { loginAsset, loginSpriteAsset } from "../../services/assets";
+import { isRemoteAssetMode } from "../../config/assets";
+import { loginAsset, loginFullSpriteAsset, loginSpriteAsset } from "../../services/assets";
 import { stateService } from "../../services/state";
 import "./index.scss";
 
 type RoleRoute = "husband" | "wife";
 type BubbleTarget = RoleRoute | "cat";
+type FullSpriteActor = "husband" | "wife" | "cat-blue";
 interface Position {
   x: number;
   y: number;
@@ -81,6 +83,11 @@ function dragStyle(position: Position) {
     "--drag-x": `${position.x}px`,
     "--drag-y": `${position.y}px`
   } as CSSProperties;
+}
+
+function fullSpritePath(actor: FullSpriteActor, action: string, file: "index.json" | "sprite.png") {
+  if (!isRemoteAssetMode()) return undefined;
+  return loginFullSpriteAsset(`${actor}/${action}/${file}`);
 }
 
 function enter(role: RoleRoute) {
@@ -165,6 +172,10 @@ export default function LoginPage() {
     Taro.showToast({ title: "已重置", icon: "success" });
   }
 
+  const husbandAction = selecting === "husband" ? "select" : dragState?.target === "husband" ? "drag" : activeTarget === "husband" ? "adjust-glasses" : "blink";
+  const wifeAction = selecting === "wife" ? "select" : dragState?.target === "wife" ? "drag" : activeTarget === "wife" ? "thinking" : "blink";
+  const catAction = dragState?.target === "cat" ? "drag" : activeTarget === "cat" ? "yawn" : "blink";
+
   return (
     <DesignStage className={`login-page ${selecting ? "is-selecting" : ""}`}>
       <Image className="login-page__bg" src={loginAsset("bg-room.png")} mode="aspectFill" />
@@ -192,7 +203,14 @@ export default function LoginPage() {
               style={dragStyle(offsets.husband)}
             >
               <SpriteActor mood="happy" active={activeTarget === "husband"} dragging={dragState?.target === "husband"} onTap={() => nudge("husband")}>
-                <SpriteSheetActor displayWidth={160} meta={husbandBlinkMeta} playbackRate={2} src={loginSpriteAsset("husband/blink/sprite.png")} />
+                <RemoteSpriteSheetActor
+                  displayWidth={160}
+                  fallbackMeta={husbandBlinkMeta}
+                  fallbackSrc={loginSpriteAsset("husband/blink/sprite.png")}
+                  metaUrl={fullSpritePath("husband", husbandAction, "index.json")}
+                  playbackRate={2}
+                  src={fullSpritePath("husband", husbandAction, "sprite.png")}
+                />
               </SpriteActor>
             </View>
             <Button className="btn" loading={selecting === "husband"} onClick={() => handleEnter("husband")}>我是老哥</Button>
@@ -207,7 +225,14 @@ export default function LoginPage() {
               style={dragStyle(offsets.wife)}
             >
               <SpriteActor mood="proud" active={activeTarget === "wife"} dragging={dragState?.target === "wife"} onTap={() => nudge("wife")}>
-                <SpriteSheetActor displayWidth={160} meta={wifeBlinkMeta} playbackRate={2} src={loginSpriteAsset("wife/blink/sprite.png")} />
+                <RemoteSpriteSheetActor
+                  displayWidth={160}
+                  fallbackMeta={wifeBlinkMeta}
+                  fallbackSrc={loginSpriteAsset("wife/blink/sprite.png")}
+                  metaUrl={fullSpritePath("wife", wifeAction, "index.json")}
+                  playbackRate={2}
+                  src={fullSpritePath("wife", wifeAction, "sprite.png")}
+                />
               </SpriteActor>
             </View>
             <Button className="btn" loading={selecting === "wife"} onClick={() => handleEnter("wife")}>我是老妞</Button>
@@ -222,7 +247,15 @@ export default function LoginPage() {
           style={dragStyle(offsets.cat)}
         >
           <View className={`login-page__cat-wrap ${activeTarget === "cat" ? "is-active" : ""}`} onClick={() => nudge("cat")}>
-            <SpriteSheetActor className="login-page__cat" displayWidth={104} meta={catBlueBlinkMeta} playbackRate={2} src={loginSpriteAsset("cat-blue/blink/sprite.png")} />
+            <RemoteSpriteSheetActor
+              className="login-page__cat"
+              displayWidth={104}
+              fallbackMeta={catBlueBlinkMeta}
+              fallbackSrc={loginSpriteAsset("cat-blue/blink/sprite.png")}
+              metaUrl={fullSpritePath("cat-blue", catAction, "index.json")}
+              playbackRate={2}
+              src={fullSpritePath("cat-blue", catAction, "sprite.png")}
+            />
             <View className="login-page__cat-spark" />
           </View>
         </View>

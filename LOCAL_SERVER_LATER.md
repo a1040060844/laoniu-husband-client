@@ -94,6 +94,22 @@ export const ASSET_CONFIG = {
 
 `remoteBase` must point to the public URL of the uploaded `assets` directory. For example, `publicAsset("/roles/role-00.png")` will resolve to `https://your-cdn.example.com/assets/roles/role-00.png`.
 
+### Login Sprite Remote Mode
+
+Local mode keeps only selected blink sprite sheets inside the Mini Program package. Remote mode can use the complete exported H5 login sprite batch from:
+
+```text
+assets/login-sprites-full/
+```
+
+The login page already switches these actions when `ASSET_CONFIG.mode` is `"remote"`:
+
+- husband: `blink`, `adjust-glasses`, `drag`, `select`
+- wife: `blink`, `thinking`, `drag`, `select`
+- cat-blue: `blink`, `drag`, `yawn`
+
+Frame metadata is loaded with `Taro.request` from the remote `index.json`. If the request fails or the remote host is not configured as a legal WeChat domain yet, the component falls back to the local blink animation instead of blocking the login page.
+
 ## WeChat Production Requirements
 
 - HTTPS server domain.

@@ -38,3 +38,7 @@ export function loadingAsset(name: string): string {
 export function loginSpriteAsset(path: string): string {
   return publicAsset(`/login-sprites/${path}`);
 }
+
+export function loginFullSpriteAsset(path: string): string {
+  return publicAsset(`/login-sprites-full/${path}`);
+}
