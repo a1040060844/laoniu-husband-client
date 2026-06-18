@@ -36,6 +36,7 @@
 - [x] Husband role
 - [x] Husband role H5-style bottom panel and guide controls
 - [x] Husband benefit
+- [x] Husband benefit H5-style stage and benefit bubble rail
 - [x] Husband task
 - [x] Husband slave
 - [x] Husband wallet

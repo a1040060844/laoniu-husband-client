@@ -27,9 +27,9 @@ Use `husband-client/` as the visual and behavior source of truth. For each migra
 - H5 source: `RolePage`, `BenefitPage`, `TaskPage`, `SlavePage`, `HusbandVerticalPager`.
 - Mini Program target: `src/subpackages/husband/pages/*`.
 - Status: first-pass migrated.
-- Restored: role/progress/wallet display, H5-style role full-screen preview shell, dark scrim, top return control, top-right benefit guide, bottom glass biography/progress/wallet panel, bottom task entry, role preview left/right switching, locked future-role state, level dot row, task filter tabs, task status cards, submit confirmation, benefit filter tabs, locked/cooldown/pending/available benefit states, recent benefit records, slave state display, slave-mode ambient overlay, wallet ledger display, recent reward flight panel, Mini Program-safe reward flight overlay, vertical swipe helper.
-- Difference: H5 micro-animations, exact DOM-to-target reward projectile paths, exact role navigator art and full pager choreography are simplified into Mini Program-safe reward cards, viewport-based reward flight chips, native button controls and page motion.
-- Needs device review: role image framing under the bottom panel, top button hitboxes, long list scrolling, button density, and subpackage navigation.
+- Restored: role/progress/wallet display, H5-style role full-screen preview shell, dark scrim, top return control, top-right benefit guide, bottom glass biography/progress/wallet panel, bottom task entry, role preview left/right switching, locked future-role state, level dot row, H5-style benefit stage with current-role background and horizontal benefit bubbles, task filter tabs, task status cards, submit confirmation, benefit filter tabs, locked/cooldown/pending/available benefit states, recent benefit records, slave state display, slave-mode ambient overlay, wallet ledger display, recent reward flight panel, Mini Program-safe reward flight overlay, vertical swipe helper.
+- Difference: H5 micro-animations, benefit bubble auto-scroll/burst timing, exact DOM-to-target reward projectile paths, exact role navigator art and full pager choreography are simplified into Mini Program-safe reward cards, viewport-based reward flight chips, native button controls and page motion.
+- Needs device review: role image framing under the bottom panel, benefit bubble track touch feel, top button hitboxes, long list scrolling, button density, and subpackage navigation.
 
 ## Wife Pages
 

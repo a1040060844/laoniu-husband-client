@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import Taro, { useDidShow } from "@tarojs/taro";
-import { Button, Image, Text, View } from "@tarojs/components";
+import { Button, Image, ScrollView, Text, View } from "@tarojs/components";
 import { HusbandDecreeNotice } from "../../../../components/HusbandDecreeNotice";
 import { roles } from "../../../../data/roles";
 import { stateService } from "../../../../services/state";
@@ -47,6 +47,12 @@ export default function HusbandBenefitPage() {
     return state.benefits.filter((benefit) => filter === "all" || benefitKind(state, benefit) === filter);
   }, [filter, state]);
 
+  const cloudBenefits = useMemo(() => {
+    if (!state) return [];
+    const unlocked = state.benefits.filter((benefit) => state.progress.level >= benefit.levelRequired);
+    return (unlocked.length ? unlocked : state.benefits).slice(0, 8);
+  }, [state]);
+
   if (!state) return <View className="page"><Text>加载中...</Text></View>;
 
   async function request(benefit: Benefit) {
@@ -74,9 +80,34 @@ export default function HusbandBenefitPage() {
     .slice(0, 5);
 
   return (
-    <View className="page scene-page benefit-page">
-      <Text className="title">权益</Text>
-      <Text className="subtitle">当前职务：{currentRole.title} / 可申请 {availableCount} / 待审批 {pendingCount}</Text>
+    <View className={`page scene-page benefit-page ${state.punishment.status === "slave" ? "benefit-page--frozen" : ""}`}>
+      <View className="benefit-stage">
+        <Image className="benefit-stage__image pixelated" src={currentRole.benefitImage} mode="aspectFill" />
+        <View className="benefit-stage__scrim" />
+        <View className="benefit-stage__header">
+          <Text className="benefit-stage__level">Lv. {String(state.progress.level).padStart(2, "0")}</Text>
+          <Text className="benefit-stage__title">{currentRole.title}</Text>
+          <Text className="benefit-stage__meta">可申请 {availableCount} / 待审批 {pendingCount}</Text>
+        </View>
+        <ScrollView className="benefit-cloud" scrollX enhanced showScrollbar={false}>
+          <View className="benefit-cloud__track">
+            {cloudBenefits.map((benefit, index) => {
+              const kind = benefitKind(state, benefit);
+              return (
+                <Button
+                  key={benefit.id}
+                  className={`benefit-bubble-mini benefit-bubble-mini--${kind}`}
+                  style={{ marginTop: `${index % 2 === 0 ? 4 : 38}px` }}
+                  onClick={() => setFilter(kind)}
+                >
+                  <Text className="benefit-bubble-mini__name">{benefit.name}</Text>
+                  <Text className="benefit-bubble-mini__state">{benefitStateLabel(state, benefit)}</Text>
+                </Button>
+              );
+            })}
+          </View>
+        </ScrollView>
+      </View>
       {state.punishment.status === "slave" ? <View className="empty benefit-freeze">卖身奴隶状态下权益暂停。</View> : null}
 
       <View className="benefit-filter-row">

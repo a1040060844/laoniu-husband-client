@@ -15,7 +15,7 @@ This report records the current local-only Mini Program migration checkpoint.
 - Husband role page restores the H5-style role preview loop: left/right level switching, locked future roles, level dots, hero image and progress/wallet panel.
 - Husband role page now moves closer to the H5 full-screen cinema layout: dark scrim, top return button, top-right benefit guide, bottom glass biography/progress/wallet panel and bottom task entry.
 - Husband task page has local status filtering, task status cards, submit confirmation, submitted/confirmed timestamps and clean reward text.
-- Husband benefit page has filter tabs, available/pending/cooldown/locked grouping, slave-mode freeze state, cooldown/request details and recent benefit logs.
+- Husband benefit page has an H5-style benefit stage with current-role background art and horizontal benefit bubbles, plus filter tabs, available/pending/cooldown/locked grouping, slave-mode freeze state, cooldown/request details and recent benefit logs.
 - Husband role, task and wallet pages now show a Mini Program-safe recent reward flight panel and fixed reward flight chips from local wallet/experience ledger entries.
 - Wife dashboard and review flow now include Mini Program-safe command motion: active command highlight, dimmed sibling commands, pending red dots and danger breathing feedback.
 - Wife review page has task/benefit/recent-record tabs, task approve/reject/fail actions, benefit approve/reject actions and clear confirmation dialogs.
