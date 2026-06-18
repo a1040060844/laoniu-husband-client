@@ -11,7 +11,7 @@ This report records the current local-only Mini Program migration checkpoint.
 - Domain data and pure logic were copied from the H5 project where suitable: roles, benefits, task presets, task modules, progression, task schedule and task reward helpers. User-facing role, benefit, task and reward copy is now clean UTF-8 Chinese.
 - The visual migration is a first-pass Mini Program version with targeted second-pass polish: structure, assets, state, flows and core UI are present; login includes love-day display, speech feedback, bounded role/cat dragging, role selection feedback, role/cat tap-pop feedback and reset confirmation.
 - Loading now uses the source loading logo/panel/person/error/button assets, rotating task copy and a 13-segment progress rhythm.
-- Slave mode is operable from the wife dashboard and visible on the husband slave page. Opening/restoring the state writes logs, decrees and punishment ledger entries.
+- Slave mode is operable from the wife dashboard and visible on the husband slave page. Opening/restoring the state writes logs, decrees and punishment ledger entries, and now shows a Mini Program-safe enter/restore cinematic plus slave-mode ambient overlay.
 - Husband role page restores the H5-style role preview loop: left/right level switching, locked future roles, level dots, hero image and progress/wallet panel.
 - Husband task page has local status filtering, task status cards, submit confirmation, submitted/confirmed timestamps and clean reward text.
 - Husband benefit page has filter tabs, available/pending/cooldown/locked grouping, slave-mode freeze state, cooldown/request details and recent benefit logs.
@@ -69,7 +69,7 @@ This report records the current local-only Mini Program migration checkpoint.
 
 - Login role selection, speech bubble feedback, love-day display, bounded actor/cat dragging, random idle bubble rotation and Mini Program-safe actor/cat tap feedback are restored.
 - Exact H5 sprite-sheet frame playback and rich hitbox choreography are still pending because the full `login-final/` sprite batch was kept out of the Mini Program package for size control.
-- H5 cinematic effects such as upgrade, slave state, reward flight and wife command motion are represented by lightweight Mini Program-safe decree and reward feedback; full choreography is still pending.
+- H5 cinematic effects such as upgrade, reward flight and wife command motion are represented by lightweight Mini Program-safe decree/status/reward feedback; slave state enter/restore now has a dedicated Mini Program-safe cinematic, while full H5 choreography is still pending.
 - Role preview visuals are implemented, but final animation timing and phone framing still need WeChat DevTools review.
 - Visual parity still needs WeChat DevTools and real-device review.
 - Asset payload is under 20 MB now, but close enough to the limit that a production/upload pass should still move large images to remote assets or stricter subpackage groups.

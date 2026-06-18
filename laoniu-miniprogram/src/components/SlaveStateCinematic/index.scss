@@ -1,0 +1,130 @@
+.slave-state-ambient {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 58%, transparent 0 43%, rgba(70, 8, 7, .32) 100%),
+    repeating-linear-gradient(
+      180deg,
+      rgba(255, 206, 188, .035) 0,
+      rgba(255, 206, 188, .035) 1px,
+      transparent 1px,
+      transparent 8px
+    );
+  opacity: .52;
+}
+
+.slave-state-cinematic {
+  position: fixed;
+  inset: 0;
+  z-index: 24500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  color: #ffe2ce;
+}
+
+.slave-state-cinematic__vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(10, 5, 3, .45), rgba(67, 5, 5, .72)),
+    rgba(0, 0, 0, .52);
+  animation: slaveStateVignette 420ms ease-out both;
+}
+
+.slave-state-cinematic__panel {
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  width: 86vw;
+  max-width: 620px;
+  min-height: 320px;
+  padding: 38px 30px;
+  border: 2px solid rgba(217, 70, 62, .62);
+  background:
+    linear-gradient(180deg, rgba(217, 70, 62, .16), transparent 52%),
+    rgba(12, 5, 4, .92);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 214, 196, .08),
+    0 24px 70px rgba(0, 0, 0, .78);
+  text-align: center;
+  animation: slaveStatePanel 520ms steps(5, end) both;
+}
+
+.slave-state-cinematic__eyebrow {
+  display: block;
+  margin-bottom: 10px;
+  color: rgba(255, 206, 188, .82);
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.slave-state-cinematic__title {
+  display: block;
+  margin-bottom: 28px;
+  color: #ffe2ce;
+  font-size: 50px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.slave-state-cinematic__lines {
+  display: grid;
+  gap: 12px;
+}
+
+.slave-state-cinematic__lines Text,
+.slave-state-cinematic__lines text {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(217, 70, 62, .28);
+  background: rgba(0, 0, 0, .26);
+  color: rgba(255, 226, 206, .84);
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.slave-state-cinematic--restore .slave-state-cinematic__panel {
+  border-color: rgba(248, 223, 172, .52);
+  background:
+    linear-gradient(180deg, rgba(248, 223, 172, .13), transparent 52%),
+    rgba(9, 6, 4, .92);
+}
+
+.slave-state-cinematic--restore .slave-state-cinematic__lines Text,
+.slave-state-cinematic--restore .slave-state-cinematic__lines text {
+  border-color: rgba(248, 223, 172, .24);
+}
+
+.slave-state-cinematic__wallet {
+  animation: slaveStateWallet 460ms steps(4, end) 260ms both;
+}
+
+@keyframes slaveStateVignette {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slaveStatePanel {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes slaveStateWallet {
+  0%, 100% { transform: translateX(0); }
+  22% { transform: translateX(-6px); }
+  44% { transform: translateX(5px); }
+  66% { transform: translateX(-3px); }
+}

@@ -2,12 +2,14 @@ import { useState } from "react";
 import Taro, { useDidShow } from "@tarojs/taro";
 import { Button, Text, View } from "@tarojs/components";
 import { roles } from "../../../../data/roles";
+import { SlaveStateCinematic, type SlaveStateCinematicEvent } from "../../../../components/SlaveStateCinematic";
 import { stateService } from "../../../../services/state";
 import type { AppState } from "../../../../services/state";
 import "./index.scss";
 
 export default function WifeDashboardPage() {
   const [state, setState] = useState<AppState>();
+  const [slaveEvent, setSlaveEvent] = useState<SlaveStateCinematicEvent | null>(null);
 
   async function reload() {
     setState(await stateService.loadState());
@@ -31,6 +33,7 @@ export default function WifeDashboardPage() {
       requiredRecoveryExp: 100,
     });
     setState(next);
+    setSlaveEvent({ id: `slave-enter-${Date.now()}`, mode: "enter", amount: state?.progress.wallet });
     await Taro.showToast({ title: "已开启", icon: "success" });
   }
 
@@ -44,6 +47,7 @@ export default function WifeDashboardPage() {
     if (!result.confirm) return;
     const next = await stateService.restoreNormalMode({ reason: "老妞后台手动恢复" });
     setState(next);
+    setSlaveEvent({ id: `slave-restore-${Date.now()}`, mode: "restore", amount: next.progress.wallet });
     await Taro.showToast({ title: "已恢复", icon: "success" });
   }
 
@@ -103,6 +107,7 @@ export default function WifeDashboardPage() {
         <Button className="btn btn-secondary" onClick={resetLocalData}>重置数据</Button>
         <Button className="btn btn-secondary" onClick={() => Taro.reLaunch({ url: "/pages/login/index" })}>返回登录</Button>
       </View>
+      <SlaveStateCinematic ambient={slaveMode} event={slaveEvent} onComplete={() => setSlaveEvent(null)} />
     </View>
   );
 }

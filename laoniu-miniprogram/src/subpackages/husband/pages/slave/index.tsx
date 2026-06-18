@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useDidShow } from "@tarojs/taro";
 import { Image, Text, View } from "@tarojs/components";
 import { HusbandDecreeNotice } from "../../../../components/HusbandDecreeNotice";
+import { SlaveStateCinematic } from "../../../../components/SlaveStateCinematic";
 import { stateService } from "../../../../services/state";
 import { publicAsset } from "../../../../services/assets";
 import type { AppState } from "../../../../services/state";
@@ -27,6 +28,7 @@ export default function HusbandSlavePage() {
 
   return (
     <View className="page scene-page">
+      <SlaveStateCinematic ambient={slaveMode} />
       <Text className="title">卖身奴隶状态</Text>
       <Image className="slave-image pixelated" src={publicAsset("/assets/slave/slave-page-latest.png")} mode="aspectFit" />
       <View className={`panel section slave-panel ${slaveMode ? "is-slave" : ""}`}>
