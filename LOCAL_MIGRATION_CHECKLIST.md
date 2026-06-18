@@ -34,6 +34,7 @@
 - [x] Login remote H5-like independent stage layout
 - [x] Loading
 - [x] Husband role
+- [x] Husband role H5-style bottom panel and guide controls
 - [x] Husband benefit
 - [x] Husband task
 - [x] Husband slave

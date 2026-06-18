@@ -13,6 +13,7 @@ This report records the current local-only Mini Program migration checkpoint.
 - Loading now uses the source loading logo/panel/person/error/button assets, rotating task copy and a 13-segment progress rhythm.
 - Slave mode is operable from the wife dashboard and visible on the husband slave page. Opening/restoring the state writes logs, decrees and punishment ledger entries, and now shows a Mini Program-safe enter/restore cinematic plus slave-mode ambient overlay.
 - Husband role page restores the H5-style role preview loop: left/right level switching, locked future roles, level dots, hero image and progress/wallet panel.
+- Husband role page now moves closer to the H5 full-screen cinema layout: dark scrim, top return button, top-right benefit guide, bottom glass biography/progress/wallet panel and bottom task entry.
 - Husband task page has local status filtering, task status cards, submit confirmation, submitted/confirmed timestamps and clean reward text.
 - Husband benefit page has filter tabs, available/pending/cooldown/locked grouping, slave-mode freeze state, cooldown/request details and recent benefit logs.
 - Husband role, task and wallet pages now show a Mini Program-safe recent reward flight panel and fixed reward flight chips from local wallet/experience ledger entries.
@@ -73,7 +74,7 @@ This report records the current local-only Mini Program migration checkpoint.
 - Login role selection, speech bubble feedback, love-day display, selected blink sprite-sheet playback, bounded actor/cat dragging, random idle bubble rotation and Mini Program-safe actor/cat tap feedback are restored.
 - Exact H5 drag/select/random sprite sheets and rich hitbox choreography are still pending because the full `login-final/` sprite batch was kept out of the Mini Program package for size control.
 - H5 cinematic effects now include Mini Program-safe role upgrade, slave enter/restore, reward flight and wife command motion variants. Exact H5 DOM-target reward paths and DOM query based command toggling are replaced by viewport-based paths and explicit Taro command wrappers.
-- Role preview visuals are implemented, but final animation timing and phone framing still need WeChat DevTools review.
+- Role preview visuals now include the H5-style bottom panel and top guide controls, but final animation timing, image framing and phone hitbox review still need WeChat DevTools review.
 - Visual parity still needs WeChat DevTools and real-device review.
 - Asset payload is under 20 MB now, but close enough to the limit that a production/upload pass should still move large images to remote assets or stricter subpackage groups.
 - `scripts/audit-package.mjs` now guards future work by failing over the hard package limit and warning when new assets push the package near the limit.

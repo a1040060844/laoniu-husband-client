@@ -41,10 +41,14 @@ export default function HusbandRolePage() {
 
   return (
     <View className={`page scene-page role-page role-page--level-${String(previewLevel).padStart(2, "0")}`}>
+      <View className="role-scrim" />
       <View className="role-hero">
         <Image className={`role-hero__image pixelated ${lockedPreview ? "is-locked" : ""}`} src={previewRole.roleImage} mode="aspectFit" />
         {lockedPreview ? <View className="role-hero__lock"><Text>Lv.{previewLevel} 解锁</Text></View> : null}
       </View>
+
+      <Button className="role-return" onClick={() => Taro.reLaunch({ url: "/pages/login/index" })}>返回</Button>
+      <Button className="role-side-guide" onClick={() => Taro.navigateTo({ url: "/subpackages/husband/pages/benefit/index" })}>权益</Button>
 
       <View className="role-header">
         <Button className="role-nav" disabled={previewLevel <= 0} onClick={() => movePreview(-1)}>‹</Button>
@@ -55,30 +59,33 @@ export default function HusbandRolePage() {
         <Button className="role-nav" disabled={previewLevel >= roles.length - 1} onClick={() => movePreview(1)}>›</Button>
       </View>
 
-      <View className="section panel role-card">
-        <Text className="panel-title">人物小传</Text>
-        <Text className="subtitle">{previewRole.biography}</Text>
+      <View className="role-bottom-panel">
+        <View className="section panel role-card">
+          <Text className="panel-title">人物小传</Text>
+          <Text className="subtitle">{previewRole.biography}</Text>
 
-        {!lockedPreview ? (
-          <>
-            <View className="role-card__bar"><View className="role-card__fill" style={{ width: `${expPercent}%` }} /></View>
-            <Text className="subtitle">EXP {state.progress.exp}/{currentRole.expRequired}</Text>
-            <Text className="subtitle">零花钱：{slaveMode ? "暂停" : `${state.progress.wallet} 元`} / 月标准 {currentRole.salary} 元</Text>
-          </>
-        ) : (
-          <Text className="subtitle">这个职务还没解锁，继续完成任务升级。</Text>
-        )}
+          {!lockedPreview ? (
+            <>
+              <View className="role-card__bar"><View className="role-card__fill" style={{ width: `${expPercent}%` }} /></View>
+              <Text className="subtitle">EXP {state.progress.exp}/{currentRole.expRequired}</Text>
+              <Text className="subtitle">零花钱：{slaveMode ? "暂停" : `${state.progress.wallet} 元`} / 月标准 {currentRole.salary} 元</Text>
+            </>
+          ) : (
+            <Text className="subtitle">这个职务还没解锁，继续完成任务升级。</Text>
+          )}
 
-        <View className="role-dots">
-          {roles.map((item) => (
-            <Text key={item.level} className={`role-dot ${item.level === previewLevel ? "is-active" : ""} ${item.level > state.progress.level ? "is-locked" : ""}`} />
-          ))}
+          <View className="role-dots">
+            {roles.map((item) => (
+              <Text key={item.level} className={`role-dot ${item.level === previewLevel ? "is-active" : ""} ${item.level > state.progress.level ? "is-locked" : ""}`} />
+            ))}
+          </View>
         </View>
+        <Button className="role-bottom-task" onClick={() => Taro.navigateTo({ url: "/subpackages/husband/pages/task/index" })}>任务</Button>
       </View>
 
       <RewardFlight entries={state.walletLedger} />
 
-      <View className="section row-wrap">
+      <View className="section row-wrap role-action-row">
         <Button className="btn" onClick={() => Taro.navigateTo({ url: "/subpackages/husband/pages/benefit/index" })}>权益</Button>
         <Button className="btn" onClick={() => Taro.navigateTo({ url: "/subpackages/husband/pages/task/index" })}>任务</Button>
         <Button className="btn btn-secondary" onClick={() => Taro.navigateTo({ url: "/subpackages/husband/pages/wallet/index" })}>流水</Button>
