@@ -40,6 +40,7 @@
 - [x] Husband task
 - [x] Husband task H5-style overview stage and dark task cards
 - [x] Husband slave
+- [x] Husband slave H5-style full-screen status and recovery panel
 - [x] Husband wallet
 - [x] Husband wallet H5-style ledger stage and timeline
 - [x] Wife dashboard
