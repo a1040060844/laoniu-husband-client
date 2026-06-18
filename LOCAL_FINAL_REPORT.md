@@ -14,7 +14,7 @@ This report records the current local-only Mini Program migration checkpoint.
 - Slave mode is operable from the wife dashboard and visible on the husband slave page. Opening/restoring the state writes logs, decrees and punishment ledger entries, and now shows a Mini Program-safe enter/restore cinematic plus slave-mode ambient overlay.
 - Husband role page restores the H5-style role preview loop: left/right level switching, locked future roles, level dots, hero image and progress/wallet panel.
 - Husband role page now moves closer to the H5 full-screen cinema layout: dark scrim, top return button, top-right benefit guide, bottom glass biography/progress/wallet panel and bottom task entry.
-- Husband task page has local status filtering, task status cards, submit confirmation, submitted/confirmed timestamps and clean reward text.
+- Husband task page has an H5-style dark task stage with current-role avatar, today's execution overview, monthly harvest stats, local status filtering, dark glass task cards, submit confirmation, submitted/confirmed timestamps and clean reward text.
 - Husband benefit page has an H5-style benefit stage with current-role background art and horizontal benefit bubbles, plus filter tabs, available/pending/cooldown/locked grouping, slave-mode freeze state, cooldown/request details and recent benefit logs.
 - Husband role, task and wallet pages now show a Mini Program-safe recent reward flight panel and fixed reward flight chips from local wallet/experience ledger entries.
 - Wife dashboard and review flow now include Mini Program-safe command motion: active command highlight, dimmed sibling commands, pending red dots and danger breathing feedback.

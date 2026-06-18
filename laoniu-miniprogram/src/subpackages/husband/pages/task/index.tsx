@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import Taro, { useDidShow } from "@tarojs/taro";
-import { Button, Text, View } from "@tarojs/components";
+import { Button, Image, Text, View } from "@tarojs/components";
 import { HusbandDecreeNotice } from "../../../../components/HusbandDecreeNotice";
 import { RewardFlight } from "../../../../components/RewardFlight";
-import { taskRewardText } from "../../../../domain/taskRewards";
+import { roles } from "../../../../data/roles";
+import { taskRewardExp, taskRewardMoney, taskRewardText } from "../../../../domain/taskRewards";
 import { stateService } from "../../../../services/state";
 import type { AppState } from "../../../../services/state";
 import type { Task, TaskStatus } from "../../../../types/domain";
@@ -44,6 +45,14 @@ function matchFilter(task: Task, filter: TaskFilter) {
   return task.status === filter;
 }
 
+function isCurrentMonth(value?: string) {
+  if (!value) return false;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+  const now = new Date();
+  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+}
+
 export default function HusbandTaskPage() {
   const [state, setState] = useState<AppState>();
   const [filter, setFilter] = useState<TaskFilter>("active");
@@ -79,11 +88,56 @@ export default function HusbandTaskPage() {
   const activeCount = state.tasks.filter((task) => matchFilter(task, "active")).length;
   const submittedCount = state.tasks.filter((task) => task.status === "submitted").length;
   const confirmedCount = state.tasks.filter((task) => task.status === "confirmed").length;
+  const doingCount = state.tasks.filter((task) => task.status === "doing").length;
+  const todayPotentialExp = state.tasks
+    .filter((task) => ["todo", "doing", "failed_pending"].includes(task.status))
+    .reduce((sum, task) => sum + taskRewardExp(task), 0);
+  const monthTasks = state.tasks.filter((task) => ["confirmed", "completed"].includes(task.status) && isCurrentMonth(task.rewardedAt || task.confirmedAt || task.createdAt));
+  const monthExp = monthTasks.reduce((sum, task) => sum + taskRewardExp(task), 0);
+  const monthMoney = monthTasks.reduce((sum, task) => sum + taskRewardMoney(task), 0);
+  const currentRole = roles[state.progress.level];
 
   return (
     <View className="page scene-page husband-task-page">
-      <Text className="title">任务</Text>
-      <Text className="subtitle">待完成 {activeCount} / 待确认 {submittedCount} / 已完成 {confirmedCount}</Text>
+      <View className="task-stage">
+        <View className="task-stage__scrim" />
+        <View className="task-stage__header">
+          <View className="task-stage__copy">
+            <Text className="task-stage__level">Lv. {String(state.progress.level).padStart(2, "0")}</Text>
+            <Text className="task-stage__title">{currentRole.title}</Text>
+            <Text className="task-stage__subtitle">老哥任务簿 · 今日待执行</Text>
+          </View>
+          <Image className="task-stage__avatar pixelated" src={currentRole.roleImage} mode="aspectFill" />
+        </View>
+
+        <View className="task-overview">
+          <View className="task-stat">
+            <Text className="task-stat__value">{activeCount}</Text>
+            <Text className="task-stat__label">待完成</Text>
+          </View>
+          <View className="task-stat">
+            <Text className="task-stat__value">{doingCount}</Text>
+            <Text className="task-stat__label">待提交</Text>
+          </View>
+          <View className="task-stat">
+            <Text className="task-stat__value">{submittedCount}</Text>
+            <Text className="task-stat__label">待确认</Text>
+          </View>
+          <View className="task-stat">
+            <Text className="task-stat__value">+{todayPotentialExp}</Text>
+            <Text className="task-stat__label">今日可得 EXP</Text>
+          </View>
+        </View>
+
+        <View className="task-month-panel">
+          <Text className="task-month-panel__title">本月收获</Text>
+          <View className="task-month-panel__grid">
+            <Text>零花钱 {monthMoney}</Text>
+            <Text>完成 {monthTasks.length}</Text>
+            <Text>经验 {monthExp}</Text>
+          </View>
+        </View>
+      </View>
       <RewardFlight entries={state.walletLedger} />
 
       <View className="task-filter-row">
@@ -96,19 +150,22 @@ export default function HusbandTaskPage() {
 
       {visibleTasks.length ? visibleTasks.map((task) => (
         <View className={`panel section task-card task-card--${task.status}`} key={task.id}>
-          <View className="task-card__header">
-            <Text className="task-card__title">{task.title}</Text>
-            <Text className="status-pill">{statusText[task.status]}</Text>
+          <View className="task-card__mark"><Text>{task.status === "confirmed" || task.status === "completed" ? "✓" : task.status === "submitted" ? "…" : "!"}</Text></View>
+          <View className="task-card__content">
+            <View className="task-card__header">
+              <Text className="task-card__title">{task.title}</Text>
+              <Text className="status-pill">{statusText[task.status]}</Text>
+            </View>
+            <Text className="subtitle">{task.description}</Text>
+            <Text className="task-meta">奖励：{taskRewardText(task)}</Text>
+            <Text className="task-meta">截止：{task.deadline}</Text>
+            {task.submittedAt ? <Text className="task-meta">提交：{formatTime(task.submittedAt)} / {task.submitNote}</Text> : null}
+            {task.confirmedAt ? <Text className="task-meta">确认：{formatTime(task.confirmedAt)}</Text> : null}
+            {task.resultText ? <Text className="task-meta">结果：{task.resultText}</Text> : null}
+            {["todo", "doing", "failed_pending"].includes(task.status) ? (
+              <Button className="btn section task-action" onClick={() => submit(task)}>提交完成</Button>
+            ) : null}
           </View>
-          <Text className="subtitle">{task.description}</Text>
-          <Text className="task-meta">奖励：{taskRewardText(task)}</Text>
-          <Text className="task-meta">截止：{task.deadline}</Text>
-          {task.submittedAt ? <Text className="task-meta">提交：{formatTime(task.submittedAt)} / {task.submitNote}</Text> : null}
-          {task.confirmedAt ? <Text className="task-meta">确认：{formatTime(task.confirmedAt)}</Text> : null}
-          {task.resultText ? <Text className="task-meta">结果：{task.resultText}</Text> : null}
-          {["todo", "doing", "failed_pending"].includes(task.status) ? (
-            <Button className="btn section" onClick={() => submit(task)}>提交完成</Button>
-          ) : null}
         </View>
       )) : <View className="empty">当前筛选下没有任务</View>}
       <HusbandDecreeNotice state={state} onStateChange={setState} />

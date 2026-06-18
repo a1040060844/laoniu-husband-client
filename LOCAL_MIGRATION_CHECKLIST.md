@@ -38,6 +38,7 @@
 - [x] Husband benefit
 - [x] Husband benefit H5-style stage and benefit bubble rail
 - [x] Husband task
+- [x] Husband task H5-style overview stage and dark task cards
 - [x] Husband slave
 - [x] Husband wallet
 - [x] Wife dashboard
