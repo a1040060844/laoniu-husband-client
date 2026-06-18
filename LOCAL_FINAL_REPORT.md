@@ -31,6 +31,7 @@ This report records the current local-only Mini Program migration checkpoint.
 - `npm test`: passed, 2 tests.
 - `npx tsc --noEmit`: passed.
 - `npm run build:weapp`: passed and generated `dist/`.
+- `npm run audit:package`: passed and warns that the package is close to the 20 MB upload limit.
 - Browser API scan: no forbidden browser APIs in Mini Program source. Taro's `app.config.ts` uses a `window` config key, which is not browser `window` usage.
 - Asset audit: generated `dist` contains 124 files, about 19.51 MB total; `dist/assets` contains 55 files, about 19.04 MB after filtering local copies, cleaning unused loading/static login images, and adding selected blink sprite sheets.
 
@@ -74,4 +75,5 @@ This report records the current local-only Mini Program migration checkpoint.
 - Role preview visuals are implemented, but final animation timing and phone framing still need WeChat DevTools review.
 - Visual parity still needs WeChat DevTools and real-device review.
 - Asset payload is under 20 MB now, but close enough to the limit that a production/upload pass should still move large images to remote assets or stricter subpackage groups.
+- `scripts/audit-package.mjs` now guards future work by failing over the hard package limit and warning when new assets push the package near the limit.
 - Future server mode is only documented and stubbed; this checkpoint is intentionally local-only.

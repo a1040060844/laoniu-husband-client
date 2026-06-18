@@ -6,8 +6,9 @@
     "build:weapp": "taro build --type weapp && npm run copy:assets",
     "dev:weapp": "taro build --type weapp --watch",
     "copy:assets": "node scripts/copy-assets.mjs",
+    "audit:package": "node scripts/audit-package.mjs",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
-    "check": "npm test && npm run build:weapp"
+    "check": "npm test && npm run build:weapp && npm run audit:package"
   },
   "dependencies": {
     "@babel/runtime": "^7.27.6",

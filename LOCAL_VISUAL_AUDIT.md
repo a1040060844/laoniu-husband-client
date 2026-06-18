@@ -52,6 +52,7 @@ Use `husband-client/` as the visual and behavior source of truth. For each migra
 ## Package Notes
 
 - `scripts/copy-assets.mjs` copies filtered local assets into `dist/assets` after Taro build.
+- `scripts/audit-package.mjs` reports package totals, top-level groups and largest files, and warns while the local package is close to the 20 MB upload limit.
 - Source-only directories such as loading PSD files and the full `login-final/` batch were kept out of `laoniu-miniprogram/src/assets`; only selected blink sprite sheets are packaged under `login-sprites/`.
 - Unused full-page task/wife/reference images and unused loading/login static images were not kept in the baseline package; generated `dist` currently has 124 files, about 19.51 MB total, with `dist/assets` at about 19.04 MB.
 - Future production packaging should move large role/benefit images behind remote assets or stricter subpackage asset groups if WeChat package size becomes tight.
