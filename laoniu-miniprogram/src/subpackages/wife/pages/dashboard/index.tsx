@@ -3,6 +3,7 @@ import Taro, { useDidShow } from "@tarojs/taro";
 import { Button, Text, View } from "@tarojs/components";
 import { roles } from "../../../../data/roles";
 import { SlaveStateCinematic, type SlaveStateCinematicEvent } from "../../../../components/SlaveStateCinematic";
+import { WifeCommandMotion } from "../../../../components/WifeCommandMotion";
 import { stateService } from "../../../../services/state";
 import type { AppState } from "../../../../services/state";
 import "./index.scss";
@@ -93,20 +94,52 @@ export default function WifeDashboardPage() {
             <Text className="small-text">恢复要求：{state.punishment.requiredRecoveryExp} EXP 或 {state.punishment.durationDays} 天</Text>
           </>
         ) : null}
-        <View className="row-wrap">
-          <Button className="btn btn-secondary" disabled={slaveMode} onClick={startSlaveMode}>开启卖身状态</Button>
-          <Button className="btn" disabled={!slaveMode} onClick={restoreNormalMode}>恢复正常</Button>
-        </View>
+        <WifeCommandMotion className="section">
+          {({ command }) => (
+            <>
+              {command(
+                { armed: !slaveMode, commandKey: "start-slave", danger: true, onClick: startSlaveMode },
+                <Button className="btn btn-secondary" disabled={slaveMode}>开启卖身状态</Button>,
+              )}
+              {command(
+                { commandKey: "restore-normal", onClick: restoreNormalMode, pending: slaveMode },
+                <Button className="btn" disabled={!slaveMode}>恢复正常</Button>,
+              )}
+            </>
+          )}
+        </WifeCommandMotion>
       </View>
 
-      <View className="section row-wrap">
-        <Button className="btn" onClick={() => Taro.navigateTo({ url: "/subpackages/wife/pages/task-create/index" })}>发布任务</Button>
-        <Button className="btn" onClick={() => Taro.navigateTo({ url: "/subpackages/wife/pages/review/index" })}>任务/权益审批</Button>
-        <Button className="btn btn-secondary" onClick={() => Taro.navigateTo({ url: "/subpackages/wife/pages/decrees/index" })}>圣旨裁定</Button>
-        <Button className="btn btn-secondary" onClick={() => Taro.navigateTo({ url: "/subpackages/wife/pages/logs/index" })}>日志</Button>
-        <Button className="btn btn-secondary" onClick={resetLocalData}>重置数据</Button>
-        <Button className="btn btn-secondary" onClick={() => Taro.reLaunch({ url: "/pages/login/index" })}>返回登录</Button>
-      </View>
+      <WifeCommandMotion className="section">
+        {({ command }) => (
+          <>
+            {command(
+              { commandKey: "create-task", onClick: () => Taro.navigateTo({ url: "/subpackages/wife/pages/task-create/index" }) },
+              <Button className="btn">发布任务</Button>,
+            )}
+            {command(
+              { commandKey: "review", onClick: () => Taro.navigateTo({ url: "/subpackages/wife/pages/review/index" }), pending: pendingTasks + pendingBenefits > 0 },
+              <Button className="btn">任务/权益审批</Button>,
+            )}
+            {command(
+              { commandKey: "decrees", onClick: () => Taro.navigateTo({ url: "/subpackages/wife/pages/decrees/index" }) },
+              <Button className="btn btn-secondary">圣旨裁定</Button>,
+            )}
+            {command(
+              { commandKey: "logs", onClick: () => Taro.navigateTo({ url: "/subpackages/wife/pages/logs/index" }) },
+              <Button className="btn btn-secondary">日志</Button>,
+            )}
+            {command(
+              { armed: true, commandKey: "reset-data", danger: true, onClick: resetLocalData },
+              <Button className="btn btn-secondary">重置数据</Button>,
+            )}
+            {command(
+              { commandKey: "back-login", onClick: () => Taro.reLaunch({ url: "/pages/login/index" }) },
+              <Button className="btn btn-secondary">返回登录</Button>,
+            )}
+          </>
+        )}
+      </WifeCommandMotion>
       <SlaveStateCinematic ambient={slaveMode} event={slaveEvent} onComplete={() => setSlaveEvent(null)} />
     </View>
   );
