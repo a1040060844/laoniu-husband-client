@@ -13,8 +13,10 @@ import { stateService } from "../../services/state";
 import "./index.scss";
 
 type RoleRoute = "husband" | "wife";
+type CatTarget = "cat" | "catWhite";
 type BubbleTarget = RoleRoute | "cat";
-type FullSpriteActor = "husband" | "wife" | "cat-blue";
+type DragTarget = RoleRoute | CatTarget;
+type FullSpriteActor = "husband" | "wife" | "cat-blue" | "cat-white";
 interface Position {
   x: number;
   y: number;
@@ -25,7 +27,7 @@ interface DragState {
   originY: number;
   startX: number;
   startY: number;
-  target: BubbleTarget;
+  target: DragTarget;
 }
 
 const LOVE_START_UTC = Date.UTC(2024, 8, 14);
@@ -49,16 +51,18 @@ const bubbleLines: Record<BubbleTarget, string[]> = {
   ]
 };
 
-const initialOffsets: Record<BubbleTarget, Position> = {
+const initialOffsets: Record<DragTarget, Position> = {
   husband: { x: 0, y: 0 },
   wife: { x: 0, y: 0 },
-  cat: { x: 0, y: 0 }
+  cat: { x: 0, y: 0 },
+  catWhite: { x: 0, y: 0 }
 };
 
-const remoteIdleActions: Record<BubbleTarget, string[]> = {
+const remoteIdleActions: Record<DragTarget, string[]> = {
   husband: ["blink", "adjust-glasses", "nervous"],
   wife: ["blink", "thinking", "helpless"],
-  cat: ["blink", "lick", "tail", "yawn", "lift"]
+  cat: ["blink", "lick", "tail", "yawn", "lift"],
+  catWhite: ["idle", "lookaround", "stretch", "roll", "jump"]
 };
 
 function getLoveDayCount(now = new Date()) {
@@ -79,13 +83,13 @@ function pickLine(target: BubbleTarget) {
   return lines[Math.floor(Math.random() * lines.length)] ?? lines[0];
 }
 
-function pickIdleAction(target: BubbleTarget) {
+function pickIdleAction(target: DragTarget) {
   const actions = remoteIdleActions[target];
   return actions[Math.floor(Math.random() * actions.length)] ?? "blink";
 }
 
-function dragLimit(target: BubbleTarget) {
-  if (target === "cat") return { x: 54, y: 34 };
+function dragLimit(target: DragTarget) {
+  if (target === "cat" || target === "catWhite") return { x: 54, y: 34 };
   return { x: 30, y: 22 };
 }
 
@@ -101,6 +105,10 @@ function fullSpritePath(actor: FullSpriteActor, action: string, file: "index.jso
   return loginFullSpriteAsset(`${actor}/${action}/${file}`);
 }
 
+function bubbleTargetForDrag(target: DragTarget): BubbleTarget {
+  return target === "catWhite" ? "cat" : target;
+}
+
 function enter(role: RoleRoute) {
   Taro.navigateTo({ url: `/pages/loading/index?target=${role}` });
 }
@@ -110,11 +118,12 @@ export default function LoginPage() {
   const [bubbleLine, setBubbleLine] = useState(pickLine("husband"));
   const [activeTarget, setActiveTarget] = useState<BubbleTarget>("husband");
   const [dragState, setDragState] = useState<DragState | null>(null);
-  const [offsets, setOffsets] = useState<Record<BubbleTarget, Position>>(initialOffsets);
-  const [idleActions, setIdleActions] = useState<Record<BubbleTarget, string>>({
+  const [offsets, setOffsets] = useState<Record<DragTarget, Position>>(initialOffsets);
+  const [idleActions, setIdleActions] = useState<Record<DragTarget, string>>({
     husband: "blink",
     wife: "blink",
-    cat: "blink"
+    cat: "blink",
+    catWhite: "idle"
   });
   const [selecting, setSelecting] = useState<RoleRoute | null>(null);
   const loveDays = getLoveDayCount();
@@ -123,7 +132,11 @@ export default function LoginPage() {
     setBubble(target);
     setBubbleLine(pickLine(target));
     setActiveTarget(target);
-    setIdleActions((current) => ({ ...current, [target]: pickIdleAction(target) }));
+    setIdleActions((current) => ({
+      ...current,
+      [target]: pickIdleAction(target),
+      ...(target === "cat" ? { catWhite: pickIdleAction("catWhite") } : {})
+    }));
   }
 
   useEffect(() => {
@@ -136,11 +149,11 @@ export default function LoginPage() {
     return () => clearInterval(timer);
   }, [dragState, selecting]);
 
-  function beginDrag(target: BubbleTarget, event: any) {
+  function beginDrag(target: DragTarget, event: any) {
     const touch = getTouch(event);
     if (!touch || selecting) return;
     event.stopPropagation?.();
-    nudge(target);
+    nudge(bubbleTargetForDrag(target));
     setDragState({
       originX: offsets[target].x,
       originY: offsets[target].y,
@@ -192,6 +205,8 @@ export default function LoginPage() {
   const husbandAction = selecting === "husband" ? "select" : dragState?.target === "husband" ? "drag" : activeTarget === "husband" ? idleActions.husband : "blink";
   const wifeAction = selecting === "wife" ? "select" : dragState?.target === "wife" ? "drag" : activeTarget === "wife" ? idleActions.wife : "blink";
   const catAction = dragState?.target === "cat" ? "drag" : activeTarget === "cat" ? idleActions.cat : "blink";
+  const catWhiteAction = dragState?.target === "catWhite" ? "drag" : idleActions.catWhite;
+  const showRemoteWhiteCat = isRemoteAssetMode();
 
   return (
     <DesignStage className={`login-page ${selecting ? "is-selecting" : ""}`}>
@@ -276,6 +291,28 @@ export default function LoginPage() {
             <View className="login-page__cat-spark" />
           </View>
         </View>
+        {showRemoteWhiteCat ? (
+          <View
+            className={`login-page__cat-white-drag ${dragState?.target === "catWhite" ? "is-dragging" : ""}`}
+            onTouchEnd={endDrag}
+            onTouchMove={moveDrag}
+            onTouchStart={(event) => beginDrag("catWhite", event)}
+            style={dragStyle(offsets.catWhite)}
+          >
+            <View className={`login-page__cat-white-wrap ${activeTarget === "cat" ? "is-active" : ""}`} onClick={() => nudge("cat")}>
+              <RemoteSpriteSheetActor
+                className="login-page__cat-white"
+                displayWidth={92}
+                fallbackMeta={catBlueBlinkMeta}
+                fallbackSrc={loginSpriteAsset("cat-blue/blink/sprite.png")}
+                hideUntilRemote
+                metaUrl={fullSpritePath("cat-white", catWhiteAction, "index.json")}
+                playbackRate={2}
+                src={fullSpritePath("cat-white", catWhiteAction, "sprite.png")}
+              />
+            </View>
+          </View>
+        ) : null}
         <Button className="login-page__reset btn btn-secondary" onClick={handleReset}>重置本地数据</Button>
       </View>
     </DesignStage>

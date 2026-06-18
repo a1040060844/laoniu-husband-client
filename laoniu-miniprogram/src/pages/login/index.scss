@@ -185,6 +185,39 @@
   filter: drop-shadow(0 12px 0 rgba(74, 51, 40, .2)) saturate(1.12);
 }
 
+.login-page__cat-white-drag {
+  position: absolute;
+  right: 28px;
+  bottom: 76px;
+  z-index: 3;
+  width: 104px;
+  height: 124px;
+  transform: translate(var(--drag-x), var(--drag-y));
+  transition: transform .18s ease;
+  touch-action: none;
+}
+
+.login-page__cat-white-drag.is-dragging {
+  transition: none;
+  filter: drop-shadow(0 12px 0 rgba(74, 51, 40, .2)) saturate(1.08);
+}
+
+.login-page__cat-white-wrap {
+  position: relative;
+  width: 104px;
+  height: 124px;
+  animation: floatSoft 3.7s ease-in-out infinite;
+  animation-delay: -.9s;
+}
+
+.login-page__cat-white-wrap.is-active {
+  animation: catPop .38s ease-out both;
+}
+
+.login-page__cat-white {
+  margin: 0 auto;
+}
+
 .login-page__cat-wrap {
   position: relative;
   width: 120px;

@@ -107,6 +107,7 @@ The login page already switches these actions when `ASSET_CONFIG.mode` is `"remo
 - husband: idle pool `blink`, `adjust-glasses`, `nervous`; overrides `drag`, `select`
 - wife: idle pool `blink`, `thinking`, `helpless`; overrides `drag`, `select`
 - cat-blue: idle pool `blink`, `lick`, `tail`, `yawn`, `lift`; override `drag`
+- cat-white: remote-only idle pool `idle`, `lookaround`, `stretch`, `roll`, `jump`; override `drag`
 
 Frame metadata is loaded with `Taro.request` from the remote `index.json`. If the request fails or the remote host is not configured as a legal WeChat domain yet, the component falls back to the local blink animation instead of blocking the login page.
 

@@ -52,6 +52,7 @@ export function RemoteSpriteSheetActor({
   fallbackMeta,
   fallbackSrc,
   fps = 5,
+  hideUntilRemote = false,
   metaUrl,
   playbackRate = 1,
   src,
@@ -61,6 +62,7 @@ export function RemoteSpriteSheetActor({
   fallbackMeta: SpriteSheetMeta;
   fallbackSrc: string;
   fps?: number;
+  hideUntilRemote?: boolean;
   metaUrl?: string;
   playbackRate?: number;
   src?: string;
@@ -103,6 +105,11 @@ export function RemoteSpriteSheetActor({
       cancelled = true;
     };
   }, [metaUrl, src]);
+
+  if (hideUntilRemote && !remoteMeta) {
+    const displayHeight = (fallbackMeta.frame_size.h * displayWidth) / fallbackMeta.frame_size.w;
+    return <View className={`sprite-sheet-actor ${className}`} style={{ height: `${displayHeight}px`, width: `${displayWidth}px` }} />;
+  }
 
   return (
     <SpriteSheetActor

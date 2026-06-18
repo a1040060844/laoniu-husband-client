@@ -9,8 +9,8 @@ Use `husband-client/` as the visual and behavior source of truth. For each migra
 - H5 source: `husband-client/src/pages/LoginPage.tsx`, `LoginPage.css`, `loginSpriteData.ts`, `public/assets/login/`, `src/assets/login-final/`.
 - Mini Program target: `laoniu-miniprogram/src/pages/login/index.tsx`, `index.scss`, `components/SpriteActor/`, `components/SpriteSheetActor/`.
 - Status: second-pass migrated.
-- Restored: room background, title/subtitle images, love-day plaque, husband/wife role cards, role selection feedback, cat/reset area, speech bubble feedback, pixel rendering, selected husband/wife/cat blink sprite-sheet playback, role actor tap-pop feedback, cat tap feedback, bounded actor/cat dragging, random idle bubble rotation and light floating motion.
-- Difference: selected blink sprite sheets are packaged, but the full `login-final/` batch, drag sheets, select sheets, random action sheets and exact H5 hitbox choreography are still omitted for package-size control.
+- Restored: room background, title/subtitle images, love-day plaque, husband/wife role cards, role selection feedback, cat/reset area, speech bubble feedback, pixel rendering, selected husband/wife/cat blink sprite-sheet playback, role actor tap-pop feedback, cat tap feedback, bounded actor/cat dragging, random idle bubble rotation and light floating motion. Remote asset mode can load husband/wife/cat-blue complete action sheets and a remote-only cat-white actor from `assets/login-sprites-full/`.
+- Difference: selected blink sprite sheets are packaged, while the full `login-final/` batch is remote-only for package-size control. Exact H5 hitbox choreography and the original absolute percentage stage layout are still simplified in the Mini Program layout.
 - Needs device review: sprite playback smoothness, drag feel on real touch screens, touch target size, image scaling on narrow phones, and whether additional sprite-sheet frame assets should move to remote assets or stricter package groups.
 
 ## Loading Page
@@ -54,6 +54,6 @@ Use `husband-client/` as the visual and behavior source of truth. For each migra
 - `scripts/copy-assets.mjs` copies filtered local assets into `dist/assets` after Taro build.
 - `scripts/audit-package.mjs` reports package totals, top-level groups and largest files, and warns while the local package is close to the 20 MB upload limit.
 - `src/config/assets.ts` centralizes `local` vs `remote` asset mode so additional sprite sheets can move to CDN/HTTPS static hosting without page rewrites.
-- Source-only directories such as loading PSD files and the full `login-final/` batch were kept out of `laoniu-miniprogram/src/assets`; only selected blink sprite sheets are packaged under `login-sprites/`.
+- Source-only directories such as loading PSD files and the full `login-final/` batch were kept out of `laoniu-miniprogram/src/assets`; only selected blink sprite sheets are packaged under `login-sprites/`. The remote asset export includes full `login-final` sprite sheets under `assets/login-sprites-full/`.
 - Unused full-page task/wife/reference images and unused loading/login static images were not kept in the baseline package; generated `dist` currently has 124 files, about 19.51 MB total, with `dist/assets` at about 19.04 MB.
 - Future production packaging should move large role/benefit images behind remote assets or stricter subpackage asset groups if WeChat package size becomes tight.
