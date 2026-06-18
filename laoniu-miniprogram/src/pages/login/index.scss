@@ -153,17 +153,42 @@
   z-index: 1;
 }
 
+.login-card__actor-drag {
+  position: relative;
+  z-index: 1;
+  transform: translate(var(--drag-x), var(--drag-y));
+  transition: transform .18s ease;
+}
+
+.login-card__actor-drag.is-dragging {
+  transition: none;
+}
+
 .login-card .btn {
   position: relative;
   z-index: 2;
   width: 100%;
 }
 
-.login-page__cat-wrap {
+.login-page__cat-drag {
   position: relative;
   width: 120px;
   height: 120px;
   margin: 22px auto 0;
+  transform: translate(var(--drag-x), var(--drag-y));
+  transition: transform .18s ease;
+  touch-action: none;
+}
+
+.login-page__cat-drag.is-dragging {
+  transition: none;
+  filter: drop-shadow(0 12px 0 rgba(74, 51, 40, .2)) saturate(1.12);
+}
+
+.login-page__cat-wrap {
+  position: relative;
+  width: 120px;
+  height: 120px;
   animation: floatSoft 3.4s ease-in-out infinite;
 }
 

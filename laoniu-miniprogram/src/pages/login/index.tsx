@@ -1,6 +1,6 @@
 import Taro from "@tarojs/taro";
 import { Button, Image, Text, View } from "@tarojs/components";
-import { useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { DesignStage } from "../../components/DesignStage";
 import { SpriteActor } from "../../components/SpriteActor";
 import { loginAsset } from "../../services/assets";
@@ -9,19 +9,74 @@ import "./index.scss";
 
 type RoleRoute = "husband" | "wife";
 type BubbleTarget = RoleRoute | "cat";
+interface Position {
+  x: number;
+  y: number;
+}
+
+interface DragState {
+  originX: number;
+  originY: number;
+  startX: number;
+  startY: number;
+  target: BubbleTarget;
+}
 
 const LOVE_START_UTC = Date.UTC(2024, 8, 14);
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-const bubbleText: Record<BubbleTarget, string> = {
-  husband: "老哥准备报到，等老妞验收表现。",
-  wife: "老妞上线，今天也要把老哥安排明白。",
-  cat: "本地数据都在手机里，重置前记得想清楚。"
+const bubbleLines: Record<BubbleTarget, string[]> = {
+  husband: [
+    "老哥准备报到，等老妞验收表现。",
+    "眼镜扶好，今天也要认真升级。",
+    "拖我一下试试，别太用力。"
+  ],
+  wife: [
+    "老妞上线，今天也要把老哥安排明白。",
+    "本宫看看今天该发什么任务。",
+    "表现好就奖励，表现差就裁定。"
+  ],
+  cat: [
+    "本地数据都在手机里，重置前记得想清楚。",
+    "喵，数据先存在本机。",
+    "我负责看守重置按钮。"
+  ]
+};
+
+const initialOffsets: Record<BubbleTarget, Position> = {
+  husband: { x: 0, y: 0 },
+  wife: { x: 0, y: 0 },
+  cat: { x: 0, y: 0 }
 };
 
 function getLoveDayCount(now = new Date()) {
   const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
   return Math.min(9999, Math.max(1, Math.floor((todayUtc - LOVE_START_UTC) / DAY_MS) + 1));
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function getTouch(event: any) {
+  return event.touches?.[0] ?? event.changedTouches?.[0];
+}
+
+function pickLine(target: BubbleTarget) {
+  const lines = bubbleLines[target];
+  return lines[Math.floor(Math.random() * lines.length)] ?? lines[0];
+}
+
+function dragLimit(target: BubbleTarget) {
+  if (target === "cat") return { x: 54, y: 34 };
+  return { x: 30, y: 22 };
+}
+
+function dragStyle(position: Position) {
+  return {
+    "--drag-x": `${position.x}px`,
+    "--drag-y": `${position.y}px`
+  } as CSSProperties;
 }
 
 function enter(role: RoleRoute) {
@@ -30,13 +85,60 @@ function enter(role: RoleRoute) {
 
 export default function LoginPage() {
   const [bubble, setBubble] = useState<BubbleTarget>("husband");
+  const [bubbleLine, setBubbleLine] = useState(pickLine("husband"));
   const [activeTarget, setActiveTarget] = useState<BubbleTarget>("husband");
+  const [dragState, setDragState] = useState<DragState | null>(null);
+  const [offsets, setOffsets] = useState<Record<BubbleTarget, Position>>(initialOffsets);
   const [selecting, setSelecting] = useState<RoleRoute | null>(null);
   const loveDays = getLoveDayCount();
 
   function nudge(target: BubbleTarget) {
     setBubble(target);
+    setBubbleLine(pickLine(target));
     setActiveTarget(target);
+  }
+
+  useEffect(() => {
+    if (selecting || dragState) return undefined;
+    const timer = setInterval(() => {
+      const targets: BubbleTarget[] = ["husband", "wife", "cat"];
+      const target = targets[Math.floor(Math.random() * targets.length)] ?? "husband";
+      nudge(target);
+    }, 5600);
+    return () => clearInterval(timer);
+  }, [dragState, selecting]);
+
+  function beginDrag(target: BubbleTarget, event: any) {
+    const touch = getTouch(event);
+    if (!touch || selecting) return;
+    event.stopPropagation?.();
+    nudge(target);
+    setDragState({
+      originX: offsets[target].x,
+      originY: offsets[target].y,
+      startX: touch.clientX,
+      startY: touch.clientY,
+      target
+    });
+  }
+
+  function moveDrag(event: any) {
+    if (!dragState) return;
+    const touch = getTouch(event);
+    if (!touch) return;
+    event.stopPropagation?.();
+    const limit = dragLimit(dragState.target);
+    const next = {
+      x: clamp(dragState.originX + touch.clientX - dragState.startX, -limit.x, limit.x),
+      y: clamp(dragState.originY + touch.clientY - dragState.startY, -limit.y, limit.y)
+    };
+    setOffsets((current) => ({ ...current, [dragState.target]: next }));
+  }
+
+  function endDrag(event: any) {
+    if (!dragState) return;
+    event.stopPropagation?.();
+    setDragState(null);
   }
 
   async function handleEnter(role: RoleRoute) {
@@ -72,25 +174,49 @@ export default function LoginPage() {
 
         <View className={`login-bubble login-bubble--${bubble}`}>
           <Image className="login-bubble__image pixelated" src={loginAsset(bubble === "wife" ? "speech-wife.png" : "speech-husband.png")} mode="aspectFit" />
-          <Text className="login-bubble__text">{bubbleText[bubble]}</Text>
+          <Text className="login-bubble__text">{bubbleLine}</Text>
         </View>
 
         <View className="login-page__cards">
           <View className={`login-card panel ${activeTarget === "husband" ? "is-active" : ""} ${selecting === "husband" ? "is-entering" : ""}`} onClick={() => nudge("husband")}>
             <Image className="login-card__frame pixelated" src={loginAsset("card-husband.png")} mode="aspectFit" />
-            <SpriteActor src={loginAsset("husband.png")} mood="happy" active={activeTarget === "husband"} onTap={() => nudge("husband")} />
+            <View
+              className={`login-card__actor-drag ${dragState?.target === "husband" ? "is-dragging" : ""}`}
+              onTouchEnd={endDrag}
+              onTouchMove={moveDrag}
+              onTouchStart={(event) => beginDrag("husband", event)}
+              style={dragStyle(offsets.husband)}
+            >
+              <SpriteActor src={loginAsset("husband.png")} mood="happy" active={activeTarget === "husband"} dragging={dragState?.target === "husband"} onTap={() => nudge("husband")} />
+            </View>
             <Button className="btn" loading={selecting === "husband"} onClick={() => handleEnter("husband")}>我是老哥</Button>
           </View>
           <View className={`login-card panel ${activeTarget === "wife" ? "is-active" : ""} ${selecting === "wife" ? "is-entering" : ""}`} onClick={() => nudge("wife")}>
             <Image className="login-card__frame pixelated" src={loginAsset("card-wife.png")} mode="aspectFit" />
-            <SpriteActor src={loginAsset("wife.png")} mood="proud" active={activeTarget === "wife"} onTap={() => nudge("wife")} />
+            <View
+              className={`login-card__actor-drag ${dragState?.target === "wife" ? "is-dragging" : ""}`}
+              onTouchEnd={endDrag}
+              onTouchMove={moveDrag}
+              onTouchStart={(event) => beginDrag("wife", event)}
+              style={dragStyle(offsets.wife)}
+            >
+              <SpriteActor src={loginAsset("wife.png")} mood="proud" active={activeTarget === "wife"} dragging={dragState?.target === "wife"} onTap={() => nudge("wife")} />
+            </View>
             <Button className="btn" loading={selecting === "wife"} onClick={() => handleEnter("wife")}>我是老妞</Button>
           </View>
         </View>
 
-        <View className={`login-page__cat-wrap ${activeTarget === "cat" ? "is-active" : ""}`} onClick={() => nudge("cat")}>
-          <Image className="login-page__cat pixelated" src={loginAsset("cat-blue.png")} mode="aspectFit" />
-          <View className="login-page__cat-spark" />
+        <View
+          className={`login-page__cat-drag ${dragState?.target === "cat" ? "is-dragging" : ""}`}
+          onTouchEnd={endDrag}
+          onTouchMove={moveDrag}
+          onTouchStart={(event) => beginDrag("cat", event)}
+          style={dragStyle(offsets.cat)}
+        >
+          <View className={`login-page__cat-wrap ${activeTarget === "cat" ? "is-active" : ""}`} onClick={() => nudge("cat")}>
+            <Image className="login-page__cat pixelated" src={loginAsset("cat-blue.png")} mode="aspectFit" />
+            <View className="login-page__cat-spark" />
+          </View>
         </View>
         <Button className="login-page__reset btn btn-secondary" onClick={handleReset}>重置本地数据</Button>
       </View>

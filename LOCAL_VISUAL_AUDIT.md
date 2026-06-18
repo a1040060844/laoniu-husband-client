@@ -9,9 +9,9 @@ Use `husband-client/` as the visual and behavior source of truth. For each migra
 - H5 source: `husband-client/src/pages/LoginPage.tsx`, `LoginPage.css`, `loginSpriteData.ts`, `public/assets/login/`, `src/assets/login-final/`.
 - Mini Program target: `laoniu-miniprogram/src/pages/login/index.tsx`, `index.scss`, `components/SpriteActor/`.
 - Status: first-pass migrated.
-- Restored: room background, title/subtitle images, love-day plaque, husband/wife role cards, role selection feedback, cat/reset area, speech bubble feedback, pixel rendering, role actor tap-pop feedback, cat tap feedback and light floating motion.
-- Difference: the H5 sprite-sheet idle/random/drag/hitbox behavior is represented by static actors plus Mini Program-safe tap/pop/spark feedback. `login-final/` was not copied into the Mini Program package to avoid a large unused asset batch.
-- Needs device review: touch target size, image scaling on narrow phones, and whether sprite-sheet interaction should be reintroduced with selective frame assets.
+- Restored: room background, title/subtitle images, love-day plaque, husband/wife role cards, role selection feedback, cat/reset area, speech bubble feedback, pixel rendering, role actor tap-pop feedback, cat tap feedback, bounded actor/cat dragging, random idle bubble rotation and light floating motion.
+- Difference: the H5 sprite-sheet frame playback is still represented by static actors plus Mini Program-safe drag/pop/spark/idle feedback. `login-final/` was not copied into the Mini Program package to avoid a large unused asset batch.
+- Needs device review: drag feel on real touch screens, touch target size, image scaling on narrow phones, and whether selective sprite-sheet frame assets should be reintroduced without blowing up package size.
 
 ## Loading Page
 

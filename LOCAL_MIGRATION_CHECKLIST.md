@@ -88,6 +88,6 @@
 
 ## Known Follow-Up
 
-- Login sprite-sheet idle, drag, hitbox and richer click reactions are represented by static/float actors in this baseline.
+- Login now has bounded actor/cat dragging, idle bubble rotation and tap feedback; exact sprite-sheet frame playback remains a package-size-sensitive follow-up.
 - H5 cinematic effects are approximated by lightweight Taro components and need real-device timing polish.
 - H5 source package still has unrelated dirty changes; this migration avoided editing `husband-client/`.

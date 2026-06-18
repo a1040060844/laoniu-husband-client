@@ -66,8 +66,8 @@ This report records the current local-only Mini Program migration checkpoint.
 
 ## Known Gaps
 
-- Login sprite-sheet drag, random idle, click hitbox and exact H5 sprite behavior are not fully restored.
-- Login role selection, speech bubble feedback, love-day display and Mini Program-safe actor/cat tap feedback are restored, but full sprite-sheet dragging is still pending.
+- Login role selection, speech bubble feedback, love-day display, bounded actor/cat dragging, random idle bubble rotation and Mini Program-safe actor/cat tap feedback are restored.
+- Exact H5 sprite-sheet frame playback and rich hitbox choreography are still pending because the full `login-final/` sprite batch was kept out of the Mini Program package for size control.
 - H5 cinematic effects such as upgrade, slave state, reward flight and wife command motion are represented by lightweight Mini Program-safe decree and reward feedback; full choreography is still pending.
 - Role preview visuals are implemented, but final animation timing and phone framing still need WeChat DevTools review.
 - Visual parity still needs WeChat DevTools and real-device review.

@@ -1,5 +1,6 @@
 .sprite-actor {
   position: relative;
+  touch-action: none;
   animation: floatSoft 3s ease-in-out infinite;
   transition: transform .16s ease, filter .16s ease;
 }
@@ -7,6 +8,12 @@
 .sprite-actor.is-active {
   animation: spriteActorPop .34s ease-out both;
   filter: drop-shadow(0 10px 0 rgba(74, 51, 40, .16));
+}
+
+.sprite-actor.is-dragging {
+  animation: none;
+  filter: drop-shadow(0 14px 0 rgba(74, 51, 40, .2)) saturate(1.16);
+  transform: scale(1.035);
 }
 
 .sprite-actor--happy.is-active {
