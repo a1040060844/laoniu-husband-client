@@ -38,7 +38,7 @@ export default function LoadingPage() {
 
   return (
     <View className="page scene-page">
-      <LoadingStage percent={percent} phase={phase} onContinue={goNext} onRetry={run} />
+      <LoadingStage percent={percent} phase={phase} target={target} onContinue={goNext} onRetry={run} />
     </View>
   );
 }

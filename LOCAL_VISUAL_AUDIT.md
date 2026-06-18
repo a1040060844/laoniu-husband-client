@@ -17,10 +17,10 @@ Use `husband-client/` as the visual and behavior source of truth. For each migra
 
 - H5 source: `husband-client/src/components/AppLoadingPage.tsx`, `AppLoadingPage.css`, `public/assets/loading/`.
 - Mini Program target: `laoniu-miniprogram/src/pages/loading/index.tsx`, `components/LoadingStage/`.
-- Status: first-pass migrated.
-- Restored: loading page route, local preload flow, progress bar, ready/error state, retry/continue buttons.
-- Difference: the H5 13-step visual rhythm and source PSD/panel details are simplified to Taro-native blocks and text.
-- Needs device review: first-load timing, asset availability from `dist/assets`, and transition into husband/wife subpackages.
+- Status: second-pass migrated.
+- Restored: loading page route, local preload flow, source loading logo/panel/person/error/button assets, rotating task copy, 13-segment progress rhythm, percent text, ready/error state, retry/continue buttons.
+- Difference: room/current backdrop mode is still represented by the Mini Program scene background rather than the full H5 fixed modal backdrop choreography.
+- Needs device review: first-load timing, asset availability from `dist/assets`, panel scaling on short phones, and transition into husband/wife subpackages.
 
 ## Husband Pages
 

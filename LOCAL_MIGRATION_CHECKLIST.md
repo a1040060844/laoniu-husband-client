@@ -73,7 +73,7 @@
 - `npm install --prefer-offline --no-audit --no-fund` in `laoniu-miniprogram/`: passed. An earlier plain `npm install` attempt timed out before completion.
 - `npm test` in `laoniu-miniprogram/`: passed, 2 tests.
 - `npx tsc --noEmit` in `laoniu-miniprogram/`: passed.
-- `npm run build:weapp` in `laoniu-miniprogram/`: passed and generated `dist/`. Sass reported `@import` deprecation warnings from Taro-generated style imports.
+- `npm run build:weapp` in `laoniu-miniprogram/`: passed and generated `dist/`. Sass `@import` deprecation warnings were cleared by switching the app stylesheet entry to `@use`.
 - Browser API scan in `laoniu-miniprogram/src`: no `ReactDOM`, `localStorage`, `history`, `location`, `web-view`, `document`; only `app.config.ts` contains Taro's `window` config key.
 - Filtered and optimized local assets: `src/assets` and generated `dist/assets` currently contain 63 files, about 18.82 MB.
 

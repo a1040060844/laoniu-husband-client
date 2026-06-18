@@ -9,7 +9,8 @@ This report records the current local-only Mini Program migration checkpoint.
 - Runtime mode is local-only. It uses Taro storage through `services/state/index.ts`; no CloudBase, server, API, `web-view`, ReactDOM, browser storage, or browser routing is required.
 - Main pages and husband/wife subpackage pages are implemented.
 - Domain data and pure logic were copied from the H5 project where suitable: roles, benefits, task presets, task modules, progression, task schedule and task reward helpers. User-facing role, benefit, task and reward copy is now clean UTF-8 Chinese.
-- The visual migration is a first-pass Mini Program version: structure, assets, state, flows and core UI are present; login includes love-day display, speech feedback, role selection feedback, role/cat tap-pop feedback and reset confirmation.
+- The visual migration is a first-pass Mini Program version with targeted second-pass polish: structure, assets, state, flows and core UI are present; login includes love-day display, speech feedback, bounded role/cat dragging, role selection feedback, role/cat tap-pop feedback and reset confirmation.
+- Loading now uses the source loading logo/panel/person/error/button assets, rotating task copy and a 13-segment progress rhythm.
 - Slave mode is operable from the wife dashboard and visible on the husband slave page. Opening/restoring the state writes logs, decrees and punishment ledger entries.
 - Husband role page restores the H5-style role preview loop: left/right level switching, locked future roles, level dots, hero image and progress/wallet panel.
 - Husband task page has local status filtering, task status cards, submit confirmation, submitted/confirmed timestamps and clean reward text.
