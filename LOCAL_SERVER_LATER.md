@@ -119,6 +119,12 @@ Frame metadata is loaded with `Taro.request` from the remote `index.json`. If th
 
 Remote mode also swaps husband/wife login bubbles from the lightweight local text bubbles to H5 speech/thought image bubbles from `assets/login-speech-full/`. These images are selected by interaction state: intro/login, idle, drag/nervous, select, wife response, and wife thinking. Cat bubbles keep the local text fallback because the H5 source does not define cat-specific speech images.
 
+Remote login mode also changes the page structure from local card-contained actors to an H5-like stage:
+
+- husband/wife/cat-blue/cat-white are positioned as independent draggable actors over the room background.
+- husband/wife entry cards become bottom image buttons.
+- local mode keeps the compact card layout for package-safe preview.
+
 ## WeChat Production Requirements
 
 - HTTPS server domain.

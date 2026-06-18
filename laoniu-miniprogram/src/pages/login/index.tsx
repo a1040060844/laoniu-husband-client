@@ -59,6 +59,13 @@ const initialOffsets: Record<DragTarget, Position> = {
   catWhite: { x: 0, y: 0 }
 };
 
+const remoteStagePositions: Record<DragTarget, Position> = {
+  husband: { x: 38, y: 55 },
+  wife: { x: 59, y: 55 },
+  cat: { x: 51, y: 66 },
+  catWhite: { x: 63, y: 68 }
+};
+
 const remoteIdleActions: Record<DragTarget, string[]> = {
   husband: ["blink", "adjust-glasses", "nervous"],
   wife: ["blink", "thinking", "helpless"],
@@ -149,6 +156,16 @@ function dragStyle(position: Position) {
   return {
     "--drag-x": `${position.x}px`,
     "--drag-y": `${position.y}px`
+  } as CSSProperties;
+}
+
+function stageActorStyle(target: DragTarget, offset: Position) {
+  const position = remoteStagePositions[target];
+  return {
+    "--actor-x": `${position.x}%`,
+    "--actor-y": `${position.y}%`,
+    "--drag-x": `${offset.x}px`,
+    "--drag-y": `${offset.y}px`
   } as CSSProperties;
 }
 
@@ -262,10 +279,10 @@ export default function LoginPage() {
   const wifeAction = selecting === "wife" ? "select" : dragState?.target === "wife" ? "drag" : activeTarget === "wife" ? idleActions.wife : "blink";
   const catAction = dragState?.target === "cat" ? "drag" : activeTarget === "cat" ? idleActions.cat : "blink";
   const catWhiteAction = dragState?.target === "catWhite" ? "drag" : idleActions.catWhite;
-  const showRemoteWhiteCat = isRemoteAssetMode();
+  const useRemoteStage = isRemoteAssetMode();
 
   return (
-    <DesignStage className={`login-page ${selecting ? "is-selecting" : ""}`}>
+    <DesignStage className={`login-page ${useRemoteStage ? "login-page--remote-stage" : ""} ${selecting ? "is-selecting" : ""}`}>
       <Image className="login-page__bg" src={loginAsset("bg-room.png")} mode="aspectFill" />
       <View className="login-page__shade" />
       <View className="login-page__top-mask" />
@@ -286,7 +303,93 @@ export default function LoginPage() {
           )}
         </View>
 
-        <View className="login-page__cards">
+        {useRemoteStage ? (
+          <View className="login-remote-stage">
+            <View
+              className={`login-remote-actor login-remote-actor--husband ${activeTarget === "husband" ? "is-active" : ""} ${dragState?.target === "husband" ? "is-dragging" : ""}`}
+              onTouchEnd={endDrag}
+              onTouchMove={moveDrag}
+              onTouchStart={(event) => beginDrag("husband", event)}
+              style={stageActorStyle("husband", offsets.husband)}
+            >
+              <SpriteActor mood="happy" active={activeTarget === "husband"} dragging={dragState?.target === "husband"} onTap={() => nudge("husband")}>
+                <RemoteSpriteSheetActor
+                  displayWidth={160}
+                  fallbackMeta={husbandBlinkMeta}
+                  fallbackSrc={loginSpriteAsset("husband/blink/sprite.png")}
+                  metaUrl={fullSpritePath("husband", husbandAction, "index.json")}
+                  playbackRate={2}
+                  src={fullSpritePath("husband", husbandAction, "sprite.png")}
+                />
+              </SpriteActor>
+            </View>
+            <View
+              className={`login-remote-actor login-remote-actor--wife ${activeTarget === "wife" ? "is-active" : ""} ${dragState?.target === "wife" ? "is-dragging" : ""}`}
+              onTouchEnd={endDrag}
+              onTouchMove={moveDrag}
+              onTouchStart={(event) => beginDrag("wife", event)}
+              style={stageActorStyle("wife", offsets.wife)}
+            >
+              <SpriteActor mood="proud" active={activeTarget === "wife"} dragging={dragState?.target === "wife"} onTap={() => nudge("wife")}>
+                <RemoteSpriteSheetActor
+                  displayWidth={160}
+                  fallbackMeta={wifeBlinkMeta}
+                  fallbackSrc={loginSpriteAsset("wife/blink/sprite.png")}
+                  metaUrl={fullSpritePath("wife", wifeAction, "index.json")}
+                  playbackRate={2}
+                  src={fullSpritePath("wife", wifeAction, "sprite.png")}
+                />
+              </SpriteActor>
+            </View>
+            <View
+              className={`login-remote-actor login-remote-actor--cat ${activeTarget === "cat" ? "is-active" : ""} ${dragState?.target === "cat" ? "is-dragging" : ""}`}
+              onTouchEnd={endDrag}
+              onTouchMove={moveDrag}
+              onTouchStart={(event) => beginDrag("cat", event)}
+              style={stageActorStyle("cat", offsets.cat)}
+            >
+              <View className="login-remote-actor__cat-wrap" onClick={() => nudge("cat")}>
+                <RemoteSpriteSheetActor
+                  className="login-page__cat"
+                  displayWidth={104}
+                  fallbackMeta={catBlueBlinkMeta}
+                  fallbackSrc={loginSpriteAsset("cat-blue/blink/sprite.png")}
+                  metaUrl={fullSpritePath("cat-blue", catAction, "index.json")}
+                  playbackRate={2}
+                  src={fullSpritePath("cat-blue", catAction, "sprite.png")}
+                />
+              </View>
+            </View>
+            <View
+              className={`login-remote-actor login-remote-actor--cat-white ${activeTarget === "cat" ? "is-active" : ""} ${dragState?.target === "catWhite" ? "is-dragging" : ""}`}
+              onTouchEnd={endDrag}
+              onTouchMove={moveDrag}
+              onTouchStart={(event) => beginDrag("catWhite", event)}
+              style={stageActorStyle("catWhite", offsets.catWhite)}
+            >
+              <View className="login-remote-actor__cat-wrap" onClick={() => nudge("cat")}>
+                <RemoteSpriteSheetActor
+                  className="login-page__cat-white"
+                  displayWidth={92}
+                  fallbackMeta={catBlueBlinkMeta}
+                  fallbackSrc={loginSpriteAsset("cat-blue/blink/sprite.png")}
+                  hideUntilRemote
+                  metaUrl={fullSpritePath("cat-white", catWhiteAction, "index.json")}
+                  playbackRate={2}
+                  src={fullSpritePath("cat-white", catWhiteAction, "sprite.png")}
+                />
+              </View>
+            </View>
+            <Button className="login-remote-card-button login-remote-card-button--husband" loading={selecting === "husband"} onClick={() => handleEnter("husband")}>
+              <Image className="login-remote-card-button__image pixelated" src={loginAsset("card-husband.png")} mode="aspectFit" />
+            </Button>
+            <Button className="login-remote-card-button login-remote-card-button--wife" loading={selecting === "wife"} onClick={() => handleEnter("wife")}>
+              <Image className="login-remote-card-button__image pixelated" src={loginAsset("card-wife.png")} mode="aspectFit" />
+            </Button>
+          </View>
+        ) : (
+          <>
+          <View className="login-page__cards">
           <View className={`login-card panel ${activeTarget === "husband" ? "is-active" : ""} ${selecting === "husband" ? "is-entering" : ""}`} onClick={() => nudge("husband")}>
             <Image className="login-card__frame pixelated" src={loginAsset("card-husband.png")} mode="aspectFit" />
             <View
@@ -353,28 +456,8 @@ export default function LoginPage() {
             <View className="login-page__cat-spark" />
           </View>
         </View>
-        {showRemoteWhiteCat ? (
-          <View
-            className={`login-page__cat-white-drag ${dragState?.target === "catWhite" ? "is-dragging" : ""}`}
-            onTouchEnd={endDrag}
-            onTouchMove={moveDrag}
-            onTouchStart={(event) => beginDrag("catWhite", event)}
-            style={dragStyle(offsets.catWhite)}
-          >
-            <View className={`login-page__cat-white-wrap ${activeTarget === "cat" ? "is-active" : ""}`} onClick={() => nudge("cat")}>
-              <RemoteSpriteSheetActor
-                className="login-page__cat-white"
-                displayWidth={92}
-                fallbackMeta={catBlueBlinkMeta}
-                fallbackSrc={loginSpriteAsset("cat-blue/blink/sprite.png")}
-                hideUntilRemote
-                metaUrl={fullSpritePath("cat-white", catWhiteAction, "index.json")}
-                playbackRate={2}
-                src={fullSpritePath("cat-white", catWhiteAction, "sprite.png")}
-              />
-            </View>
-          </View>
-        ) : null}
+          </>
+        )}
         <Button className="login-page__reset btn btn-secondary" onClick={handleReset}>重置本地数据</Button>
       </View>
     </DesignStage>

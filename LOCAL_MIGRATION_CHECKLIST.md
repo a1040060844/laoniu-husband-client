@@ -31,6 +31,7 @@
 
 - [x] Login
 - [x] Login remote full-sprite action wiring with local fallback
+- [x] Login remote H5-like independent stage layout
 - [x] Loading
 - [x] Husband role
 - [x] Husband benefit
@@ -94,6 +95,6 @@
 
 ## Known Follow-Up
 
-- Login now has selected husband/wife/cat blink sprite-sheet playback, bounded actor/cat dragging, idle bubble rotation and tap feedback; remote mode can load full drag/select/action sprite sheets from `assets/login-sprites-full/`, randomly choose role/cat idle actions, show the H5 white cat as a remote-only actor and display H5 husband/wife speech images from `assets/login-speech-full/` according to intro/idle/drag/select/thinking states, while exact H5 hitbox choreography remains a real-device follow-up.
+- Login now has selected husband/wife/cat blink sprite-sheet playback, bounded actor/cat dragging, idle bubble rotation and tap feedback; remote mode can load full drag/select/action sprite sheets from `assets/login-sprites-full/`, randomly choose role/cat idle actions, show the H5 white cat as a remote-only actor, display H5 husband/wife speech images from `assets/login-speech-full/` according to intro/idle/drag/select/thinking states, and use an H5-like independent actor stage, while exact H5 hitbox choreography remains a real-device follow-up.
 - H5 cinematic effects are approximated by lightweight Taro components and need real-device timing polish.
 - H5 source package still has unrelated dirty changes; this migration avoided editing `husband-client/`.

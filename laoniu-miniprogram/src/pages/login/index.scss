@@ -35,6 +35,12 @@
   padding: 66px 24px 36px;
 }
 
+.login-page--remote-stage .login-page__content {
+  min-height: 100%;
+  padding-bottom: 24px;
+  box-sizing: border-box;
+}
+
 .login-page__title-image {
   width: 480px;
   height: 110px;
@@ -264,6 +270,93 @@
 }
 
 .login-page.is-selecting .login-page__cards {
+  pointer-events: none;
+}
+
+.login-remote-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.login-remote-actor {
+  position: absolute;
+  left: var(--actor-x);
+  top: var(--actor-y);
+  z-index: 8;
+  transform: translate(calc(-50% + var(--drag-x)), calc(-100% + var(--drag-y)));
+  transition: filter .18s ease, transform .18s ease;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.login-remote-actor.is-active {
+  filter: saturate(1.08) drop-shadow(0 10px 0 rgba(74, 51, 40, .18));
+}
+
+.login-remote-actor.is-dragging {
+  z-index: 16;
+  filter: saturate(1.12) drop-shadow(0 16px 0 rgba(74, 51, 40, .22));
+  transition: none;
+}
+
+.login-remote-actor--cat,
+.login-remote-actor--cat-white {
+  z-index: 10;
+}
+
+.login-remote-actor__cat-wrap {
+  animation: floatSoft 3.5s ease-in-out infinite;
+}
+
+.login-remote-card-button {
+  position: absolute;
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  z-index: 20;
+  width: 48%;
+  height: 146px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  line-height: 1;
+  pointer-events: auto;
+  animation: floatSoft 3.4s ease-in-out infinite;
+}
+
+.login-remote-card-button::after {
+  border: 0;
+}
+
+.login-remote-card-button--husband {
+  left: 2%;
+}
+
+.login-remote-card-button--wife {
+  right: 2%;
+  animation-delay: -.8s;
+}
+
+.login-remote-card-button__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 10px 0 rgba(74, 51, 40, .22));
+}
+
+.login-page--remote-stage .login-page__reset {
+  position: absolute;
+  right: 32px;
+  top: 166px;
+  z-index: 22;
+  width: 190px;
+  height: 58px;
+  margin-top: 0;
+  pointer-events: auto;
+}
+
+.login-page--remote-stage.is-selecting .login-remote-stage {
   pointer-events: none;
 }
 
