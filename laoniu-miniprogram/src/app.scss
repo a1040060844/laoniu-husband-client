@@ -1,6 +1,6 @@
-@import "./styles/visual.scss";
-@import "./styles/layers.scss";
-@import "./styles/animations.scss";
+@use "./styles/visual.scss";
+@use "./styles/layers.scss";
+@use "./styles/animations.scss";
 
 page {
   min-height: 100%;
