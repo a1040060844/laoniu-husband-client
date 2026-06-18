@@ -1,5 +1,6 @@
 node_modules/
 dist/
+laoniu-miniprogram/remote-assets/
 
 app-data/
 *.log

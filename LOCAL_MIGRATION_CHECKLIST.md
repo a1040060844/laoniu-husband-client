@@ -63,6 +63,7 @@
 - [x] Resource path abstraction exists.
 - [x] Large assets are candidates for future CDN.
 - [x] Package audit command exists: `npm run audit:package`.
+- [x] Remote asset export command exists: `npm run export:remote-assets`.
 - [x] `npm run check` runs tests, WeChat build and package audit.
 
 ## Stage 1 Command Log
@@ -77,6 +78,7 @@
 - `npx tsc --noEmit` in `laoniu-miniprogram/`: passed.
 - `npm run build:weapp` in `laoniu-miniprogram/`: passed and generated `dist/`. Sass `@import` deprecation warnings were cleared by switching the app stylesheet entry to `@use`.
 - `npm run audit:package` in `laoniu-miniprogram/`: passed; current `dist` is 19.51 MB total and `dist/assets` is 19.04 MB, with a warning that package size is close to the 20 MB upload limit.
+- `npm run export:remote-assets` in `laoniu-miniprogram/`: generates an ignored `remote-assets/` upload bundle with current Mini Program assets and the complete H5 `login-final` sprite batch for later CDN/static-host use.
 - Browser API scan in `laoniu-miniprogram/src`: no `ReactDOM`, `localStorage`, `history`, `location`, `web-view`, `document`; only `app.config.ts` contains Taro's `window` config key.
 - Filtered and optimized local assets: generated `dist` currently contains 124 files, about 19.51 MB total; `dist/assets` contains 55 files, about 19.04 MB after adding selected blink sprite sheets and removing unused loading/static login images.
 

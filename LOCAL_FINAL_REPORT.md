@@ -32,6 +32,7 @@ This report records the current local-only Mini Program migration checkpoint.
 - `npx tsc --noEmit`: passed.
 - `npm run build:weapp`: passed and generated `dist/`.
 - `npm run audit:package`: passed and warns that the package is close to the 20 MB upload limit.
+- `npm run export:remote-assets`: available for generating an ignored CDN/static-host upload bundle under `laoniu-miniprogram/remote-assets/`.
 - Browser API scan: no forbidden browser APIs in Mini Program source. Taro's `app.config.ts` uses a `window` config key, which is not browser `window` usage.
 - Asset audit: generated `dist` contains 124 files, about 19.51 MB total; `dist/assets` contains 55 files, about 19.04 MB after filtering local copies, cleaning unused loading/static login images, and adding selected blink sprite sheets.
 
@@ -77,4 +78,5 @@ This report records the current local-only Mini Program migration checkpoint.
 - Asset payload is under 20 MB now, but close enough to the limit that a production/upload pass should still move large images to remote assets or stricter subpackage groups.
 - `scripts/audit-package.mjs` now guards future work by failing over the hard package limit and warning when new assets push the package near the limit.
 - Remote asset switching is now centralized in `laoniu-miniprogram/src/config/assets.ts`; full sprite sheets can later move to a CDN/HTTPS static host without changing page code.
+- `scripts/export-remote-assets.mjs` can generate a remote upload bundle containing the current Mini Program assets plus the complete H5 `login-final` sprite batch under `assets/login-sprites-full/`.
 - Future server mode is only documented and stubbed; this checkpoint is intentionally local-only.

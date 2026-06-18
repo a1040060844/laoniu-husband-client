@@ -65,6 +65,35 @@ After switching to remote mode, the code paths in `services/assets.ts` keep page
 
 Current local build uses `scripts/copy-assets.mjs` after `taro build` to copy filtered `src/assets` files into `dist/assets`. Source PSD folders and unused sprite batches are excluded from this Mini Program baseline.
 
+### Remote Asset Export Command
+
+Use this command when you are ready to upload larger artwork or complete sprite sheets to a CDN/static host:
+
+```bash
+cd laoniu-miniprogram
+npm run export:remote-assets
+```
+
+The command creates:
+
+- `laoniu-miniprogram/remote-assets/assets/`: upload this entire folder to HTTPS storage.
+- `laoniu-miniprogram/remote-assets/asset-manifest.json`: generated file count, byte size and largest files.
+- `laoniu-miniprogram/remote-assets/README.md`: upload and config notes.
+
+The generated `remote-assets/` directory is intentionally ignored by git because it can be large. The export includes the current Mini Program `src/assets` layout and also copies the complete H5 `husband-client/src/assets/login-final` sprite batch to `assets/login-sprites-full/` for later full visual parity work.
+
+After upload, set `laoniu-miniprogram/src/config/assets.ts`:
+
+```ts
+export const ASSET_CONFIG = {
+  mode: "remote",
+  localBase: "/assets",
+  remoteBase: "https://your-cdn.example.com/assets",
+};
+```
+
+`remoteBase` must point to the public URL of the uploaded `assets` directory. For example, `publicAsset("/roles/role-00.png")` will resolve to `https://your-cdn.example.com/assets/roles/role-00.png`.
+
 ## WeChat Production Requirements
 
 - HTTPS server domain.
