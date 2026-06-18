@@ -8,7 +8,7 @@ import husbandBlinkMeta from "../../assets/login-sprites/husband/blink/index.jso
 import wifeBlinkMeta from "../../assets/login-sprites/wife/blink/index.json";
 import catBlueBlinkMeta from "../../assets/login-sprites/cat-blue/blink/index.json";
 import { isRemoteAssetMode } from "../../config/assets";
-import { loginAsset, loginFullSpriteAsset, loginSpriteAsset } from "../../services/assets";
+import { loginAsset, loginFullSpeechAsset, loginFullSpriteAsset, loginSpriteAsset } from "../../services/assets";
 import { stateService } from "../../services/state";
 import "./index.scss";
 
@@ -65,6 +65,25 @@ const remoteIdleActions: Record<DragTarget, string[]> = {
   catWhite: ["idle", "lookaround", "stretch", "roll", "jump"]
 };
 
+const remoteBubbleImages: Record<Exclude<BubbleTarget, "cat">, string[]> = {
+  husband: [
+    "speech-husband-idle.png",
+    "speech-husband-login.png",
+    "speech-husband-nervous.png",
+    "speech-husband-select.png"
+  ],
+  wife: [
+    "speech-wife-login.png",
+    "speech-wife-response.png",
+    "speech-wife-select.png",
+    "thought-wife-food-1.png",
+    "thought-wife-food-2.png",
+    "thought-wife-food-3.png",
+    "thought-wife-hotpot-bbq.png",
+    "thought-wife-what-eat.png"
+  ]
+};
+
 function getLoveDayCount(now = new Date()) {
   const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
   return Math.min(9999, Math.max(1, Math.floor((todayUtc - LOVE_START_UTC) / DAY_MS) + 1));
@@ -86,6 +105,13 @@ function pickLine(target: BubbleTarget) {
 function pickIdleAction(target: DragTarget) {
   const actions = remoteIdleActions[target];
   return actions[Math.floor(Math.random() * actions.length)] ?? "blink";
+}
+
+function pickRemoteBubbleImage(target: BubbleTarget) {
+  if (!isRemoteAssetMode() || target === "cat") return undefined;
+  const images = remoteBubbleImages[target];
+  const image = images[Math.floor(Math.random() * images.length)] ?? images[0];
+  return loginFullSpeechAsset(image);
 }
 
 function dragLimit(target: DragTarget) {
@@ -116,6 +142,7 @@ function enter(role: RoleRoute) {
 export default function LoginPage() {
   const [bubble, setBubble] = useState<BubbleTarget>("husband");
   const [bubbleLine, setBubbleLine] = useState(pickLine("husband"));
+  const [bubbleImage, setBubbleImage] = useState(() => pickRemoteBubbleImage("husband"));
   const [activeTarget, setActiveTarget] = useState<BubbleTarget>("husband");
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [offsets, setOffsets] = useState<Record<DragTarget, Position>>(initialOffsets);
@@ -131,6 +158,7 @@ export default function LoginPage() {
   function nudge(target: BubbleTarget) {
     setBubble(target);
     setBubbleLine(pickLine(target));
+    setBubbleImage(pickRemoteBubbleImage(target));
     setActiveTarget(target);
     setIdleActions((current) => ({
       ...current,
@@ -220,8 +248,14 @@ export default function LoginPage() {
         <Text className={`login-page__days ${loveDays >= 1000 ? "login-page__days--long" : ""}`}>第 {loveDays} 天</Text>
 
         <View className={`login-bubble login-bubble--${bubble}`}>
-          <Image className="login-bubble__image pixelated" src={loginAsset(bubble === "wife" ? "speech-wife.png" : "speech-husband.png")} mode="aspectFit" />
-          <Text className="login-bubble__text">{bubbleLine}</Text>
+          {bubbleImage ? (
+            <Image className="login-bubble__remote-image" src={bubbleImage} mode="aspectFit" />
+          ) : (
+            <>
+              <Image className="login-bubble__image pixelated" src={loginAsset(bubble === "wife" ? "speech-wife.png" : "speech-husband.png")} mode="aspectFit" />
+              <Text className="login-bubble__text">{bubbleLine}</Text>
+            </>
+          )}
         </View>
 
         <View className="login-page__cards">

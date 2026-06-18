@@ -85,6 +85,16 @@
   height: 100%;
 }
 
+.login-bubble__remote-image {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 360px;
+  height: 132px;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 5px 0 rgba(72, 45, 34, .16));
+}
+
 .login-bubble__text {
   position: relative;
   z-index: 1;

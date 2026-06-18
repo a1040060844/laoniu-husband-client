@@ -7,6 +7,7 @@ const outputRoot = resolve(root, "remote-assets");
 const outputAssets = resolve(outputRoot, "assets");
 const localAssets = resolve(root, "src/assets");
 const h5LoginFinal = resolve(repoRoot, "husband-client/src/assets/login-final");
+const h5LoginSpeech = resolve(repoRoot, "husband-client/src/assets/login/speech");
 const skippedExtensions = new Set([".psd", ".psb", ".psd1", ".ai"]);
 const largestFiles = [];
 
@@ -73,6 +74,12 @@ if (existsSync(h5LoginFinal)) {
   console.warn(`export-remote-assets: optional H5 sprite source not found: ${h5LoginFinal}`);
 }
 
+if (existsSync(h5LoginSpeech)) {
+  copyTree(h5LoginSpeech, resolve(outputAssets, "login-speech-full"));
+} else {
+  console.warn(`export-remote-assets: optional H5 speech source not found: ${h5LoginSpeech}`);
+}
+
 const manifest = {
   version: 1,
   generatedAt: new Date().toISOString(),
@@ -81,6 +88,7 @@ const manifest = {
     "Upload the assets directory to an HTTPS static host.",
     "Set ASSET_CONFIG.mode to remote and remoteBase to the public URL ending with /assets.",
     "login-sprites-full contains the complete H5 login-final sprite batch for future visual parity work.",
+    "login-speech-full contains the H5 login speech/thought image bubbles.",
   ],
   totals: {
     files: totalFiles,

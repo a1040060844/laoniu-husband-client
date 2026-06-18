@@ -82,6 +82,12 @@ The command creates:
 
 The generated `remote-assets/` directory is intentionally ignored by git because it can be large. The export includes the current Mini Program `src/assets` layout and also copies the complete H5 `husband-client/src/assets/login-final` sprite batch to `assets/login-sprites-full/` for later full visual parity work.
 
+It also copies the H5 login speech/thought bubble images from `husband-client/src/assets/login/speech` to:
+
+```text
+assets/login-speech-full/
+```
+
 After upload, set `laoniu-miniprogram/src/config/assets.ts`:
 
 ```ts
@@ -110,6 +116,8 @@ The login page already switches these actions when `ASSET_CONFIG.mode` is `"remo
 - cat-white: remote-only idle pool `idle`, `lookaround`, `stretch`, `roll`, `jump`; override `drag`
 
 Frame metadata is loaded with `Taro.request` from the remote `index.json`. If the request fails or the remote host is not configured as a legal WeChat domain yet, the component falls back to the local blink animation instead of blocking the login page.
+
+Remote mode also swaps husband/wife login bubbles from the lightweight local text bubbles to H5 speech/thought image bubbles from `assets/login-speech-full/`. Cat bubbles keep the local text fallback because the H5 source does not define cat-specific speech images.
 
 ## WeChat Production Requirements
 
