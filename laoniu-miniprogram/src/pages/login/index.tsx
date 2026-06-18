@@ -30,18 +30,24 @@ function enter(role: RoleRoute) {
 
 export default function LoginPage() {
   const [bubble, setBubble] = useState<BubbleTarget>("husband");
+  const [activeTarget, setActiveTarget] = useState<BubbleTarget>("husband");
   const [selecting, setSelecting] = useState<RoleRoute | null>(null);
   const loveDays = getLoveDayCount();
 
+  function nudge(target: BubbleTarget) {
+    setBubble(target);
+    setActiveTarget(target);
+  }
+
   async function handleEnter(role: RoleRoute) {
-    setBubble(role);
+    nudge(role);
     setSelecting(role);
     Taro.showToast({ title: role === "husband" ? "老哥报到" : "老妞上线", icon: "none", duration: 650 });
     setTimeout(() => enter(role), 420);
   }
 
   async function handleReset() {
-    setBubble("cat");
+    nudge("cat");
     const result = await Taro.showModal({
       title: "重置本地数据",
       content: "会清空本地进度、任务、权益申请和日志。确定重置吗？",
@@ -70,19 +76,22 @@ export default function LoginPage() {
         </View>
 
         <View className="login-page__cards">
-          <View className={`login-card panel ${selecting === "husband" ? "is-active" : ""}`} onClick={() => setBubble("husband")}>
+          <View className={`login-card panel ${activeTarget === "husband" ? "is-active" : ""} ${selecting === "husband" ? "is-entering" : ""}`} onClick={() => nudge("husband")}>
             <Image className="login-card__frame pixelated" src={loginAsset("card-husband.png")} mode="aspectFit" />
-            <SpriteActor src={loginAsset("husband.png")} onTap={() => setBubble("husband")} />
+            <SpriteActor src={loginAsset("husband.png")} mood="happy" active={activeTarget === "husband"} onTap={() => nudge("husband")} />
             <Button className="btn" loading={selecting === "husband"} onClick={() => handleEnter("husband")}>我是老哥</Button>
           </View>
-          <View className={`login-card panel ${selecting === "wife" ? "is-active" : ""}`} onClick={() => setBubble("wife")}>
+          <View className={`login-card panel ${activeTarget === "wife" ? "is-active" : ""} ${selecting === "wife" ? "is-entering" : ""}`} onClick={() => nudge("wife")}>
             <Image className="login-card__frame pixelated" src={loginAsset("card-wife.png")} mode="aspectFit" />
-            <SpriteActor src={loginAsset("wife.png")} onTap={() => setBubble("wife")} />
+            <SpriteActor src={loginAsset("wife.png")} mood="proud" active={activeTarget === "wife"} onTap={() => nudge("wife")} />
             <Button className="btn" loading={selecting === "wife"} onClick={() => handleEnter("wife")}>我是老妞</Button>
           </View>
         </View>
 
-        <Image className="login-page__cat pixelated" src={loginAsset("cat-blue.png")} mode="aspectFit" onClick={() => setBubble("cat")} />
+        <View className={`login-page__cat-wrap ${activeTarget === "cat" ? "is-active" : ""}`} onClick={() => nudge("cat")}>
+          <Image className="login-page__cat pixelated" src={loginAsset("cat-blue.png")} mode="aspectFit" />
+          <View className="login-page__cat-spark" />
+        </View>
         <Button className="login-page__reset btn btn-secondary" onClick={handleReset}>重置本地数据</Button>
       </View>
     </DesignStage>

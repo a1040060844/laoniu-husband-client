@@ -9,7 +9,7 @@ This report records the current local-only Mini Program migration checkpoint.
 - Runtime mode is local-only. It uses Taro storage through `services/state/index.ts`; no CloudBase, server, API, `web-view`, ReactDOM, browser storage, or browser routing is required.
 - Main pages and husband/wife subpackage pages are implemented.
 - Domain data and pure logic were copied from the H5 project where suitable: roles, benefits, task presets, task modules, progression, task schedule and task reward helpers. User-facing role, benefit, task and reward copy is now clean UTF-8 Chinese.
-- The visual migration is a first-pass Mini Program version: structure, assets, state, flows and core UI are present; login includes love-day display, speech feedback, role selection feedback and reset confirmation.
+- The visual migration is a first-pass Mini Program version: structure, assets, state, flows and core UI are present; login includes love-day display, speech feedback, role selection feedback, role/cat tap-pop feedback and reset confirmation.
 - Slave mode is operable from the wife dashboard and visible on the husband slave page. Opening/restoring the state writes logs, decrees and punishment ledger entries.
 - Husband role page restores the H5-style role preview loop: left/right level switching, locked future roles, level dots, hero image and progress/wallet panel.
 - Husband task page has local status filtering, task status cards, submit confirmation, submitted/confirmed timestamps and clean reward text.
@@ -67,7 +67,7 @@ This report records the current local-only Mini Program migration checkpoint.
 ## Known Gaps
 
 - Login sprite-sheet drag, random idle, click hitbox and exact H5 sprite behavior are not fully restored.
-- Login role selection, speech bubble feedback and love-day display are restored, but full sprite-sheet dragging is still pending.
+- Login role selection, speech bubble feedback, love-day display and Mini Program-safe actor/cat tap feedback are restored, but full sprite-sheet dragging is still pending.
 - H5 cinematic effects such as upgrade, slave state, reward flight and wife command motion are represented by lightweight Mini Program-safe decree and reward feedback; full choreography is still pending.
 - Role preview visuals are implemented, but final animation timing and phone framing still need WeChat DevTools review.
 - Visual parity still needs WeChat DevTools and real-device review.
