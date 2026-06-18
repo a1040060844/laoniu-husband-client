@@ -88,6 +88,14 @@ It also copies the H5 login speech/thought bubble images from `husband-client/sr
 assets/login-speech-full/
 ```
 
+The H5 login top-level static images are copied to:
+
+```text
+assets/login-static-full/
+```
+
+This includes `bg-room.png`, `title.png`, `subtitle.png`, `card-husband.png`, `card-wife.png`, and `reset-button.png`.
+
 After upload, set `laoniu-miniprogram/src/config/assets.ts`:
 
 ```ts
@@ -122,7 +130,8 @@ Remote mode also swaps husband/wife login bubbles from the lightweight local tex
 Remote login mode also changes the page structure from local card-contained actors to an H5-like stage:
 
 - husband/wife/cat-blue/cat-white are positioned as independent draggable actors over the room background.
-- husband/wife entry cards become bottom image buttons.
+- husband/wife entry cards become bottom image buttons, and the reset button uses the H5 reset image when available.
+- background/title/subtitle/card/reset images come from `assets/login-static-full/`.
 - local mode keeps the compact card layout for package-safe preview.
 
 ## WeChat Production Requirements

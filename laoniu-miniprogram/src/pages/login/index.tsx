@@ -8,7 +8,7 @@ import husbandBlinkMeta from "../../assets/login-sprites/husband/blink/index.jso
 import wifeBlinkMeta from "../../assets/login-sprites/wife/blink/index.json";
 import catBlueBlinkMeta from "../../assets/login-sprites/cat-blue/blink/index.json";
 import { isRemoteAssetMode } from "../../config/assets";
-import { loginAsset, loginFullSpeechAsset, loginFullSpriteAsset, loginSpriteAsset } from "../../services/assets";
+import { loginAsset, loginFullSpeechAsset, loginFullSpriteAsset, loginFullStaticAsset, loginSpriteAsset } from "../../services/assets";
 import { stateService } from "../../services/state";
 import "./index.scss";
 
@@ -280,16 +280,17 @@ export default function LoginPage() {
   const catAction = dragState?.target === "cat" ? "drag" : activeTarget === "cat" ? idleActions.cat : "blink";
   const catWhiteAction = dragState?.target === "catWhite" ? "drag" : idleActions.catWhite;
   const useRemoteStage = isRemoteAssetMode();
+  const loginStaticAsset = useRemoteStage ? loginFullStaticAsset : loginAsset;
 
   return (
     <DesignStage className={`login-page ${useRemoteStage ? "login-page--remote-stage" : ""} ${selecting ? "is-selecting" : ""}`}>
-      <Image className="login-page__bg" src={loginAsset("bg-room.png")} mode="aspectFill" />
+      <Image className="login-page__bg" src={loginStaticAsset("bg-room.png")} mode="aspectFill" />
       <View className="login-page__shade" />
       <View className="login-page__top-mask" />
       <View className="login-page__bottom-mask" />
       <View className="login-page__content">
-        <Image className="login-page__title-image pixelated" src={loginAsset("title.png")} mode="aspectFit" />
-        <Image className="login-page__subtitle-image pixelated" src={loginAsset("subtitle.png")} mode="aspectFit" />
+        <Image className="login-page__title-image pixelated" src={loginStaticAsset("title.png")} mode="aspectFit" />
+        <Image className="login-page__subtitle-image pixelated" src={loginStaticAsset("subtitle.png")} mode="aspectFit" />
         <Text className={`login-page__days ${loveDays >= 1000 ? "login-page__days--long" : ""}`}>第 {loveDays} 天</Text>
 
         <View className={`login-bubble login-bubble--${bubble}`}>
@@ -381,10 +382,10 @@ export default function LoginPage() {
               </View>
             </View>
             <Button className="login-remote-card-button login-remote-card-button--husband" loading={selecting === "husband"} onClick={() => handleEnter("husband")}>
-              <Image className="login-remote-card-button__image pixelated" src={loginAsset("card-husband.png")} mode="aspectFit" />
+              <Image className="login-remote-card-button__image pixelated" src={loginStaticAsset("card-husband.png")} mode="aspectFit" />
             </Button>
             <Button className="login-remote-card-button login-remote-card-button--wife" loading={selecting === "wife"} onClick={() => handleEnter("wife")}>
-              <Image className="login-remote-card-button__image pixelated" src={loginAsset("card-wife.png")} mode="aspectFit" />
+              <Image className="login-remote-card-button__image pixelated" src={loginStaticAsset("card-wife.png")} mode="aspectFit" />
             </Button>
           </View>
         ) : (
@@ -458,7 +459,13 @@ export default function LoginPage() {
         </View>
           </>
         )}
-        <Button className="login-page__reset btn btn-secondary" onClick={handleReset}>重置本地数据</Button>
+        {useRemoteStage ? (
+          <Button className="login-page__reset login-page__reset--remote" onClick={handleReset}>
+            <Image className="login-page__reset-image pixelated" src={loginStaticAsset("reset-button.png")} mode="aspectFit" />
+          </Button>
+        ) : (
+          <Button className="login-page__reset btn btn-secondary" onClick={handleReset}>重置本地数据</Button>
+        )}
       </View>
     </DesignStage>
   );

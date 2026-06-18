@@ -46,3 +46,7 @@ export function loginFullSpriteAsset(path: string): string {
 export function loginFullSpeechAsset(path: string): string {
   return publicAsset(`/login-speech-full/${path}`);
 }
+
+export function loginFullStaticAsset(path: string): string {
+  return publicAsset(`/login-static-full/${path}`);
+}

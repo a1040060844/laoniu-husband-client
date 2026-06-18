@@ -8,6 +8,15 @@ const outputAssets = resolve(outputRoot, "assets");
 const localAssets = resolve(root, "src/assets");
 const h5LoginFinal = resolve(repoRoot, "husband-client/src/assets/login-final");
 const h5LoginSpeech = resolve(repoRoot, "husband-client/src/assets/login/speech");
+const h5LoginStatic = resolve(repoRoot, "husband-client/src/assets/login");
+const h5LoginStaticFiles = [
+  "bg-room.png",
+  "card-husband.png",
+  "card-wife.png",
+  "reset-button.png",
+  "subtitle.png",
+  "title.png",
+];
 const skippedExtensions = new Set([".psd", ".psb", ".psd1", ".ai"]);
 const largestFiles = [];
 
@@ -52,6 +61,22 @@ function copyTree(from, to, options = {}) {
   recordFile(to, stats.size);
 }
 
+function copySelectedFiles(fromDir, toDir, fileNames) {
+  if (!existsSync(fromDir)) return false;
+  let copiedAny = false;
+  for (const fileName of fileNames) {
+    const from = resolve(fromDir, fileName);
+    if (!existsSync(from)) continue;
+    const to = resolve(toDir, fileName);
+    const stats = statSync(from);
+    ensureDir(resolve(to, ".."));
+    copyFileSync(from, to);
+    recordFile(to, stats.size);
+    copiedAny = true;
+  }
+  return copiedAny;
+}
+
 function formatBytes(bytes) {
   return `${(bytes / 1024 / 1024).toFixed(2)} MiB`;
 }
@@ -80,6 +105,10 @@ if (existsSync(h5LoginSpeech)) {
   console.warn(`export-remote-assets: optional H5 speech source not found: ${h5LoginSpeech}`);
 }
 
+if (!copySelectedFiles(h5LoginStatic, resolve(outputAssets, "login-static-full"), h5LoginStaticFiles)) {
+  console.warn(`export-remote-assets: optional H5 login static source not found: ${h5LoginStatic}`);
+}
+
 const manifest = {
   version: 1,
   generatedAt: new Date().toISOString(),
@@ -89,6 +118,7 @@ const manifest = {
     "Set ASSET_CONFIG.mode to remote and remoteBase to the public URL ending with /assets.",
     "login-sprites-full contains the complete H5 login-final sprite batch for future visual parity work.",
     "login-speech-full contains the H5 login speech/thought image bubbles.",
+    "login-static-full contains H5 login top-level static images such as title, cards, background, and reset button.",
   ],
   totals: {
     files: totalFiles,
