@@ -76,4 +76,5 @@ This report records the current local-only Mini Program migration checkpoint.
 - Visual parity still needs WeChat DevTools and real-device review.
 - Asset payload is under 20 MB now, but close enough to the limit that a production/upload pass should still move large images to remote assets or stricter subpackage groups.
 - `scripts/audit-package.mjs` now guards future work by failing over the hard package limit and warning when new assets push the package near the limit.
+- Remote asset switching is now centralized in `laoniu-miniprogram/src/config/assets.ts`; full sprite sheets can later move to a CDN/HTTPS static host without changing page code.
 - Future server mode is only documented and stubbed; this checkpoint is intentionally local-only.

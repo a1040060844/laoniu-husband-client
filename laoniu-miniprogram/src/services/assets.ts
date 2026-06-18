@@ -1,15 +1,18 @@
-export type AssetMode = "local" | "remote";
+import { ASSET_CONFIG, isRemoteAssetMode, type AssetMode } from "../config/assets";
 
-export const ASSET_MODE: AssetMode = "local";
-
-const LOCAL_BASE = "/assets";
-const REMOTE_BASE = "";
+export type { AssetMode };
 
 export function publicAsset(path: string): string {
   const clean = path.startsWith("/") ? path : `/${path}`;
-  if (ASSET_MODE === "remote") return `${REMOTE_BASE}${clean}`;
+  if (isRemoteAssetMode()) {
+    if (ASSET_CONFIG.remoteBase) {
+      const remoteBase = ASSET_CONFIG.remoteBase.replace(/\/$/, "");
+      const remotePath = clean.startsWith("/assets/") ? clean.slice("/assets".length) : clean;
+      return `${remoteBase}${remotePath}`;
+    }
+  }
   if (clean.startsWith("/assets/")) return clean;
-  return `${LOCAL_BASE}${clean}`;
+  return `${ASSET_CONFIG.localBase}${clean}`;
 }
 
 export function roleAsset(level: number): string {

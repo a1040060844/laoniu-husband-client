@@ -44,6 +44,25 @@ The Mini Program must read and write all app state through `services/state/index
 
 Large role, benefit, loading and sprite images can later move to CDN. Keep all references behind `services/assets.ts` so `ASSET_MODE` can switch from `local` to `remote`.
 
+The Mini Program now keeps asset mode in `laoniu-miniprogram/src/config/assets.ts`:
+
+```ts
+export const ASSET_CONFIG = {
+  mode: "local",
+  localBase: "/assets",
+  remoteBase: "",
+};
+```
+
+When full sprite sheets or large role/benefit art need to move out of the local package, upload the same folder layout to a CDN or HTTPS static host, then set:
+
+```ts
+mode: "remote",
+remoteBase: "https://your-cdn.example.com/assets"
+```
+
+After switching to remote mode, the code paths in `services/assets.ts` keep page code unchanged. In production, remember that WeChat Mini Program image hosts must be available over HTTPS and configured as legal download/request domains when required.
+
 Current local build uses `scripts/copy-assets.mjs` after `taro build` to copy filtered `src/assets` files into `dist/assets`. Source PSD folders and unused sprite batches are excluded from this Mini Program baseline.
 
 ## WeChat Production Requirements
