@@ -117,7 +117,7 @@ The login page already switches these actions when `ASSET_CONFIG.mode` is `"remo
 
 Frame metadata is loaded with `Taro.request` from the remote `index.json`. If the request fails or the remote host is not configured as a legal WeChat domain yet, the component falls back to the local blink animation instead of blocking the login page.
 
-Remote mode also swaps husband/wife login bubbles from the lightweight local text bubbles to H5 speech/thought image bubbles from `assets/login-speech-full/`. Cat bubbles keep the local text fallback because the H5 source does not define cat-specific speech images.
+Remote mode also swaps husband/wife login bubbles from the lightweight local text bubbles to H5 speech/thought image bubbles from `assets/login-speech-full/`. These images are selected by interaction state: intro/login, idle, drag/nervous, select, wife response, and wife thinking. Cat bubbles keep the local text fallback because the H5 source does not define cat-specific speech images.
 
 ## WeChat Production Requirements
 

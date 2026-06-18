@@ -17,6 +17,7 @@ type CatTarget = "cat" | "catWhite";
 type BubbleTarget = RoleRoute | "cat";
 type DragTarget = RoleRoute | CatTarget;
 type FullSpriteActor = "husband" | "wife" | "cat-blue" | "cat-white";
+type BubbleIntent = "idle" | "drag" | "select" | "intro";
 interface Position {
   x: number;
   y: number;
@@ -84,6 +85,14 @@ const remoteBubbleImages: Record<Exclude<BubbleTarget, "cat">, string[]> = {
   ]
 };
 
+const wifeThoughtBubbles = [
+  "thought-wife-food-1.png",
+  "thought-wife-food-2.png",
+  "thought-wife-food-3.png",
+  "thought-wife-hotpot-bbq.png",
+  "thought-wife-what-eat.png"
+];
+
 function getLoveDayCount(now = new Date()) {
   const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
   return Math.min(9999, Math.max(1, Math.floor((todayUtc - LOVE_START_UTC) / DAY_MS) + 1));
@@ -107,10 +116,27 @@ function pickIdleAction(target: DragTarget) {
   return actions[Math.floor(Math.random() * actions.length)] ?? "blink";
 }
 
-function pickRemoteBubbleImage(target: BubbleTarget) {
+function pickRemoteBubbleImage(target: BubbleTarget, intent: BubbleIntent = "idle", action = "blink") {
   if (!isRemoteAssetMode() || target === "cat") return undefined;
-  const images = remoteBubbleImages[target];
-  const image = images[Math.floor(Math.random() * images.length)] ?? images[0];
+
+  let image: string | undefined;
+  if (target === "husband") {
+    if (intent === "intro") image = "speech-husband-login.png";
+    else if (intent === "select") image = "speech-husband-select.png";
+    else if (intent === "drag" || action === "nervous") image = "speech-husband-nervous.png";
+    else image = "speech-husband-idle.png";
+  }
+
+  if (target === "wife") {
+    if (intent === "intro") image = "speech-wife-login.png";
+    else if (intent === "select") image = "speech-wife-select.png";
+    else if (intent === "drag" || action === "helpless") image = "speech-wife-response.png";
+    else if (action === "thinking") image = wifeThoughtBubbles[Math.floor(Math.random() * wifeThoughtBubbles.length)];
+    else image = "speech-wife-login.png";
+  }
+
+  const fallbackImages = remoteBubbleImages[target];
+  image = image ?? fallbackImages[Math.floor(Math.random() * fallbackImages.length)] ?? fallbackImages[0];
   return loginFullSpeechAsset(image);
 }
 
@@ -142,7 +168,7 @@ function enter(role: RoleRoute) {
 export default function LoginPage() {
   const [bubble, setBubble] = useState<BubbleTarget>("husband");
   const [bubbleLine, setBubbleLine] = useState(pickLine("husband"));
-  const [bubbleImage, setBubbleImage] = useState(() => pickRemoteBubbleImage("husband"));
+  const [bubbleImage, setBubbleImage] = useState(() => pickRemoteBubbleImage("husband", "intro"));
   const [activeTarget, setActiveTarget] = useState<BubbleTarget>("husband");
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [offsets, setOffsets] = useState<Record<DragTarget, Position>>(initialOffsets);
@@ -155,15 +181,17 @@ export default function LoginPage() {
   const [selecting, setSelecting] = useState<RoleRoute | null>(null);
   const loveDays = getLoveDayCount();
 
-  function nudge(target: BubbleTarget) {
+  function nudge(target: BubbleTarget, intent: BubbleIntent = "idle") {
+    const nextAction = pickIdleAction(target);
+    const nextCatWhiteAction = target === "cat" ? pickIdleAction("catWhite") : undefined;
     setBubble(target);
     setBubbleLine(pickLine(target));
-    setBubbleImage(pickRemoteBubbleImage(target));
+    setBubbleImage(pickRemoteBubbleImage(target, intent, nextAction));
     setActiveTarget(target);
     setIdleActions((current) => ({
       ...current,
-      [target]: pickIdleAction(target),
-      ...(target === "cat" ? { catWhite: pickIdleAction("catWhite") } : {})
+      [target]: nextAction,
+      ...(nextCatWhiteAction ? { catWhite: nextCatWhiteAction } : {})
     }));
   }
 
@@ -181,7 +209,7 @@ export default function LoginPage() {
     const touch = getTouch(event);
     if (!touch || selecting) return;
     event.stopPropagation?.();
-    nudge(bubbleTargetForDrag(target));
+    nudge(bubbleTargetForDrag(target), "drag");
     setDragState({
       originX: offsets[target].x,
       originY: offsets[target].y,
@@ -211,7 +239,7 @@ export default function LoginPage() {
   }
 
   async function handleEnter(role: RoleRoute) {
-    nudge(role);
+    nudge(role, "select");
     setSelecting(role);
     Taro.showToast({ title: role === "husband" ? "老哥报到" : "老妞上线", icon: "none", duration: 650 });
     setTimeout(() => enter(role), 420);
