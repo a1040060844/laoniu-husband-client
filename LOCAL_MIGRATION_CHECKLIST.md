@@ -48,6 +48,7 @@
 - [x] Wife task-create
 - [x] Wife task-create H5-style publisher hero, dark form sections and confirm preview
 - [x] Wife review
+- [x] Wife review H5-style dark audit hall, stat plaques, review cards and clean reward chips
 - [x] Wife decrees
 - [x] Wife logs
 

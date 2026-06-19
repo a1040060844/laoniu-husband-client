@@ -19,8 +19,8 @@ This report records the current local-only Mini Program migration checkpoint.
 - Husband wallet page now has an H5-style dark ledger stage with current balance, monthly salary, wallet/experience totals, freeze messaging and recent timeline ledger entries.
 - Husband role, task and wallet pages now show a Mini Program-safe recent reward flight panel and fixed reward flight chips from local wallet/experience ledger entries.
 - Wife dashboard now has an H5-style throne console: wife portrait hero, dark shade, return control, status card, EXP/recovery progress, salary/slave state line, pending summary stats and command grid. Wife dashboard and review flow include Mini Program-safe command motion: active command highlight, dimmed sibling commands, pending red dots and danger breathing feedback.
-- Wife review page has task/benefit/recent-record tabs, task approve/reject/fail actions, benefit approve/reject actions and clear confirmation dialogs.
-- Local state service is clean UTF-8 and supports `failTask`, rejected-task resubmission, proper benefit cooldown parsing and slave-mode allowance pause.
+- Wife review page has task/benefit/recent-record tabs, task approve/reject/fail actions, benefit approve/reject actions and clear confirmation dialogs. It now uses clean UTF-8 Chinese, H5-style dark "审核殿" staging, summary stat plaques, gold tabs, review cards, reward chips and recent handling records.
+- Local state service supports `failTask`, rejected-task resubmission, proper benefit cooldown parsing and slave-mode allowance pause. Task reward display helpers are clean UTF-8 Chinese for EXP, allowance, benefits, direct upgrades and custom rewards.
 - Wife task creation supports A/B linked selection, free text, deadline options, reward types and structured task metadata. Its user-facing copy is clean UTF-8, and the page now uses an H5-style wife publisher stage with portrait hero, dark command panel, reward preview chip and confirm-publish card.
 - Wife decrees page supports manually creating decrees with tone states and readable decree cards.
 - Wife logs page supports filtering, recent 100 entries and JSON detail preview through a modal.
