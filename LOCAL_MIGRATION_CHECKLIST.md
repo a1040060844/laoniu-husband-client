@@ -52,6 +52,7 @@
 - [x] Wife decrees
 - [x] Wife decrees H5-style dark decree hall, tone selector and decree cards
 - [x] Wife logs
+- [x] Wife logs H5-style dark ruling timeline with current state, wallet ledger and event records
 
 ## Visual Audit Checklist
 

@@ -23,7 +23,7 @@ This report records the current local-only Mini Program migration checkpoint.
 - Local state service supports `failTask`, rejected-task resubmission, proper benefit cooldown parsing and slave-mode allowance pause. Task reward display helpers are clean UTF-8 Chinese for EXP, allowance, benefits, direct upgrades and custom rewards.
 - Wife task creation supports A/B linked selection, free text, deadline options, reward types and structured task metadata. Its user-facing copy is clean UTF-8, and the page now uses an H5-style wife publisher stage with portrait hero, dark command panel, reward preview chip and confirm-publish card.
 - Wife decrees page supports manually creating decrees with tone states and readable decree cards. It now uses clean UTF-8 Chinese, H5-style dark "圣旨裁定" staging, all/pending summary plaques, tone hints and gold/punish/down/upgrade decree cards.
-- Wife logs page supports filtering, recent 100 entries and JSON detail preview through a modal.
+- Wife logs page supports filtering, recent 100 entries and JSON detail preview through a modal. It now uses clean UTF-8 Chinese, H5-style dark "裁定录" staging, event/wallet/task/benefit summary plaques, current-state entry and a mixed wallet/event timeline.
 - Husband pages now surface unread decrees through a tone-aware Mini Program modal with upgrade, down, punish and normal states. Unread upgrade decrees first play a Mini Program-safe role upgrade cinematic with old/new role imagery.
 - Complex H5 sprite/cinematic effects are still intentionally lighter than the H5 version where full choreography would add package or runtime risk.
 
