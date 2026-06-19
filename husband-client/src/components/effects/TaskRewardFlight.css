@@ -1,0 +1,120 @@
+.task-reward-flight-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 23000;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.task-reward-flight {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(248, 223, 172, 0.46);
+  color: #fff0d4;
+  background:
+    linear-gradient(180deg, rgba(248, 223, 172, 0.16), transparent 70%),
+    rgba(10, 7, 4, 0.88);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 244, 212, 0.08),
+    0 12px 28px rgba(0, 0, 0, 0.48);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0;
+  white-space: nowrap;
+  transform: translate(var(--flight-start-x), var(--flight-start-y)) scale(0.92);
+  animation: task-reward-flight 980ms cubic-bezier(0.2, 0.8, 0.24, 1)
+    var(--flight-delay) both;
+}
+
+.task-reward-flight::after {
+  content: "";
+  position: absolute;
+  left: -20px;
+  top: 50%;
+  width: 18px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(248, 223, 172, 0.78));
+  transform: translateY(-50%);
+}
+
+.task-reward-flight--money {
+  border-color: rgba(217, 181, 109, 0.56);
+}
+
+.task-reward-flight--benefit {
+  border-color: rgba(231, 199, 141, 0.28);
+  color: rgba(248, 223, 172, 0.9);
+  background: rgba(8, 6, 4, 0.82);
+}
+
+.task-reward-flight-target--bump {
+  animation: task-reward-flight-target-bump 420ms ease-out both;
+}
+
+@keyframes task-reward-flight {
+  0% {
+    opacity: 0;
+    transform: translate(var(--flight-start-x), var(--flight-start-y)) scale(0.92);
+  }
+  14% {
+    opacity: 1;
+  }
+  58% {
+    opacity: 1;
+    transform: translate(var(--flight-start-x), calc(var(--flight-start-y) - 58px))
+      scale(1.02);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--flight-end-x), var(--flight-end-y)) scale(0.72);
+  }
+}
+
+@keyframes task-reward-flight-target-bump {
+  0%,
+  100% {
+    transform: translateZ(0) scale(1);
+    filter: none;
+  }
+  48% {
+    transform: translateZ(0) scale(1.035);
+    filter: brightness(1.18);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-reward-flight {
+    left: 50%;
+    top: 42%;
+    opacity: 1;
+    transform: translate(-50%, -50%);
+    animation: task-reward-flight-reduced 900ms ease-out var(--flight-delay) both;
+  }
+
+  .task-reward-flight::after {
+    display: none;
+  }
+
+  .task-reward-flight-target--bump {
+    animation: none;
+  }
+}
+
+@keyframes task-reward-flight-reduced {
+  0% {
+    opacity: 0;
+  }
+  18%,
+  78% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}

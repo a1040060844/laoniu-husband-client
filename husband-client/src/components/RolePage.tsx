@@ -118,7 +118,7 @@ export function RolePage({
         </article>
 
         {!isPreviewing && (
-          <div className="exp-block exp-block--role">
+          <div className="exp-block exp-block--role" data-reward-target="exp">
             <strong>
               <CountUp value={previewRole.expCurrent} /> /{" "}
               <CountUp value={previewRole.expRequired} />
@@ -134,7 +134,7 @@ export function RolePage({
         )}
 
         {!isPreviewing ? (
-          <p className="role-wallet-line">
+          <p className="role-wallet-line" data-reward-target="money">
             零花钱 <strong>¥ <CountUp value={wallet} /></strong>
           </p>
         ) : null}

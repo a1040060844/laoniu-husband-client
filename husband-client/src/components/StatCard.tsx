@@ -6,11 +6,23 @@ interface StatCardProps {
   value: ReactNode;
   icon?: ReactNode;
   muted?: string;
+  rewardTarget?: "exp" | "money";
 }
 
-export function StatCard({ label, value, icon, muted }: StatCardProps) {
+export function StatCard({
+  label,
+  value,
+  icon,
+  muted,
+  rewardTarget,
+}: StatCardProps) {
   return (
-    <AnimatedContent as="article" className="stat-card" duration={320}>
+    <AnimatedContent
+      as="article"
+      className="stat-card"
+      data-reward-target={rewardTarget}
+      duration={320}
+    >
       <div className="stat-card__icon">{icon}</div>
       <span>{label}</span>
       <strong>{value}</strong>

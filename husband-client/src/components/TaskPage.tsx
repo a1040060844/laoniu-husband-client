@@ -272,6 +272,7 @@ export function TaskPage({
             <StatCard
               label="本月获得零花钱"
               value={<CountUp value={month.money} prefix="¥ " />}
+              rewardTarget="money"
               icon={<CircleDollarSign size={21} />}
             />
             <StatCard
@@ -282,6 +283,7 @@ export function TaskPage({
             <StatCard
               label="本月经验总数"
               value={<CountUp value={month.exp} suffix=" EXP" />}
+              rewardTarget="exp"
               icon={<Sparkles size={21} />}
             />
           </div>

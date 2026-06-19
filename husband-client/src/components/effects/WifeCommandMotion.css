@@ -1,0 +1,107 @@
+.wife-command-motion [data-wife-command] {
+  transform-origin: center;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    filter 180ms ease,
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.wife-command-motion__item--active {
+  border-color: rgba(248, 223, 172, 0.74) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 244, 212, 0.12),
+    0 0 0 2px rgba(248, 223, 172, 0.12),
+    0 14px 36px rgba(0, 0, 0, 0.46) !important;
+  filter: brightness(1.08);
+  transform: scale(1.025);
+}
+
+.wife-command-motion__item--dimmed {
+  opacity: 0.7;
+  filter: brightness(0.78) saturate(0.82);
+}
+
+.wife-command-motion [data-wife-command-pending="true"] b,
+.wife-command-motion [data-wife-command-pending="true"] > span:first-child {
+  animation: wife-command-pending-pulse 1.15s ease-in-out infinite;
+}
+
+.wife-command-motion [data-wife-command-pending="true"] {
+  position: relative;
+}
+
+.wife-command-motion [data-wife-command-pending="true"]::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #d94a3e;
+  box-shadow: 0 0 0 4px rgba(217, 70, 62, 0.16);
+  animation: wife-command-red-dot 1.15s ease-in-out infinite;
+}
+
+.wife-command-motion [data-wife-command-tone="danger"] {
+  border-color: rgba(217, 70, 62, 0.72);
+}
+
+.wife-command-motion [data-wife-command-armed="true"] {
+  border-color: rgba(255, 112, 88, 0.94) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 214, 196, 0.14),
+    0 0 0 2px rgba(217, 70, 62, 0.2),
+    0 0 28px rgba(217, 70, 62, 0.28) !important;
+  animation: wife-command-danger-breathe 940ms ease-in-out infinite;
+}
+
+@keyframes wife-command-pending-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.12);
+    filter: brightness(1.25);
+  }
+}
+
+@keyframes wife-command-danger-breathe {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.18);
+  }
+}
+
+@keyframes wife-command-red-dot {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.18);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wife-command-motion [data-wife-command],
+  .wife-command-motion__item--active,
+  .wife-command-motion__item--dimmed,
+  .wife-command-motion [data-wife-command-pending="true"] b,
+  .wife-command-motion [data-wife-command-pending="true"] > span:first-child,
+  .wife-command-motion [data-wife-command-pending="true"]::after,
+  .wife-command-motion [data-wife-command-armed="true"] {
+    animation: none;
+    transition: none;
+    transform: none;
+  }
+}

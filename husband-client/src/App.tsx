@@ -18,6 +18,18 @@ import { StoryModal } from "./components/StoryModal";
 import { TaskPage } from "./components/TaskPage";
 import { WifeDashboard } from "./components/WifeDashboard";
 import { PixelTransition } from "./components/effects/PixelTransition";
+import {
+  RoleUpgradeCinematic,
+  type RoleUpgradeCinematicEvent,
+} from "./components/effects/RoleUpgradeCinematic";
+import {
+  SlaveStateCinematic,
+  type SlaveStateCinematicEvent,
+} from "./components/effects/SlaveStateCinematic";
+import {
+  TaskRewardFlight,
+  type TaskRewardFlightEvent,
+} from "./components/effects/TaskRewardFlight";
 import { roles } from "./data/roles";
 import {
   MIN_LEVEL,
@@ -315,11 +327,35 @@ export default function App() {
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
   const salaryProcessingRef = useRef(new Set<string>());
   const [pixelTransitionKey, setPixelTransitionKey] = useState(0);
+  const [roleUpgradeCinematic, setRoleUpgradeCinematic] =
+    useState<RoleUpgradeCinematicEvent | null>(null);
+  const [taskRewardFlight, setTaskRewardFlight] =
+    useState<TaskRewardFlightEvent | null>(null);
+  const [slaveStateCinematic, setSlaveStateCinematic] =
+    useState<SlaveStateCinematicEvent | null>(null);
 
   const runPixelTransition = useCallback((action: () => void) => {
     pixelTransitionActionRef.current = action;
     setPixelTransitionKey((current) => current + 1);
   }, []);
+
+  const showRoleUpgradeCinematic = useCallback(
+    (fromLevel: number, toLevel: number) => {
+      if (toLevel <= fromLevel) return;
+      const fromRole = roles[clampLevel(fromLevel)];
+      const toRole = roles[clampLevel(toLevel)];
+      setRoleUpgradeCinematic({
+        id: `role-upgrade-${Date.now()}-${fromLevel}-${toLevel}`,
+        fromLevel,
+        toLevel,
+        fromRoleName: fromRole.title,
+        toRoleName: toRole.title,
+        fromRoleImage: fromRole.roleImage,
+        toRoleImage: toRole.roleImage,
+      });
+    },
+    [],
+  );
 
   const handlePixelCovered = useCallback(() => {
     const action = pixelTransitionActionRef.current;
@@ -720,9 +756,27 @@ export default function App() {
     const settled = settleConfirmedTasks(progress, tasks, roles);
     if (settled.stories.length === 0) return;
     setProgress(settled.progress);
+    if (settled.progress.level > progress.level) {
+      showRoleUpgradeCinematic(progress.level, settled.progress.level);
+    }
     const entries = newlyRewardedTasks.flatMap((task) =>
       ledgerEntriesFromTask(task, rewardedAt),
     );
+    const rewardFlightTasks = newlyRewardedTasks
+      .map((task) => ({
+        taskId: task.id,
+        title: task.title,
+        exp: taskRewardExp(task),
+        money: taskRewardMoney(task),
+        benefit: taskRewards(task).some((reward) => reward.type === "benefit"),
+      }))
+      .filter((task) => task.exp > 0 || task.money > 0 || task.benefit);
+    if (rewardFlightTasks.length) {
+      setTaskRewardFlight({
+        id: `task-reward-${Date.now()}`,
+        tasks: rewardFlightTasks,
+      });
+    }
     if (entries.length) {
       setWalletLedger((current) => [...entries, ...current]);
       entries.forEach((entry) => {
@@ -764,7 +818,7 @@ export default function App() {
       );
     }
     setStory(settled.stories[settled.stories.length - 1]);
-  }, [progress, punishment.status, tasks]);
+  }, [progress, punishment.status, showRoleUpgradeCinematic, tasks]);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -1219,6 +1273,9 @@ export default function App() {
         "老妞大人亲自赏赐",
       );
       setProgress(result.progress);
+      if (result.progress.level > progress.level) {
+        showRoleUpgradeCinematic(progress.level, result.progress.level);
+      }
       if (result.stories.length) {
         setStory(result.stories[result.stories.length - 1]);
       }
@@ -1297,6 +1354,9 @@ export default function App() {
       level: safeLevel,
       exp: Math.min(current.exp, expRequiredForLevel(safeLevel)),
     }));
+    if (safeLevel > previousLevel) {
+      showRoleUpgradeCinematic(previousLevel, safeLevel);
+    }
     if (safeLevel !== previousLevel) {
       addLedger({
         type: "level_up",
@@ -1408,6 +1468,11 @@ export default function App() {
       text: "老婆大人执行卖身奴隶状态：冻结权益与零花钱，职务降至流落街头。",
       tone: "punish",
     });
+    setSlaveStateCinematic({
+      id: `slave-enter-${Date.now()}`,
+      mode: "enter",
+      amount: progress.wallet,
+    });
   }
 
   function handleRestoreNormal() {
@@ -1468,6 +1533,11 @@ export default function App() {
       title: "赎回成功",
       text: `老婆大人已赎回骆老哥，卖身奴隶状态解除，恢复「${roles[restoredLevel].title}」职务、原有经验与零花钱。`,
       tone: "upgrade",
+    });
+    setSlaveStateCinematic({
+      id: `slave-restore-${Date.now()}`,
+      mode: "restore",
+      amount: restoredWallet,
     });
     setShowSlaveRuling(false);
   }
@@ -1599,12 +1669,32 @@ export default function App() {
       onAcknowledge={handleAcknowledgeDecree}
     />
   );
+  const cinematicOverlays = (
+    <>
+      {roleUpgradeCinematic ? (
+        <RoleUpgradeCinematic
+          {...roleUpgradeCinematic}
+          isOpen
+          onComplete={() => setRoleUpgradeCinematic(null)}
+        />
+      ) : null}
+      <TaskRewardFlight
+        event={taskRewardFlight}
+        onComplete={() => setTaskRewardFlight(null)}
+      />
+      <SlaveStateCinematic
+        event={slaveStateCinematic}
+        onComplete={() => setSlaveStateCinematic(null)}
+      />
+    </>
+  );
 
   if (loadingOverlay && loadingBackdropMode === "room") {
     return (
       <>
         {loadingOverlay}
         {pixelTransition}
+        {cinematicOverlays}
       </>
     );
   }
@@ -1615,6 +1705,7 @@ export default function App() {
         <LoginPage onEnterRole={handleEnterRole} isEntering={isLoading} />
         {loadingOverlay}
         {pixelTransition}
+        {cinematicOverlays}
       </main>
     );
   }
@@ -1665,6 +1756,7 @@ export default function App() {
         />
         {loadingOverlay}
         {pixelTransition}
+        {cinematicOverlays}
       </main>
     );
   }
@@ -1743,6 +1835,7 @@ export default function App() {
         {decreeModal}
         {loadingOverlay}
         {pixelTransition}
+        {cinematicOverlays}
       </main>
     );
   }
@@ -1804,6 +1897,7 @@ export default function App() {
       {decreeModal}
       {loadingOverlay}
       {pixelTransition}
+      {cinematicOverlays}
     </main>
   );
 }

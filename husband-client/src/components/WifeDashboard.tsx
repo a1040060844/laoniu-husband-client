@@ -65,6 +65,7 @@ import type {
 } from "../types/domain";
 import { AnimatedContent } from "./effects/AnimatedContent";
 import { ClickSpark } from "./effects/ClickSpark";
+import { WifeCommandMotion } from "./effects/WifeCommandMotion";
 
 type WifeSheet = "task" | "review" | "benefit" | "level" | "redeem" | null;
 type WifePage = "today" | "main" | "growth";
@@ -365,6 +366,7 @@ export function WifeDashboard({
   const [subPage, setSubPage] = useState<WifeSubPage | null>(null);
   const [draft, setDraft] = useState<TaskDraft>(initialDraft);
   const [targetLevel, setTargetLevel] = useState(progress.level);
+  const [armedPunish, setArmedPunish] = useState(false);
   const [reviewEdits, setReviewEdits] = useState<Record<string, ReviewEdit>>({});
   const [benefitRejectReasons, setBenefitRejectReasons] = useState<Record<string, string>>({});
   const touchStart = useRef<TouchPoint | null>(null);
@@ -615,6 +617,12 @@ export function WifeDashboard({
   useEffect(() => {
     setTargetLevel(progress.level);
   }, [progress.level]);
+
+  useEffect(() => {
+    if (!armedPunish) return;
+    const timer = window.setTimeout(() => setArmedPunish(false), 2800);
+    return () => window.clearTimeout(timer);
+  }, [armedPunish]);
 
   useEffect(() => {
     if (draft.moduleId === "custom") return;
@@ -896,6 +904,15 @@ export function WifeDashboard({
     setSheet(null);
   }
 
+  function confirmPunishStatus() {
+    if (!armedPunish) {
+      setArmedPunish(true);
+      return;
+    }
+    setArmedPunish(false);
+    onPunishStatus();
+  }
+
   return (
     <section
       className={`wife-console wife-console--${activePage}`}
@@ -1035,23 +1052,35 @@ export function WifeDashboard({
               </div>
             </div>
             <div className="wife-growth-control-section wife-level-control">
-              <div className="wife-level-actions">
-                <button type="button" onClick={() => onLevelDelta(1)}>
+              <WifeCommandMotion as="div" className="wife-level-actions">
+                <button
+                  type="button"
+                  data-wife-command="level-up"
+                  onClick={() => onLevelDelta(1)}
+                >
                   <ArrowUp size={27} />
                   <span>升一级</span>
                   <em>赐予新职务</em>
                 </button>
-                <button type="button" onClick={openLevelSheet}>
+                <button
+                  type="button"
+                  data-wife-command="level-pick"
+                  onClick={openLevelSheet}
+                >
                   <Crown size={27} />
                   <span>指定等级</span>
                   <em>直接裁定职务</em>
                 </button>
-                <button type="button" onClick={() => onLevelDelta(-1)}>
+                <button
+                  type="button"
+                  data-wife-command="level-down"
+                  onClick={() => onLevelDelta(-1)}
+                >
                   <ArrowDown size={27} />
                   <span>降一级</span>
                   <em>收回当前职务</em>
                 </button>
-              </div>
+              </WifeCommandMotion>
             </div>
           </AnimatedContent>
 
@@ -1070,6 +1099,8 @@ export function WifeDashboard({
               <button
                 className="wife-punish-state"
                 type="button"
+                data-wife-command="redeem"
+                data-wife-command-tone="danger"
                 onClick={() => setSheet("redeem")}
               >
                 <Shield size={32} />
@@ -1080,10 +1111,11 @@ export function WifeDashboard({
                 <Gavel size={27} />
               </button>
             ) : (
-              <div className="wife-punish-actions">
+              <WifeCommandMotion as="div" className="wife-punish-actions">
                 <button
                   className="wife-punish-state wife-punish-state--street"
                   type="button"
+                  data-wife-command="street"
                   onClick={() => onSetLevel(0)}
                 >
                   <Gavel size={27} />
@@ -1095,15 +1127,18 @@ export function WifeDashboard({
                 <button
                   className="wife-punish-state wife-punish-state--slave"
                   type="button"
-                  onClick={onPunishStatus}
+                  data-wife-command="slave"
+                  data-wife-command-tone="danger"
+                  data-wife-command-armed={armedPunish ? "true" : undefined}
+                  onClick={confirmPunishStatus}
                 >
                   <Shield size={27} />
                   <span>
-                    <strong>卖身奴隶状态</strong>
-                    <em>冻结权益与零花钱</em>
+                    <strong>{armedPunish ? "再次确认执行" : "卖身奴隶状态"}</strong>
+                    <em>{armedPunish ? "确认后冻结权益与零花钱" : "冻结权益与零花钱"}</em>
                   </span>
                 </button>
-              </div>
+              </WifeCommandMotion>
             )}
             {isSlave ? (
               <>
@@ -1208,25 +1243,44 @@ export function WifeDashboard({
             </p>
           </AnimatedContent>
 
-          <nav className="wife-actions" aria-label="老婆端快捷操作">
+          <WifeCommandMotion
+            as="nav"
+            className="wife-actions"
+            aria-label="老婆端快捷操作"
+          >
             <button
               className="wife-action wife-action--primary"
               type="button"
+              data-wife-command="publish"
               onClick={() => setSheet("task")}
             >
               <FilePenLine size={21} />
               发布任务
             </button>
-            <button type="button" onClick={() => setSheet("review")}>
+            <button
+              type="button"
+              data-wife-command="review"
+              data-wife-command-pending={
+                submittedTasks.length ? "true" : undefined
+              }
+              onClick={() => setSheet("review")}
+            >
               <ClipboardCheck size={19} />
               审核提交
               {submittedTasks.length ? <b>{submittedTasks.length}</b> : null}
             </button>
-            <button type="button" onClick={() => setSheet("benefit")}>
+            <button
+              type="button"
+              data-wife-command="benefit"
+              data-wife-command-pending={
+                pendingBenefits.length ? "true" : undefined
+              }
+              onClick={() => setSheet("benefit")}
+            >
               <ShieldCheck size={19} />
               权益审批
             </button>
-          </nav>
+          </WifeCommandMotion>
 
           <a
             className="wife-scroll-cue"
@@ -1307,8 +1361,13 @@ export function WifeDashboard({
             duration={370}
           >
             <h2>待老妞处理</h2>
-            <div className="wife-affair-list">
-              <article>
+            <WifeCommandMotion as="div" className="wife-affair-list">
+              <article
+                data-wife-command="today-review"
+                data-wife-command-pending={
+                  pendingRulingCount ? "true" : undefined
+                }
+              >
                 <div className="wife-affair-icon">
                   <ClipboardCheck size={31} />
                 </div>
@@ -1322,7 +1381,12 @@ export function WifeDashboard({
                   <i aria-hidden="true">›</i>
                 </button>
               </article>
-              <article>
+              <article
+                data-wife-command="today-benefit"
+                data-wife-command-pending={
+                  pendingBenefitCount ? "true" : undefined
+                }
+              >
                 <div className="wife-affair-icon">
                   <KeyRound size={31} />
                 </div>
@@ -1340,7 +1404,7 @@ export function WifeDashboard({
                   <i aria-hidden="true">›</i>
                 </button>
               </article>
-            </div>
+            </WifeCommandMotion>
           </AnimatedContent>
 
           <AnimatedContent
@@ -1354,6 +1418,7 @@ export function WifeDashboard({
             <button
               className="wife-quick-task"
               type="button"
+              data-wife-command="quick-publish"
               onClick={() => setSheet("task")}
             >
               <ScrollText size={39} />

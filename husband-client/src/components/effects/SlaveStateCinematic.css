@@ -1,0 +1,147 @@
+.slave-state-ambient {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 58%, transparent 0 43%, rgba(70, 8, 7, 0.32) 100%),
+    repeating-linear-gradient(
+      180deg,
+      rgba(255, 206, 188, 0.035) 0,
+      rgba(255, 206, 188, 0.035) 1px,
+      transparent 1px,
+      transparent 8px
+    );
+  mix-blend-mode: screen;
+  opacity: 0.52;
+}
+
+.slave-state-cinematic {
+  position: fixed;
+  inset: 0;
+  z-index: 24500;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  color: #ffe2ce;
+  isolation: isolate;
+}
+
+.slave-state-cinematic__vignette {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(10, 5, 3, 0.45), rgba(67, 5, 5, 0.72)),
+    rgba(0, 0, 0, 0.52);
+  animation: slave-state-vignette 420ms ease-out both;
+}
+
+.slave-state-cinematic__panel {
+  width: min(86vw, 340px);
+  min-height: 188px;
+  padding: 22px 18px;
+  border: 1px solid rgba(217, 70, 62, 0.62);
+  background:
+    linear-gradient(180deg, rgba(217, 70, 62, 0.16), transparent 52%),
+    rgba(12, 5, 4, 0.92);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 214, 196, 0.08),
+    0 24px 70px rgba(0, 0, 0, 0.78);
+  text-align: center;
+  animation: slave-state-panel 520ms steps(5, end) both;
+}
+
+.slave-state-cinematic__panel p {
+  margin: 0 0 8px;
+  color: rgba(255, 206, 188, 0.82);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 12px;
+  letter-spacing: 0;
+}
+
+.slave-state-cinematic__panel h2 {
+  margin: 0 0 18px;
+  color: #ffe2ce;
+  font-family: var(--serif);
+  font-size: 32px;
+  font-weight: 500;
+  letter-spacing: 5px;
+}
+
+.slave-state-cinematic__panel div {
+  display: grid;
+  gap: 8px;
+}
+
+.slave-state-cinematic__panel span {
+  min-height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(217, 70, 62, 0.28);
+  color: rgba(255, 226, 206, 0.84);
+  background: rgba(0, 0, 0, 0.26);
+  font-family: var(--serif);
+  font-size: 14px;
+  letter-spacing: 2px;
+}
+
+.slave-state-cinematic--restore .slave-state-cinematic__panel {
+  border-color: rgba(248, 223, 172, 0.52);
+  background:
+    linear-gradient(180deg, rgba(248, 223, 172, 0.13), transparent 52%),
+    rgba(9, 6, 4, 0.92);
+}
+
+.slave-state-cinematic--restore .slave-state-cinematic__panel span {
+  border-color: rgba(248, 223, 172, 0.24);
+}
+
+.slave-state-cinematic__wallet {
+  animation: slave-state-wallet 460ms steps(4, end) 260ms both;
+}
+
+@keyframes slave-state-vignette {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slave-state-panel {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes slave-state-wallet {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  22% {
+    transform: translateX(-5px);
+  }
+  44% {
+    transform: translateX(4px);
+  }
+  66% {
+    transform: translateX(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slave-state-ambient,
+  .slave-state-cinematic__vignette,
+  .slave-state-cinematic__panel,
+  .slave-state-cinematic__wallet {
+    animation: none;
+  }
+}

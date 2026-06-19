@@ -70,6 +70,7 @@ export function TaskCard({ task, onStart, onSubmit }: TaskCardProps) {
   return (
     <article
       className={`task-card task-card--${task.status}`}
+      data-task-card-id={task.id}
     >
       <div className="task-card__mark">
         <StatusIcon size={28} strokeWidth={1.6} />

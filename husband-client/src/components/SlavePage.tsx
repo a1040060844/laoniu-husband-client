@@ -2,6 +2,7 @@ import { publicAsset } from "../lib/assets";
 import { getPunishmentRemainingDays } from "../lib/taskSystem";
 import type { Punishment, Role, ViewKey } from "../types/domain";
 import { ClickSpark } from "./effects/ClickSpark";
+import { SlaveStateCinematic } from "./effects/SlaveStateCinematic";
 
 interface SlavePageProps {
   role: Role;
@@ -30,6 +31,7 @@ export function SlavePage({
       <img className="cinema-image" src={slaveImage} alt="卖身奴隶状态形象" />
       <div className="image-scrim" />
       <div className="locked-character-mask" aria-hidden="true" />
+      <SlaveStateCinematic ambient />
 
       <header className="hero-title hero-title--role hero-title--slave">
         <div className="level-line">
