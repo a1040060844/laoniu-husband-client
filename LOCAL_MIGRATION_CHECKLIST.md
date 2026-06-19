@@ -46,6 +46,7 @@
 - [x] Wife dashboard
 - [x] Wife dashboard H5-style throne console and command grid
 - [x] Wife task-create
+- [x] Wife task-create H5-style publisher hero, dark form sections and confirm preview
 - [x] Wife review
 - [x] Wife decrees
 - [x] Wife logs
@@ -85,10 +86,10 @@
 - `npm test` in `laoniu-miniprogram/`: passed, 2 tests.
 - `npx tsc --noEmit` in `laoniu-miniprogram/`: passed.
 - `npm run build:weapp` in `laoniu-miniprogram/`: passed and generated `dist/`. Sass `@import` deprecation warnings were cleared by switching the app stylesheet entry to `@use`.
-- `npm run audit:package` in `laoniu-miniprogram/`: passed; current `dist` is 19.51 MB total and `dist/assets` is 19.04 MB, with a warning that package size is close to the 20 MB upload limit.
+- `npm run audit:package` in `laoniu-miniprogram/`: passed; current `dist` is 19.55 MB total and `dist/assets` is 19.04 MB, with a warning that package size is close to the 20 MB upload limit.
 - `npm run export:remote-assets` in `laoniu-miniprogram/`: generates an ignored `remote-assets/` upload bundle with current Mini Program assets and the complete H5 `login-final` sprite batch for later CDN/static-host use.
 - Browser API scan in `laoniu-miniprogram/src`: no `ReactDOM`, `localStorage`, `history`, `location`, `web-view`, `document`; only `app.config.ts` contains Taro's `window` config key.
-- Filtered and optimized local assets: generated `dist` currently contains 124 files, about 19.51 MB total; `dist/assets` contains 55 files, about 19.04 MB after adding selected blink sprite sheets and removing unused loading/static login images.
+- Filtered and optimized local assets: generated `dist` currently contains 124 files, about 19.55 MB total; `dist/assets` contains 55 files, about 19.04 MB after adding selected blink sprite sheets and removing unused loading/static login images.
 
 ## WeChat DevTools Preview
 

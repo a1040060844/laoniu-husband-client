@@ -21,7 +21,7 @@ This report records the current local-only Mini Program migration checkpoint.
 - Wife dashboard now has an H5-style throne console: wife portrait hero, dark shade, return control, status card, EXP/recovery progress, salary/slave state line, pending summary stats and command grid. Wife dashboard and review flow include Mini Program-safe command motion: active command highlight, dimmed sibling commands, pending red dots and danger breathing feedback.
 - Wife review page has task/benefit/recent-record tabs, task approve/reject/fail actions, benefit approve/reject actions and clear confirmation dialogs.
 - Local state service is clean UTF-8 and supports `failTask`, rejected-task resubmission, proper benefit cooldown parsing and slave-mode allowance pause.
-- Wife task creation supports A/B linked selection, free text, deadline options, reward types and structured task metadata.
+- Wife task creation supports A/B linked selection, free text, deadline options, reward types and structured task metadata. Its user-facing copy is clean UTF-8, and the page now uses an H5-style wife publisher stage with portrait hero, dark command panel, reward preview chip and confirm-publish card.
 - Wife decrees page supports manually creating decrees with tone states and readable decree cards.
 - Wife logs page supports filtering, recent 100 entries and JSON detail preview through a modal.
 - Husband pages now surface unread decrees through a tone-aware Mini Program modal with upgrade, down, punish and normal states. Unread upgrade decrees first play a Mini Program-safe role upgrade cinematic with old/new role imagery.
@@ -36,7 +36,7 @@ This report records the current local-only Mini Program migration checkpoint.
 - `npm run audit:package`: passed and warns that the package is close to the 20 MB upload limit.
 - `npm run export:remote-assets`: available for generating an ignored CDN/static-host upload bundle under `laoniu-miniprogram/remote-assets/`.
 - Browser API scan: no forbidden browser APIs in Mini Program source. Taro's `app.config.ts` uses a `window` config key, which is not browser `window` usage.
-- Asset audit: generated `dist` contains 124 files, about 19.51 MB total; `dist/assets` contains 55 files, about 19.04 MB after filtering local copies, cleaning unused loading/static login images, and adding selected blink sprite sheets.
+- Asset audit: generated `dist` contains 124 files, about 19.55 MB total; `dist/assets` contains 55 files, about 19.04 MB after filtering local copies, cleaning unused loading/static login images, and adding selected blink sprite sheets.
 
 ## Known Manual Verification
 

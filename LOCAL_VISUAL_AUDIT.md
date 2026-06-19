@@ -36,9 +36,9 @@ Use `husband-client/` as the visual and behavior source of truth. For each migra
 - H5 source: `WifeDashboard`, `SlaveRulingModal`, task/benefit/decree/log sections.
 - Mini Program target: `src/subpackages/wife/pages/*`.
 - Status: first-pass migrated.
-- Restored: H5-style wife throne console, wife portrait hero, dark shade, return control, status card, EXP/recovery progress, salary/slave state line, pending summary stats, command grid, structured task creation with A/B selection and reward types, task review tabs, task approve/reject/fail actions, benefit approval/rejection tabs, recent review records, manual decrees, decree tone states, log filters/detail preview, punishment/slave controls, slave enter/restore cinematic feedback, Mini Program-safe wife command motion, reset local data.
+- Restored: H5-style wife throne console, wife portrait hero, dark shade, return control, status card, EXP/recovery progress, salary/slave state line, pending summary stats, command grid, H5-style task publisher stage with portrait hero, dark command sections, A/B selection, deadline/reward editor and confirm-publish preview, task review tabs, task approve/reject/fail actions, benefit approval/rejection tabs, recent review records, manual decrees, decree tone states, log filters/detail preview, punishment/slave controls, slave enter/restore cinematic feedback, Mini Program-safe wife command motion, reset local data.
 - Difference: dense H5 dashboard subpages are still split into focused Mini Program pages; wife command motion now uses explicit command wrappers instead of DOM data-attribute querying, and the throne image uses the packaged wife loading portrait until a richer wife-dashboard portrait is moved into remote assets.
-- Needs device review: wife hero framing, status-card overlap on short phones, form ergonomics, picker values, and review actions after repeated state changes.
+- Needs device review: wife hero framing, status-card overlap on short phones, task publisher hero crop, dark input contrast, picker values, form ergonomics, and review actions after repeated state changes.
 
 ## Effects
 
