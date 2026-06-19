@@ -22,7 +22,7 @@ This report records the current local-only Mini Program migration checkpoint.
 - Wife review page has task/benefit/recent-record tabs, task approve/reject/fail actions, benefit approve/reject actions and clear confirmation dialogs. It now uses clean UTF-8 Chinese, H5-style dark "审核殿" staging, summary stat plaques, gold tabs, review cards, reward chips and recent handling records.
 - Local state service supports `failTask`, rejected-task resubmission, proper benefit cooldown parsing and slave-mode allowance pause. Task reward display helpers are clean UTF-8 Chinese for EXP, allowance, benefits, direct upgrades and custom rewards.
 - Wife task creation supports A/B linked selection, free text, deadline options, reward types and structured task metadata. Its user-facing copy is clean UTF-8, and the page now uses an H5-style wife publisher stage with portrait hero, dark command panel, reward preview chip and confirm-publish card.
-- Wife decrees page supports manually creating decrees with tone states and readable decree cards.
+- Wife decrees page supports manually creating decrees with tone states and readable decree cards. It now uses clean UTF-8 Chinese, H5-style dark "圣旨裁定" staging, all/pending summary plaques, tone hints and gold/punish/down/upgrade decree cards.
 - Wife logs page supports filtering, recent 100 entries and JSON detail preview through a modal.
 - Husband pages now surface unread decrees through a tone-aware Mini Program modal with upgrade, down, punish and normal states. Unread upgrade decrees first play a Mini Program-safe role upgrade cinematic with old/new role imagery.
 - Complex H5 sprite/cinematic effects are still intentionally lighter than the H5 version where full choreography would add package or runtime risk.
@@ -36,7 +36,7 @@ This report records the current local-only Mini Program migration checkpoint.
 - `npm run audit:package`: passed and warns that the package is close to the 20 MB upload limit.
 - `npm run export:remote-assets`: available for generating an ignored CDN/static-host upload bundle under `laoniu-miniprogram/remote-assets/`.
 - Browser API scan: no forbidden browser APIs in Mini Program source. Taro's `app.config.ts` uses a `window` config key, which is not browser `window` usage.
-- Asset audit: generated `dist` contains 124 files, about 19.55 MB total; `dist/assets` contains 55 files, about 19.04 MB after filtering local copies, cleaning unused loading/static login images, and adding selected blink sprite sheets.
+- Asset audit: generated `dist` contains 124 files, about 19.56 MB total; `dist/assets` contains 55 files, about 19.04 MB after filtering local copies, cleaning unused loading/static login images, and adding selected blink sprite sheets.
 
 ## Known Manual Verification
 
