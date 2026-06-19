@@ -1,9 +1,11 @@
 import { useState } from "react";
 import Taro, { useDidShow } from "@tarojs/taro";
-import { Button, Text, View } from "@tarojs/components";
+import { Button, Image, Text, View } from "@tarojs/components";
 import { roles } from "../../../../data/roles";
+import { expRequiredForLevel, salaryForLevel } from "../../../../game/progression";
 import { SlaveStateCinematic, type SlaveStateCinematicEvent } from "../../../../components/SlaveStateCinematic";
 import { WifeCommandMotion } from "../../../../components/WifeCommandMotion";
+import { publicAsset } from "../../../../services/assets";
 import { stateService } from "../../../../services/state";
 import type { AppState } from "../../../../services/state";
 import "./index.scss";
@@ -72,17 +74,55 @@ export default function WifeDashboardPage() {
   const pendingBenefits = state.benefits.filter((benefit) => benefit.pendingRequest).length;
   const confirmedTasks = state.tasks.filter((task) => task.status === "confirmed").length;
   const slaveMode = state.punishment.status === "slave";
+  const requiredExp = expRequiredForLevel(state.progress.level);
+  const statusCurrent = slaveMode ? state.punishment.recoveryExp : state.progress.exp;
+  const statusRequired = slaveMode ? Math.max(1, state.punishment.requiredRecoveryExp || 100) : requiredExp;
+  const expPercent = Math.min(100, Math.round((statusCurrent / statusRequired) * 100));
+  const salary = salaryForLevel(state.progress.level);
+  const nextRole = roles[Math.min(roles.length - 1, state.progress.level + 1)];
+  const expToNext = Math.max(0, requiredExp - state.progress.exp);
+  const wifeImage = publicAsset("/assets/loading/loading-psd-wife.png");
 
   return (
     <View className="page scene-page wife-dashboard">
-      <Text className="title">老妞后台</Text>
-      <Text className="subtitle">当前老哥职务：{role.title} / Lv.{state.progress.level} / EXP {state.progress.exp}</Text>
+      <View className="wife-hero">
+        <Image className="wife-portrait pixelated" src={wifeImage} mode="aspectFill" />
+        <View className="wife-hero__shade" />
+        <Button className="wife-return" onClick={() => Taro.reLaunch({ url: "/pages/login/index" })}>返回</Button>
 
-      <View className="stats-grid section">
-        <View className="panel"><Text className="stat-number">{pendingTasks}</Text><Text className="stat-label">待确认任务</Text></View>
-        <View className="panel"><Text className="stat-number">{pendingBenefits}</Text><Text className="stat-label">待审批权益</Text></View>
-        <View className="panel"><Text className="stat-number">{confirmedTasks}</Text><Text className="stat-label">已完成任务</Text></View>
-        <View className="panel"><Text className="stat-number">{state.progress.wallet}</Text><Text className="stat-label">零花钱余额</Text></View>
+        <View className="wife-title">
+          <Text className="wife-title__kicker">老妞端</Text>
+          <Text className="wife-title__name">老妞宝座</Text>
+          <Text className="wife-title__subtitle">赏罚升降，皆由老妞大人裁定</Text>
+        </View>
+
+        <View className="wife-status-card">
+          <Text className="wife-panel-title">老哥当前状态</Text>
+          <View className="wife-status-card__title">
+            <Text className="wife-status-card__level">{slaveMode ? "FINAL" : `Lv. ${String(state.progress.level).padStart(2, "0")}`}</Text>
+            <Text className="wife-status-card__role">{slaveMode ? "卖身奴隶" : role.title}</Text>
+          </View>
+          <View className="wife-exp-line">
+            <Text>{slaveMode ? "恢复进度" : "当前经验"}</Text>
+            <Text>{statusCurrent} / {statusRequired}</Text>
+          </View>
+          <View className="wife-progress"><View className="wife-progress__fill" style={{ width: `${expPercent}%` }} /></View>
+          <View className="wife-salary-line">
+            <Text>月薪</Text>
+            <Text className="wife-salary-line__value">{slaveMode ? "冻结" : salary}</Text>
+            <Text className={slaveMode ? "wife-salary-status wife-salary-status--slave" : "wife-salary-status"}>{slaveMode ? "卖身奴隶状态" : "正常服役中"}</Text>
+          </View>
+          <Text className="wife-next-line">
+            {slaveMode ? "奴隶服役中，周期结束后由老妞大人重新裁定" : state.progress.level >= roles.length - 1 ? "已抵达最高职务，赏罚仍由老妞大人裁定" : `距 ${nextRole.title} 还差 ${expToNext} 经验`}
+          </Text>
+        </View>
+
+        <View className="wife-dashboard-stats">
+          <View className="wife-dashboard-stat"><Text className="wife-dashboard-stat__value">{pendingTasks}</Text><Text className="wife-dashboard-stat__label">待确认</Text></View>
+          <View className="wife-dashboard-stat"><Text className="wife-dashboard-stat__value">{pendingBenefits}</Text><Text className="wife-dashboard-stat__label">待审批</Text></View>
+          <View className="wife-dashboard-stat"><Text className="wife-dashboard-stat__value">{confirmedTasks}</Text><Text className="wife-dashboard-stat__label">已完成</Text></View>
+          <View className="wife-dashboard-stat"><Text className="wife-dashboard-stat__value">{state.progress.wallet}</Text><Text className="wife-dashboard-stat__label">零花钱</Text></View>
+        </View>
       </View>
 
       <View className={`panel section punishment-panel ${slaveMode ? "is-slave" : ""}`}>
@@ -114,28 +154,28 @@ export default function WifeDashboardPage() {
         {({ command }) => (
           <>
             {command(
-              { commandKey: "create-task", onClick: () => Taro.navigateTo({ url: "/subpackages/wife/pages/task-create/index" }) },
-              <Button className="btn">发布任务</Button>,
+              { className: "wife-action wife-action--primary", commandKey: "create-task", onClick: () => Taro.navigateTo({ url: "/subpackages/wife/pages/task-create/index" }) },
+              <Button className="wife-action__button">发布任务</Button>,
             )}
             {command(
-              { commandKey: "review", onClick: () => Taro.navigateTo({ url: "/subpackages/wife/pages/review/index" }), pending: pendingTasks + pendingBenefits > 0 },
-              <Button className="btn">任务/权益审批</Button>,
+              { className: "wife-action", commandKey: "review", onClick: () => Taro.navigateTo({ url: "/subpackages/wife/pages/review/index" }), pending: pendingTasks + pendingBenefits > 0 },
+              <Button className="wife-action__button">任务/权益审批{pendingTasks + pendingBenefits > 0 ? ` ${pendingTasks + pendingBenefits}` : ""}</Button>,
             )}
             {command(
-              { commandKey: "decrees", onClick: () => Taro.navigateTo({ url: "/subpackages/wife/pages/decrees/index" }) },
-              <Button className="btn btn-secondary">圣旨裁定</Button>,
+              { className: "wife-action", commandKey: "decrees", onClick: () => Taro.navigateTo({ url: "/subpackages/wife/pages/decrees/index" }) },
+              <Button className="wife-action__button">圣旨裁定</Button>,
             )}
             {command(
-              { commandKey: "logs", onClick: () => Taro.navigateTo({ url: "/subpackages/wife/pages/logs/index" }) },
-              <Button className="btn btn-secondary">日志</Button>,
+              { className: "wife-action", commandKey: "logs", onClick: () => Taro.navigateTo({ url: "/subpackages/wife/pages/logs/index" }) },
+              <Button className="wife-action__button">日志</Button>,
             )}
             {command(
-              { armed: true, commandKey: "reset-data", danger: true, onClick: resetLocalData },
-              <Button className="btn btn-secondary">重置数据</Button>,
+              { armed: true, className: "wife-action", commandKey: "reset-data", danger: true, onClick: resetLocalData },
+              <Button className="wife-action__button">重置数据</Button>,
             )}
             {command(
-              { commandKey: "back-login", onClick: () => Taro.reLaunch({ url: "/pages/login/index" }) },
-              <Button className="btn btn-secondary">返回登录</Button>,
+              { className: "wife-action", commandKey: "back-login", onClick: () => Taro.reLaunch({ url: "/pages/login/index" }) },
+              <Button className="wife-action__button">返回登录</Button>,
             )}
           </>
         )}

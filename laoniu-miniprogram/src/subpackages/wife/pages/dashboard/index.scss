@@ -1,19 +1,267 @@
 .wife-dashboard {
   min-height: 100vh;
+  padding-bottom: 48px;
+  background: #030201;
+}
+
+.wife-hero {
+  position: relative;
+  min-height: 760px;
+  margin: -28px -24px 22px;
+  overflow: hidden;
+  background: #030201;
+}
+
+.wife-portrait {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 520px;
+  filter: saturate(.96) contrast(1.08) brightness(.84);
+}
+
+.wife-hero__shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, .22) 0 9%, rgba(0, 0, 0, .02) 28%, rgba(0, 0, 0, .08) 54%, rgba(0, 0, 0, .72) 72%, #030201 92%),
+    linear-gradient(90deg, rgba(0, 0, 0, .72), transparent 19% 81%, rgba(0, 0, 0, .72)),
+    radial-gradient(ellipse at 50% 32%, transparent 0 35%, rgba(0, 0, 0, .34) 66%, rgba(0, 0, 0, .85) 100%);
+}
+
+.wife-return {
+  position: absolute;
+  top: 46px;
+  left: 20px;
+  z-index: 8;
+  height: 52px;
+  padding: 0 20px;
+  border: 1px solid rgba(231, 199, 141, .34);
+  border-radius: 999px;
+  color: #f4d99d;
+  font-size: 21px;
+  font-weight: 900;
+  line-height: 52px;
+  background: rgba(6, 4, 3, .56);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .42);
+}
+
+.wife-return::after,
+.wife-action__button::after {
+  border: 0;
+}
+
+.wife-title {
+  position: absolute;
+  top: 70px;
+  right: 24px;
+  left: 24px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, .86);
+}
+
+.wife-title__kicker,
+.wife-panel-title {
+  color: #f4d99d;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 4px;
+}
+
+.wife-title__name {
+  color: #fff0d4;
+  font-size: 46px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 5px;
+}
+
+.wife-title__subtitle {
+  color: rgba(248, 223, 172, .84);
+  font-size: 21px;
+  font-weight: 800;
+}
+
+.wife-status-card {
+  position: absolute;
+  top: 420px;
+  left: 50%;
+  z-index: 6;
+  width: 86%;
+  max-width: 620px;
+  padding: 18px;
+  border: 1px solid rgba(231, 199, 141, .32);
+  color: #f6e6bd;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(231, 199, 141, .1), transparent 220px),
+    rgba(6, 5, 4, .62);
+  box-shadow: inset 0 0 0 1px rgba(255, 244, 212, .045), 0 14px 42px rgba(0, 0, 0, .5);
+  transform: translateX(-50%);
+}
+
+.wife-status-card::before,
+.wife-status-card::after {
+  position: absolute;
+  bottom: -1px;
+  width: 18px;
+  height: 18px;
+  border-color: rgba(248, 223, 172, .72);
+  border-style: solid;
+  content: "";
+}
+
+.wife-status-card::before {
+  left: -1px;
+  border-width: 0 0 1px 1px;
+}
+
+.wife-status-card::after {
+  right: -1px;
+  border-width: 0 1px 1px 0;
+}
+
+.wife-panel-title {
+  display: block;
+  text-align: center;
+  font-size: 20px;
+  letter-spacing: 2px;
+}
+
+.wife-status-card__title {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  margin: 10px 0;
+  color: #fff0d4;
+}
+
+.wife-status-card__level {
+  font-size: 23px;
+  font-weight: 900;
+}
+
+.wife-status-card__role {
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1.08;
+}
+
+.wife-exp-line,
+.wife-salary-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: rgba(243, 234, 219, .84);
+  font-size: 21px;
+  font-weight: 800;
+}
+
+.wife-progress {
+  height: 12px;
+  padding: 2px;
+  margin: 9px 0;
+  border: 1px solid rgba(231, 199, 141, .38);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .58);
+}
+
+.wife-progress__fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #c99753, #fff0c8);
+  box-shadow: 0 0 22px rgba(248, 223, 172, .46);
+}
+
+.wife-salary-line {
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.wife-salary-line__value {
+  color: #fff0d4;
+  font-size: 30px;
+  font-weight: 900;
+}
+
+.wife-salary-status {
+  color: #f4d99d;
+  font-size: 20px;
+}
+
+.wife-salary-status--slave {
+  color: #ff7c6e;
+}
+
+.wife-next-line {
+  display: block;
+  margin-top: 8px;
+  color: rgba(231, 199, 141, .82);
+  font-size: 19px;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.wife-dashboard-stats {
+  position: absolute;
+  right: 24px;
+  bottom: 28px;
+  left: 24px;
+  z-index: 6;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.wife-dashboard-stat {
+  display: grid;
+  gap: 5px;
+  min-height: 86px;
+  padding: 12px 6px;
+  place-items: center;
+  border: 1px solid rgba(231, 199, 141, .24);
+  color: #f4d99d;
+  text-align: center;
+  background: rgba(6, 5, 4, .58);
+}
+
+.wife-dashboard-stat__value {
+  display: block;
+  color: #fff0d4;
+  font-size: 29px;
+  font-weight: 900;
+}
+
+.wife-dashboard-stat__label {
+  display: block;
+  color: #cdaa75;
+  font-size: 18px;
+  font-weight: 800;
 }
 
 .punishment-panel {
-  border-color: rgba(111, 63, 44, .32);
+  border-color: rgba(231, 199, 141, .28);
+  color: #f6e6bd;
+  background: linear-gradient(180deg, rgba(18, 13, 8, .78), rgba(8, 6, 4, .72));
+  box-shadow: 0 16px 42px rgba(0, 0, 0, .38);
 }
 
 .punishment-panel.is-slave {
-  background: rgba(80, 43, 32, .92);
+  border-color: rgba(184, 90, 79, .46);
   color: #fff6ea;
+  background: rgba(72, 24, 18, .58);
 }
 
 .panel-title {
   display: block;
   margin-bottom: 10px;
+  color: #f3d28e;
   font-size: 28px;
   font-weight: 900;
 }
@@ -21,6 +269,37 @@
 .small-text {
   display: block;
   margin-top: 6px;
+  color: #cfaa72;
   font-size: 22px;
   line-height: 1.35;
+}
+
+.wife-command-motion.section {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.wife-action--primary {
+  grid-column: 1 / -1;
+}
+
+.wife-action__button {
+  width: 100%;
+  min-height: 62px;
+  border: 1px solid rgba(231, 199, 141, .36);
+  color: rgba(248, 223, 172, .92);
+  font-size: 23px;
+  font-weight: 900;
+  line-height: 60px;
+  background: linear-gradient(180deg, rgba(231, 199, 141, .12), transparent 42%), rgba(5, 4, 3, .66);
+  box-shadow: inset 0 0 0 1px rgba(255, 244, 212, .04), 0 12px 34px rgba(0, 0, 0, .34);
+}
+
+.wife-action--primary .wife-action__button {
+  min-height: 70px;
+  color: #fff0d4;
+  font-size: 26px;
+  line-height: 68px;
+  background: radial-gradient(circle at 50% 0%, rgba(248, 223, 172, .2), transparent 70%), linear-gradient(180deg, rgba(231, 199, 141, .14), rgba(8, 6, 4, .74));
 }

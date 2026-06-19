@@ -44,6 +44,7 @@
 - [x] Husband wallet
 - [x] Husband wallet H5-style ledger stage and timeline
 - [x] Wife dashboard
+- [x] Wife dashboard H5-style throne console and command grid
 - [x] Wife task-create
 - [x] Wife review
 - [x] Wife decrees

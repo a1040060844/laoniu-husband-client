@@ -18,7 +18,7 @@ This report records the current local-only Mini Program migration checkpoint.
 - Husband benefit page has an H5-style benefit stage with current-role background art and horizontal benefit bubbles, plus filter tabs, available/pending/cooldown/locked grouping, slave-mode freeze state, cooldown/request details and recent benefit logs.
 - Husband wallet page now has an H5-style dark ledger stage with current balance, monthly salary, wallet/experience totals, freeze messaging and recent timeline ledger entries.
 - Husband role, task and wallet pages now show a Mini Program-safe recent reward flight panel and fixed reward flight chips from local wallet/experience ledger entries.
-- Wife dashboard and review flow now include Mini Program-safe command motion: active command highlight, dimmed sibling commands, pending red dots and danger breathing feedback.
+- Wife dashboard now has an H5-style throne console: wife portrait hero, dark shade, return control, status card, EXP/recovery progress, salary/slave state line, pending summary stats and command grid. Wife dashboard and review flow include Mini Program-safe command motion: active command highlight, dimmed sibling commands, pending red dots and danger breathing feedback.
 - Wife review page has task/benefit/recent-record tabs, task approve/reject/fail actions, benefit approve/reject actions and clear confirmation dialogs.
 - Local state service is clean UTF-8 and supports `failTask`, rejected-task resubmission, proper benefit cooldown parsing and slave-mode allowance pause.
 - Wife task creation supports A/B linked selection, free text, deadline options, reward types and structured task metadata.
