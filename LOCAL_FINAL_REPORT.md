@@ -25,12 +25,13 @@ This report records the current local-only Mini Program migration checkpoint.
 - Wife decrees page supports manually creating decrees with tone states and readable decree cards. It now uses clean UTF-8 Chinese, H5-style dark "圣旨裁定" staging, all/pending summary plaques, tone hints and gold/punish/down/upgrade decree cards.
 - Wife logs page supports filtering, recent 100 entries and JSON detail preview through a modal. It now uses clean UTF-8 Chinese, H5-style dark "裁定录" staging, event/wallet/task/benefit summary plaques, current-state entry and a mixed wallet/event timeline.
 - Husband pages now surface unread decrees through a tone-aware Mini Program modal with upgrade, down, punish and normal states. Unread upgrade decrees first play a Mini Program-safe role upgrade cinematic with old/new role imagery.
+- Route integrity is now covered by an automated test: every configured Mini Program page must have page/config files, every page URL reference in source must be registered, and the login/loading flow must reach both husband and wife roots.
 - Complex H5 sprite/cinematic effects are still intentionally lighter than the H5 version where full choreography would add package or runtime risk.
 
 ## Command Results
 
 - `npm install --prefer-offline --no-audit --no-fund`: passed in `laoniu-miniprogram/`.
-- `npm test`: passed, 4 tests, including source text mojibake guard and Mini Program browser-only API guard.
+- `npm test`: passed, 7 tests, including source text mojibake guard, Mini Program browser-only API guard and route integrity guard.
 - `npx tsc --noEmit`: passed.
 - `npm run build:weapp`: passed and generated `dist/`.
 - `npm run audit:package`: passed and warns that the package is close to the 20 MB upload limit.
@@ -70,6 +71,7 @@ This report records the current local-only Mini Program migration checkpoint.
 - `laoniu-miniprogram/src/styles/*`
 - `laoniu-miniprogram/tests/rules.test.ts`
 - `laoniu-miniprogram/tests/source-audit.test.ts`
+- `laoniu-miniprogram/tests/routing.test.ts`
 
 ## Known Gaps
 

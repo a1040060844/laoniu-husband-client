@@ -77,6 +77,7 @@
 - [x] Package audit command exists: `npm run audit:package`.
 - [x] Remote asset export command exists: `npm run export:remote-assets`.
 - [x] Source audit test guards against mojibake markers and browser-only APIs in Mini Program source.
+- [x] Routing audit test guards configured pages, page files and source navigation URLs.
 - [x] `npm run check` runs tests, WeChat build and package audit.
 
 ## Stage 1 Command Log
@@ -87,7 +88,7 @@
 ## Current Command Log
 
 - `npm install --prefer-offline --no-audit --no-fund` in `laoniu-miniprogram/`: passed. An earlier plain `npm install` attempt timed out before completion.
-- `npm test` in `laoniu-miniprogram/`: passed, 4 tests including rules, mojibake source audit and browser-only API audit.
+- `npm test` in `laoniu-miniprogram/`: passed, 7 tests including rules, route integrity, mojibake source audit and browser-only API audit.
 - `npx tsc --noEmit` in `laoniu-miniprogram/`: passed.
 - `npm run build:weapp` in `laoniu-miniprogram/`: passed and generated `dist/`. Sass `@import` deprecation warnings were cleared by switching the app stylesheet entry to `@use`.
 - `npm run audit:package` in `laoniu-miniprogram/`: passed; current `dist` is 19.57 MB total and `dist/assets` is 19.04 MB, with a warning that package size is close to the 20 MB upload limit.

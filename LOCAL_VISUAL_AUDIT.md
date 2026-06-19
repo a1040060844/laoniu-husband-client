@@ -54,6 +54,7 @@ Use `husband-client/` as the visual and behavior source of truth. For each migra
 - `scripts/copy-assets.mjs` copies filtered local assets into `dist/assets` after Taro build.
 - `scripts/audit-package.mjs` reports package totals, top-level groups and largest files, and warns while the local package is close to the 20 MB upload limit.
 - `tests/source-audit.test.ts` guards Mini Program source against mojibake markers and browser-only API regressions during `npm test`.
+- `tests/routing.test.ts` guards route registration, page/config file presence and source navigation URL reachability during `npm test`.
 - `src/config/assets.ts` centralizes `local` vs `remote` asset mode so additional sprite sheets can move to CDN/HTTPS static hosting without page rewrites.
 - Source-only directories such as loading PSD files, the full `login-final/` batch, H5 login speech images and full-size H5 login static images were kept out of `laoniu-miniprogram/src/assets`; only selected blink sprite sheets and compressed local images are packaged. The remote asset export includes full `login-final` sprite sheets under `assets/login-sprites-full/`, speech images under `assets/login-speech-full/`, and top-level login art under `assets/login-static-full/`.
 - Unused full-page task/wife/reference images and unused loading/login static images were not kept in the baseline package; generated `dist` currently has 124 files, about 19.57 MB total, with `dist/assets` at about 19.04 MB.
