@@ -30,13 +30,13 @@ This report records the current local-only Mini Program migration checkpoint.
 ## Command Results
 
 - `npm install --prefer-offline --no-audit --no-fund`: passed in `laoniu-miniprogram/`.
-- `npm test`: passed, 2 tests.
+- `npm test`: passed, 4 tests, including source text mojibake guard and Mini Program browser-only API guard.
 - `npx tsc --noEmit`: passed.
 - `npm run build:weapp`: passed and generated `dist/`.
 - `npm run audit:package`: passed and warns that the package is close to the 20 MB upload limit.
 - `npm run export:remote-assets`: available for generating an ignored CDN/static-host upload bundle under `laoniu-miniprogram/remote-assets/`.
 - Browser API scan: no forbidden browser APIs in Mini Program source. Taro's `app.config.ts` uses a `window` config key, which is not browser `window` usage.
-- Asset audit: generated `dist` contains 124 files, about 19.56 MB total; `dist/assets` contains 55 files, about 19.04 MB after filtering local copies, cleaning unused loading/static login images, and adding selected blink sprite sheets.
+- Asset audit: generated `dist` contains 124 files, about 19.57 MB total; `dist/assets` contains 55 files, about 19.04 MB after filtering local copies, cleaning unused loading/static login images, and adding selected blink sprite sheets.
 
 ## Known Manual Verification
 
@@ -69,6 +69,7 @@ This report records the current local-only Mini Program migration checkpoint.
 - `laoniu-miniprogram/src/components/*`
 - `laoniu-miniprogram/src/styles/*`
 - `laoniu-miniprogram/tests/rules.test.ts`
+- `laoniu-miniprogram/tests/source-audit.test.ts`
 
 ## Known Gaps
 
