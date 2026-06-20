@@ -1,13 +1,26 @@
+function isStandalonePwa() {
+  return (
+    window.matchMedia?.("(display-mode: standalone)").matches ||
+    (window.navigator as Navigator & { standalone?: boolean }).standalone ===
+      true
+  );
+}
+
 function updateAppViewport() {
   const visualViewport = window.visualViewport;
-  const width =
+  const width = Math.round(
     visualViewport?.width ??
-    window.innerWidth ??
-    document.documentElement.clientWidth;
-  const height =
-    visualViewport?.height ??
-    window.innerHeight ??
-    document.documentElement.clientHeight;
+      window.innerWidth ??
+      document.documentElement.clientWidth,
+  );
+  const viewportHeight = visualViewport?.height ?? 0;
+  const innerHeight = window.innerHeight ?? 0;
+  const clientHeight = document.documentElement.clientHeight ?? 0;
+  const height = Math.round(
+    isStandalonePwa()
+      ? Math.max(innerHeight, clientHeight, viewportHeight)
+      : viewportHeight || innerHeight || clientHeight,
+  );
 
   document.documentElement.style.setProperty("--app-width", `${width}px`);
   document.documentElement.style.setProperty("--app-height", `${height}px`);
@@ -18,7 +31,6 @@ export function setupViewportHeight() {
   window.addEventListener("resize", updateAppViewport);
   window.addEventListener("orientationchange", updateAppViewport);
   window.visualViewport?.addEventListener("resize", updateAppViewport);
-  window.visualViewport?.addEventListener("scroll", updateAppViewport);
 }
 
 export function registerServiceWorker() {

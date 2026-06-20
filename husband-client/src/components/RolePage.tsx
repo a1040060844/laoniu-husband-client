@@ -27,7 +27,6 @@ export function RolePage({
   canPrev,
   canNext,
   roleCount = 12,
-  wallet,
   onPreviewPrev,
   onPreviewNext,
   onReturnToLogin,
@@ -83,6 +82,13 @@ export function RolePage({
         <i />
       </AnimatedContent>
 
+      <p
+        className="role-wallet-line role-wallet-line--corner"
+        data-reward-target="money"
+      >
+        零花钱 <strong>¥ <CountUp value={previewRole.salary} /></strong>
+      </p>
+
       <button
         className="side-guide side-guide--image"
         type="button"
@@ -110,13 +116,6 @@ export function RolePage({
         delay={80}
         duration={380}
       >
-        <article className="bio-panel bio-panel--role">
-          <p className="panel-title">
-            <span /> 人物小传 <span />
-          </p>
-          <p>{previewRole.biography}</p>
-        </article>
-
         {!isPreviewing && (
           <div className="exp-block exp-block--role" data-reward-target="exp">
             <strong>
@@ -133,11 +132,12 @@ export function RolePage({
           <div className="exp-block-placeholder" aria-hidden="true" />
         )}
 
-        {!isPreviewing ? (
-          <p className="role-wallet-line" data-reward-target="money">
-            零花钱 <strong>¥ <CountUp value={wallet} /></strong>
+        <article className="bio-panel bio-panel--role">
+          <p className="panel-title">
+            <span /> 人物小传 <span />
           </p>
-        ) : null}
+          <p>{previewRole.biography}</p>
+        </article>
 
         <div className="role-dots" aria-hidden="true">
           {Array.from({ length: roleCount }).map((_, index) => (

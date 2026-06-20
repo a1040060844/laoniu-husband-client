@@ -10,6 +10,7 @@ import { AnimatedContent } from "./effects/AnimatedContent";
 
 const AUTO_SCROLL_RESUME_DELAY_MS = 1200;
 const AUTO_SCROLL_SPEED_PX_PER_MS = 0.014;
+const AUTO_SCROLL_LOOP_EDGE_PX = 1;
 
 interface BenefitPageProps {
   role: Role;
@@ -140,7 +141,6 @@ export function BenefitPage({
   );
   const cloudViewportRef = useRef<HTMLDivElement | null>(null);
   const openTimerRef = useRef<number | null>(null);
-  const autoScrollDirectionRef = useRef<1 | -1>(1);
   const isLockedPreview = role.level > currentLevel;
   const directionClass = `benefit-page--dir-${previewDirection}`;
   const visibleBenefits = showAllBenefits
@@ -181,7 +181,6 @@ export function BenefitPage({
     let isPaused = false;
     let isAutoScrollWrite = false;
     let lastTimestamp: number | null = null;
-    let direction = autoScrollDirectionRef.current;
 
     const clearResumeTimer = () => {
       if (resumeTimer !== null) {
@@ -222,15 +221,10 @@ export function BenefitPage({
         const maxScrollLeft = viewport.scrollWidth - viewport.clientWidth;
         const elapsed = Math.min(timestamp - lastTimestamp, 64);
         let nextScrollLeft =
-          viewport.scrollLeft +
-          elapsed * AUTO_SCROLL_SPEED_PX_PER_MS * direction;
+          viewport.scrollLeft + elapsed * AUTO_SCROLL_SPEED_PX_PER_MS;
 
-        if (nextScrollLeft <= 0) {
+        if (nextScrollLeft >= maxScrollLeft - AUTO_SCROLL_LOOP_EDGE_PX) {
           nextScrollLeft = 0;
-          direction = 1;
-        } else if (nextScrollLeft >= maxScrollLeft) {
-          nextScrollLeft = maxScrollLeft;
-          direction = -1;
         }
 
         markAutoScrollWrite();
@@ -256,7 +250,6 @@ export function BenefitPage({
     animationFrame = window.requestAnimationFrame(tick);
 
     return () => {
-      autoScrollDirectionRef.current = direction;
       clearResumeTimer();
       if (scrollWriteTimer !== null) {
         window.clearTimeout(scrollWriteTimer);

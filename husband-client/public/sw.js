@@ -1,4 +1,4 @@
-const CACHE_NAME = "laoniu-pwa-static-v2";
+const CACHE_NAME = "laoniu-pwa-static-v3-role-bottom";
 const APP_SCOPE = new URL(self.registration.scope).pathname;
 const CORE_ASSETS = [
   APP_SCOPE,

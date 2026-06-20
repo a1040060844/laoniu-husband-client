@@ -540,7 +540,7 @@ button {
 
 .side-guide--image {
   top: 28px;
-  right: 10px;
+  right: 0;
   display: block;
   width: clamp(102px, 27vw, 117px);
   padding: 0;
@@ -714,8 +714,12 @@ button {
 }
 
 .exp-block--role strong {
-  margin-bottom: 9px;
-  font-size: 30px;
+  margin-bottom: 7px;
+  font-size: 26px;
+}
+
+.exp-block--role .progress {
+  margin-bottom: 0;
 }
 
 .exp-block-placeholder {
@@ -741,33 +745,80 @@ button {
 }
 
 .role-page .bottom-panel--role {
-  padding-bottom: clamp(74px, 18vw, 92px);
+  left: 18px;
+  right: 18px;
+  bottom: calc(max(6px, env(safe-area-inset-bottom)) + 2px);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: clamp(6px, 1.15vh, 10px);
+  padding-bottom: 0;
+  transform: translateY(24px);
 }
 
 .role-page .role-wallet-line {
-  order: 1;
-  margin: 0 0 2px;
+  order: initial;
+  margin: 0 0 -2px;
+}
+
+.role-page .role-wallet-line--corner {
+  position: absolute;
+  top: max(116px, calc(env(safe-area-inset-top) + 104px));
+  left: 18px;
+  z-index: 3;
+  min-width: 118px;
+  margin: 0;
+  padding: 9px 13px 10px;
+  border: 1px solid rgba(231, 199, 141, 0.42);
+  color: rgba(243, 234, 219, 0.82);
+  background:
+    radial-gradient(
+      circle at 28% 20%,
+      rgba(255, 239, 198, 0.2),
+      transparent 42%
+    ),
+    rgba(12, 9, 7, 0.46);
+  box-shadow:
+    inset 0 0 18px rgba(231, 199, 141, 0.08),
+    0 12px 34px rgba(0, 0, 0, 0.36);
+  backdrop-filter: blur(8px);
+  font-size: 15px;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.role-page .role-wallet-line--corner strong {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 20px;
 }
 
 .role-page .exp-block--role,
 .role-page .exp-block-placeholder {
-  order: 2;
+  order: initial;
 }
 
 .role-page .bio-panel--role {
-  order: 3;
+  order: initial;
+  height: clamp(92px, 13vh, 108px);
+  padding: clamp(10px, 1.5vh, 12px) 18px clamp(10px, 1.6vh, 13px);
 }
 
 .role-page .role-dots {
-  order: 4;
+  order: initial;
+  padding: 0;
 }
 
 .role-page .bottom-panel--role > .swipe-hint--image {
-  position: fixed;
-  left: 50%;
-  bottom: max(0px, env(safe-area-inset-bottom));
-  z-index: 5;
-  transform: translateX(-50%);
+  order: initial;
+  position: static;
+  left: auto;
+  bottom: auto;
+  z-index: auto;
+  align-self: center;
+  width: min(100%, 352px);
+  margin-top: 0;
+  transform: none;
 }
 
 .role-navigator {
@@ -861,6 +912,15 @@ button {
   font-family: Georgia, serif;
   font-size: 30px;
   font-weight: 400;
+}
+
+.role-page .exp-block--role strong {
+  margin-bottom: 7px;
+  color: #ffe6a3;
+  font-size: 26px;
+  text-shadow:
+    0 0 12px rgba(246, 213, 157, 0.28),
+    0 2px 8px rgba(0, 0, 0, 0.72);
 }
 
 .progress__rail {
@@ -5165,6 +5225,10 @@ button {
   .wife-subpage-title {
     padding-right: min(30%, 128px);
   }
+
+  .role-page .side-guide--image {
+    right: -10px;
+  }
 }
 
 @media (max-width: 390px) {
@@ -5430,6 +5494,10 @@ button {
     gap: 8px;
   }
 
+  .side-guide--image {
+    right: 0;
+  }
+
   .side-guide span {
     font-size: 14px;
     letter-spacing: 4px;
@@ -5474,6 +5542,20 @@ button {
   .exp-block strong {
     margin-bottom: 7px;
     font-size: 26px;
+  }
+
+  .exp-block--role strong {
+    margin-bottom: 6px;
+    font-size: 22px;
+  }
+
+  .role-page .exp-block--role strong {
+    margin-bottom: 6px;
+    font-size: 22px;
+  }
+
+  .exp-block--role .progress {
+    margin-bottom: 0;
   }
 
   .exp-block-placeholder {
