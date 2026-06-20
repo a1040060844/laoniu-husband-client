@@ -97,10 +97,10 @@ export function grantExperience(
   let exp = Math.max(0, current.exp) + safeAmount;
   const stories: StoryEvent[] = [];
 
-  while (level < MAX_LEVEL && exp >= expRequiredForLevel(level)) {
+  if (level < MAX_LEVEL && exp >= expRequiredForLevel(level)) {
     const from = roles[level];
-    exp -= expRequiredForLevel(level);
     level += 1;
+    exp = 0;
     const to = roles[level];
     stories.push({
       title: "职务晋升",
@@ -201,7 +201,10 @@ export function settleTaskReward(
       progress = {
         ...progress,
         level,
-        exp: Math.min(progress.exp, expRequiredForLevel(level)),
+        exp:
+          level > fromLevel
+            ? 0
+            : Math.min(progress.exp, expRequiredForLevel(level)),
       };
       if (level !== fromLevel) {
         stories.push({

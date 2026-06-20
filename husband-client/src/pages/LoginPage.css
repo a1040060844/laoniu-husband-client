@@ -1,12 +1,11 @@
 .login-page {
   position: relative;
-  width: 100%;
+  width: var(--app-width, 100vw);
   height: var(--app-height, 100dvh);
-  min-height: -webkit-fill-available;
-  min-height: 100dvh;
-  min-height: var(--app-height, 100dvh);
   overflow: hidden;
-  background: #000;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(42, 25, 10, 0.32), transparent 58%),
+    linear-gradient(180deg, #050302 0%, #000 54%, #050302 100%);
   isolation: isolate;
 }
 
@@ -38,8 +37,9 @@
   z-index: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center top;
+  object-fit: contain;
+  object-position: center center;
+  background: #000;
 }
 
 .login-tree-plaque-days {

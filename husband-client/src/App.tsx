@@ -86,6 +86,7 @@ type LoadedTaskSystem = Awaited<ReturnType<typeof loadTaskSystem>>;
 
 let taskSystemLoadPromise: Promise<LoadedTaskSystem | null> | null = null;
 const MIN_LOADING_DURATION_MS = 3_000;
+const ROUTE_LOADING_STORAGE_PREFIX = "laoniu.route-loading-complete.v1";
 
 function loadTaskSystemOnce() {
   if (taskSystemLoadPromise) return taskSystemLoadPromise;
@@ -120,6 +121,27 @@ function routeFromPathname(pathname: string): RouteKey {
   if (pathname.startsWith("/wife")) return "wife";
   if (pathname.startsWith("/husband")) return "husband";
   return "husband";
+}
+
+function routeLoadingStorageKey(route: Exclude<AppRoute, "login">) {
+  return `${ROUTE_LOADING_STORAGE_PREFIX}.${route}`;
+}
+
+function hasCompletedRouteLoading(route: AppRoute) {
+  if (route === "login") return false;
+  try {
+    return window.sessionStorage.getItem(routeLoadingStorageKey(route)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markRouteLoadingComplete(route: Exclude<AppRoute, "login">) {
+  try {
+    window.sessionStorage.setItem(routeLoadingStorageKey(route), "1");
+  } catch {
+    // Loading still works when session storage is unavailable.
+  }
 }
 
 function ledgerId(prefix: string) {
@@ -282,6 +304,13 @@ export default function App() {
   const initialRoute = useRef<RouteKey>(
     routeFromPathname(window.location.pathname),
   ).current;
+  const initialLoadingPreview = useRef(
+    initialRoute !== "login" && isLoadingPreviewRoute(initialRoute),
+  ).current;
+  const shouldShowInitialLoading = useRef(
+    initialRoute !== "login" &&
+      (initialLoadingPreview || !hasCompletedRouteLoading(initialRoute)),
+  ).current;
   const [route, setRoute] = useState<RouteKey>(initialRoute);
   const [activePage, setActivePage] = useState<number>(HUSBAND_PAGES.ROLE);
   const [slaveActivePage, setSlaveActivePage] = useState<number>(
@@ -301,25 +330,28 @@ export default function App() {
   const [decrees, setDecrees] = useState<DecreeEvent[]>(initialState.decrees);
   const [selectedBenefit, setSelectedBenefit] = useState<Benefit | null>(null);
   const [story, setStory] = useState<StoryEvent | null>(null);
-  const [showSlaveRuling, setShowSlaveRuling] = useState(false);
+  const [showSlaveRuling, setShowSlaveRuling] = useState(
+    initialRoute === "wife" &&
+      !shouldShowInitialLoading &&
+      isPunishmentCycleComplete(initialState.punishment),
+  );
   const [husbandSyncReady, setHusbandSyncReady] = useState(false);
   const [taskSystemReady, setTaskSystemReady] = useState(false);
   const [decreeSaving, setDecreeSaving] = useState(false);
   const [decreeError, setDecreeError] = useState<string>();
   const [loadingTarget, setLoadingTarget] = useState<AppRoute | null>(
-    initialRoute === "login" ? null : initialRoute,
+    shouldShowInitialLoading ? initialRoute : null,
   );
   const [loadingPercent, setLoadingPercent] = useState(0);
-  const [isLoading, setIsLoading] = useState(initialRoute !== "login");
+  const [isLoading, setIsLoading] = useState(shouldShowInitialLoading);
   const [loadingPhase, setLoadingPhase] = useState<LoadingPhase>("loading");
-  const [isLoadingPreview, setIsLoadingPreview] = useState(
-    initialRoute !== "login" && isLoadingPreviewRoute(initialRoute),
-  );
+  const [isLoadingPreview, setIsLoadingPreview] =
+    useState(initialLoadingPreview);
   const [loadingBackdropMode, setLoadingBackdropMode] =
-    useState<LoadingBackdropMode>(initialRoute === "login" ? "current" : "room");
+    useState<LoadingBackdropMode>(shouldShowInitialLoading ? "room" : "current");
   const hasLoadedServerState = useRef(false);
   const loadingAttemptRef = useRef(0);
-  const navigationLockedRef = useRef(initialRoute !== "login");
+  const navigationLockedRef = useRef(shouldShowInitialLoading);
   const loadingPushHistoryRef = useRef(false);
   const pixelTransitionActionRef = useRef<(() => void) | null>(null);
   const decreesRef = useRef(initialState.decrees);
@@ -416,6 +448,7 @@ export default function App() {
       if (pushHistory && window.location.pathname !== nextPath) {
         window.history.pushState(null, "", nextPath);
       }
+      markRouteLoadingComplete(target);
       setRoute(target);
       setLoadingPercent(100);
       setLoadingPhase("loading");
@@ -637,11 +670,16 @@ export default function App() {
       return;
     }
 
+    if (!shouldShowInitialLoading) {
+      preloadRouteAssets(initialRoute).catch(() => undefined);
+      return;
+    }
+
     runLoadingAttempt(initialRoute, false, "room");
     return () => {
       loadingAttemptRef.current += 1;
     };
-  }, [initialRoute, runLoadingAttempt]);
+  }, [initialRoute, runLoadingAttempt, shouldShowInitialLoading]);
 
   useEffect(() => {
     decreesRef.current = decrees;
@@ -837,12 +875,21 @@ export default function App() {
           return;
         }
 
+        if (hasCompletedRouteLoading(nextRoute)) {
+          commitLoadedRoute(nextRoute, false);
+          setShowSlaveRuling(
+            nextRoute === "wife" && isPunishmentCycleComplete(punishment),
+          );
+          preloadRouteAssets(nextRoute).catch(() => undefined);
+          return;
+        }
+
         runLoadingAttempt(nextRoute, false, "current");
       });
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [runLoadingAttempt, runPixelTransition]);
+  }, [commitLoadedRoute, punishment, runLoadingAttempt, runPixelTransition]);
 
   useEffect(() => {
     if (!taskSystemReady || punishment.status === "slave") return;
@@ -1352,7 +1399,10 @@ export default function App() {
     setProgress((current) => ({
       ...current,
       level: safeLevel,
-      exp: Math.min(current.exp, expRequiredForLevel(safeLevel)),
+      exp:
+        safeLevel > previousLevel
+          ? 0
+          : Math.min(current.exp, expRequiredForLevel(safeLevel)),
     }));
     if (safeLevel > previousLevel) {
       showRoleUpgradeCinematic(previousLevel, safeLevel);
@@ -1595,6 +1645,17 @@ export default function App() {
   function handleEnterRole(role: "husband" | "wife") {
     if (navigationLockedRef.current) return;
     navigationLockedRef.current = true;
+    if (hasCompletedRouteLoading(role)) {
+      runPixelTransition(() => {
+        loadingAttemptRef.current += 1;
+        commitLoadedRoute(role, true);
+        setShowSlaveRuling(
+          role === "wife" && isPunishmentCycleComplete(punishment),
+        );
+        preloadRouteAssets(role).catch(() => undefined);
+      });
+      return;
+    }
     runPixelTransition(() => runLoadingAttempt(role, true, "current"));
   }
 

@@ -61,7 +61,7 @@ test("hydrateProgress rejects invalid persisted numbers", () => {
   );
 });
 
-test("experience can cross multiple levels and stops at max level", () => {
+test("experience resets to zero when a grant upgrades the role", () => {
   const current: GameProgress = {
     level: 1,
     exp: 90,
@@ -70,10 +70,10 @@ test("experience can cross multiple levels and stops at max level", () => {
     rewardedTaskIds: [],
   };
   const result = grantExperience(current, 250, roles, "测试升级");
-  assert.equal(result.progress.level, 4);
-  assert.equal(result.progress.exp, 40);
+  assert.equal(result.progress.level, 2);
+  assert.equal(result.progress.exp, 0);
   assert.equal(result.progress.totalExp, 340);
-  assert.equal(result.stories.length, 3);
+  assert.equal(result.stories.length, 1);
 });
 
 test("task rewards are settled only once per task cycle", () => {
@@ -98,6 +98,25 @@ test("task rewards are settled only once per task cycle", () => {
   assert.equal(first.progress.wallet, 5);
   assert.deepEqual(second.progress, first.progress);
   assert.deepEqual(second.stories, []);
+});
+
+test("direct level-up task rewards reset current experience", () => {
+  const current: GameProgress = {
+    level: 1,
+    exp: 80,
+    totalExp: 80,
+    wallet: 0,
+    rewardedTaskIds: [],
+  };
+  const completed = task({
+    status: "confirmed",
+    rewards: [{ id: "level", type: "level_up", label: "直接升级1级", value: 1 }],
+  });
+
+  const result = settleTaskReward(current, completed, roles);
+
+  assert.equal(result.progress.level, 2);
+  assert.equal(result.progress.exp, 0);
 });
 
 test("one-off deadline choices produce their real deadlines without cycles", () => {
