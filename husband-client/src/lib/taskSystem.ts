@@ -834,7 +834,7 @@ function serializeTaskSystem(state: TaskSystemState) {
   };
 }
 
-export async function loadTaskSystem(): Promise<TaskSystemState> {
+async function loadTaskSystemRemote(): Promise<TaskSystemState> {
   const response = await fetch(apiUrl("/api/state"), { cache: "no-store" });
   if (!response.ok) {
     throw new Error(`任务状态读取失败：${response.status}`);
@@ -843,11 +843,32 @@ export async function loadTaskSystem(): Promise<TaskSystemState> {
   return stateFromUnknown(payload.state);
 }
 
+export async function loadTaskSystem(): Promise<TaskSystemState> {
+  try {
+    return await loadTaskSystemRemote();
+  } catch (error) {
+    if (!API_BASE_URL) return readLocalTaskSystem();
+    throw error;
+  }
+}
+
 export function loadTaskSystemFresh() {
   return loadTaskSystem();
 }
 
 export async function saveTaskSystem(state: TaskSystemState): Promise<void> {
+  try {
+    await saveTaskSystemRemote(state);
+  } catch (error) {
+    if (!API_BASE_URL) {
+      persistLocalTaskSystem(state);
+      return;
+    }
+    throw error;
+  }
+}
+
+async function saveTaskSystemRemote(state: TaskSystemState): Promise<void> {
   const response = await fetch(apiUrl("/api/state"), {
     body: JSON.stringify({ state: serializeTaskSystem(state) }),
     headers: { "Content-Type": "application/json" },

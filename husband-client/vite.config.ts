@@ -11,9 +11,16 @@ let writeQueue = Promise.resolve();
 
 async function readState() {
   try {
-    return JSON.parse(await readFile(STATE_PATH, "utf8")) as unknown;
+    const content = await readFile(STATE_PATH, "utf8");
+    return JSON.parse(content.replace(/^\uFEFF/, "")) as unknown;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return {};
+    if (error instanceof SyntaxError) {
+      await rename(STATE_PATH, `${STATE_PATH}.corrupt-${Date.now()}`).catch(
+        () => undefined,
+      );
+      return {};
+    }
     throw error;
   }
 }

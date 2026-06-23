@@ -5,6 +5,7 @@ import {
   clampLevel,
   grantExperience,
   hydrateProgress,
+  progressWithLevelRule,
   settleTaskReward,
   type GameProgress,
 } from "../src/game/progression.ts";
@@ -117,6 +118,20 @@ test("direct level-up task rewards reset current experience", () => {
 
   assert.equal(result.progress.level, 2);
   assert.equal(result.progress.exp, 0);
+});
+
+test("level rule resets current experience only when level increases", () => {
+  const current: GameProgress = {
+    level: 3,
+    exp: 80,
+    totalExp: 80,
+    wallet: 0,
+    rewardedTaskIds: [],
+  };
+
+  assert.equal(progressWithLevelRule(current, 4).exp, 0);
+  assert.equal(progressWithLevelRule(current, 3).exp, 80);
+  assert.equal(progressWithLevelRule({ ...current, exp: 180 }, 2).exp, 100);
 });
 
 test("one-off deadline choices produce their real deadlines without cycles", () => {

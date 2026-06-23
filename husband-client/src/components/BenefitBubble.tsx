@@ -34,6 +34,29 @@ const iconMap = {
   settings: Settings,
 };
 
+const statusTextFallback: Record<BenefitStatus, string> = {
+  available: "可申请",
+  cooldown: "冷却中",
+  pending: "待审批",
+  frozen: "已冻结",
+  locked: "未解锁",
+};
+
+function getDisplayStatusText(status: BenefitStatus, text: string) {
+  const normalized = text.trim();
+
+  if (
+    !normalized ||
+    normalized.includes("?") ||
+    normalized.includes("？") ||
+    normalized.includes("\uFFFD")
+  ) {
+    return statusTextFallback[status];
+  }
+
+  return normalized;
+}
+
 interface BenefitBubbleProps {
   benefit: Benefit;
   computedStatus: BenefitStatus;
@@ -56,6 +79,7 @@ export function BenefitBubble({
   onOpen,
 }: BenefitBubbleProps) {
   const Icon = iconMap[benefit.icon as keyof typeof iconMap] ?? Gift;
+  const displayStatusText = getDisplayStatusText(computedStatus, statusText);
 
   return (
     <button
@@ -71,7 +95,7 @@ export function BenefitBubble({
         <Icon size={26} strokeWidth={1.8} />
       </span>
       <strong>{benefit.name}</strong>
-      <small>{statusText}</small>
+      <small>{displayStatusText}</small>
     </button>
   );
 }

@@ -1,5 +1,15 @@
 export type ViewKey = "role" | "benefits" | "tasks";
 
+export type ChatSender = "husband" | "wife";
+
+export interface ChatMessage {
+  id: string;
+  sender: ChatSender;
+  text: string;
+  createdAt: string;
+  readBy: ChatSender[];
+}
+
 export type DecreeType =
   | "experience_granted"
   | "experience_penalty"

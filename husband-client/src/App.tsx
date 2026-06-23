@@ -11,6 +11,7 @@ import {
   HUSBAND_PAGES,
   HusbandVerticalPager,
 } from "./components/HusbandVerticalPager";
+import { ChatMessagePanel } from "./components/ChatMessagePanel";
 import { RolePage } from "./components/RolePage";
 import { SlavePage } from "./components/SlavePage";
 import { SlaveRulingModal } from "./components/SlaveRulingModal";
@@ -36,6 +37,7 @@ import {
   clampLevel,
   expRequiredForLevel,
   grantExperience,
+  progressWithLevelRule,
   roleWithProgress,
   settleConfirmedTasks,
   taskRewardKey,
@@ -58,6 +60,13 @@ import {
   preloadRouteAssets,
   type AppRoute,
 } from "./lib/preloadAssets";
+import {
+  createChatMessage,
+  loadChatMessages,
+  markChatMessagesRead,
+  saveChatMessages,
+  unreadChatCount,
+} from "./lib/chatMessages";
 import { taskRewardExp, taskRewardMoney, taskRewardText } from "./lib/taskRewards";
 import { LoginPage } from "./pages/LoginPage";
 import type {
@@ -70,6 +79,8 @@ import type {
   TaskReviewDecision,
   ViewKey,
   WalletLedgerEntry,
+  ChatMessage,
+  ChatSender,
 } from "./types/domain";
 import "./styles.css";
 
@@ -86,7 +97,8 @@ type LoadedTaskSystem = Awaited<ReturnType<typeof loadTaskSystem>>;
 
 let taskSystemLoadPromise: Promise<LoadedTaskSystem | null> | null = null;
 const MIN_LOADING_DURATION_MS = 3_000;
-const ROUTE_LOADING_STORAGE_PREFIX = "laoniu.route-loading-complete.v1";
+const DAILY_LOADING_STORAGE_KEY = "laoniu.daily-loading-delay-date.v1";
+let dailyLoadingDelayCompletedInMemory = false;
 
 function loadTaskSystemOnce() {
   if (taskSystemLoadPromise) return taskSystemLoadPromise;
@@ -123,24 +135,33 @@ function routeFromPathname(pathname: string): RouteKey {
   return "husband";
 }
 
-function routeLoadingStorageKey(route: Exclude<AppRoute, "login">) {
-  return `${ROUTE_LOADING_STORAGE_PREFIX}.${route}`;
+function todayStorageKey() {
+  const now = new Date();
+  return [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0"),
+  ].join("-");
 }
 
-function hasCompletedRouteLoading(route: AppRoute) {
-  if (route === "login") return false;
+function hasCompletedDailyLoadingDelay() {
+  if (dailyLoadingDelayCompletedInMemory) return true;
   try {
-    return window.sessionStorage.getItem(routeLoadingStorageKey(route)) === "1";
+    return (
+      window.localStorage.getItem(DAILY_LOADING_STORAGE_KEY) ===
+      todayStorageKey()
+    );
   } catch {
-    return false;
+    return dailyLoadingDelayCompletedInMemory;
   }
 }
 
-function markRouteLoadingComplete(route: Exclude<AppRoute, "login">) {
+function markDailyLoadingDelayComplete() {
+  dailyLoadingDelayCompletedInMemory = true;
   try {
-    window.sessionStorage.setItem(routeLoadingStorageKey(route), "1");
+    window.localStorage.setItem(DAILY_LOADING_STORAGE_KEY, todayStorageKey());
   } catch {
-    // Loading still works when session storage is unavailable.
+    // The in-memory flag still prevents repeated forced waits this session.
   }
 }
 
@@ -308,8 +329,7 @@ export default function App() {
     initialRoute !== "login" && isLoadingPreviewRoute(initialRoute),
   ).current;
   const shouldShowInitialLoading = useRef(
-    initialRoute !== "login" &&
-      (initialLoadingPreview || !hasCompletedRouteLoading(initialRoute)),
+    initialRoute !== "login",
   ).current;
   const [route, setRoute] = useState<RouteKey>(initialRoute);
   const [activePage, setActivePage] = useState<number>(HUSBAND_PAGES.ROLE);
@@ -365,6 +385,12 @@ export default function App() {
     useState<TaskRewardFlightEvent | null>(null);
   const [slaveStateCinematic, setSlaveStateCinematic] =
     useState<SlaveStateCinematicEvent | null>(null);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() =>
+    loadChatMessages(),
+  );
+  const [activeChatViewer, setActiveChatViewer] = useState<ChatSender | null>(
+    null,
+  );
 
   const runPixelTransition = useCallback((action: () => void) => {
     pixelTransitionActionRef.current = action;
@@ -397,6 +423,8 @@ export default function App() {
 
   const currentRole = roleWithProgress(roles[progress.level], progress);
   const previewRole = roleWithProgress(roles[previewLevel], progress);
+  const husbandChatUnreadCount = unreadChatCount(chatMessages, "husband");
+  const wifeChatUnreadCount = unreadChatCount(chatMessages, "wife");
 
   const sortedBenefits = useMemo(() => {
     return [...benefits].sort((a, b) => a.levelRequired - b.levelRequired);
@@ -448,7 +476,6 @@ export default function App() {
       if (pushHistory && window.location.pathname !== nextPath) {
         window.history.pushState(null, "", nextPath);
       }
-      markRouteLoadingComplete(target);
       setRoute(target);
       setLoadingPercent(100);
       setLoadingPhase("loading");
@@ -468,6 +495,8 @@ export default function App() {
     ) => {
       const attempt = loadingAttemptRef.current + 1;
       const previewMode = isLoadingPreviewRoute(target);
+      const enforceMinimumDuration =
+        !previewMode && !hasCompletedDailyLoadingDelay();
       loadingAttemptRef.current = attempt;
       loadingPushHistoryRef.current = pushHistory;
       navigationLockedRef.current = true;
@@ -478,49 +507,58 @@ export default function App() {
       setIsLoadingPreview(previewMode);
       setIsLoading(true);
 
-      const visualProgressRequest = new Promise<void>((resolve) => {
-        const startedAt = window.performance.now();
-        let settled = false;
-        const finish = (showFinalProgress: boolean) => {
-          if (settled) return;
-          settled = true;
-          window.clearTimeout(fallbackTimer);
-          if (
-            showFinalProgress &&
-            loadingAttemptRef.current === attempt
-          ) {
-            setLoadingPercent(99);
-          }
-          resolve();
-        };
-        const fallbackTimer = window.setTimeout(
-          () => finish(true),
-          MIN_LOADING_DURATION_MS,
-        );
-        const updateProgress = (now: number) => {
-          if (settled) return;
-          if (loadingAttemptRef.current !== attempt) {
-            finish(false);
-            return;
-          }
+      const assetRequest = preloadRouteAssets(
+        target,
+        enforceMinimumDuration
+          ? undefined
+          : (percent) => {
+              if (loadingAttemptRef.current !== attempt) return;
+              setLoadingPercent(Math.max(1, Math.min(99, percent)));
+            },
+      );
+      const visualProgressRequest = enforceMinimumDuration
+        ? new Promise<void>((resolve) => {
+            const startedAt = window.performance.now();
+            let settled = false;
+            const finish = (showFinalProgress: boolean) => {
+              if (settled) return;
+              settled = true;
+              window.clearTimeout(fallbackTimer);
+              if (showFinalProgress && loadingAttemptRef.current === attempt) {
+                setLoadingPercent(99);
+                markDailyLoadingDelayComplete();
+              }
+              resolve();
+            };
+            const fallbackTimer = window.setTimeout(
+              () => finish(true),
+              MIN_LOADING_DURATION_MS,
+            );
+            const updateProgress = (now: number) => {
+              if (settled) return;
+              if (loadingAttemptRef.current !== attempt) {
+                finish(false);
+                return;
+              }
 
-          const elapsed = now - startedAt;
-          const percent = 1 + (elapsed / MIN_LOADING_DURATION_MS) * 98;
-          setLoadingPercent(Math.min(99, Math.floor(percent)));
+              const elapsed = now - startedAt;
+              const percent = 1 + (elapsed / MIN_LOADING_DURATION_MS) * 98;
+              setLoadingPercent(Math.min(99, Math.floor(percent)));
 
-          if (elapsed >= MIN_LOADING_DURATION_MS) {
-            finish(true);
-            return;
-          }
+              if (elapsed >= MIN_LOADING_DURATION_MS) {
+                finish(true);
+                return;
+              }
 
-          window.requestAnimationFrame(updateProgress);
-        };
+              window.requestAnimationFrame(updateProgress);
+            };
 
-        window.requestAnimationFrame(updateProgress);
-      });
+            window.requestAnimationFrame(updateProgress);
+          })
+        : Promise.resolve();
 
       Promise.all([
-        preloadRouteAssets(target),
+        assetRequest,
         loadTaskSystemOnce(),
         visualProgressRequest,
       ])
@@ -614,6 +652,10 @@ export default function App() {
   useEffect(() => {
     setPreviewLevel(progress.level);
   }, [progress.level]);
+
+  useEffect(() => {
+    saveChatMessages(chatMessages);
+  }, [chatMessages]);
 
   useEffect(() => {
     setTasks((current) => refreshTaskCycles(current));
@@ -872,15 +914,6 @@ export default function App() {
           setIsLoading(false);
           setRoute("login");
           preloadRouteAssets("login").catch(() => undefined);
-          return;
-        }
-
-        if (hasCompletedRouteLoading(nextRoute)) {
-          commitLoadedRoute(nextRoute, false);
-          setShowSlaveRuling(
-            nextRoute === "wife" && isPunishmentCycleComplete(punishment),
-          );
-          preloadRouteAssets(nextRoute).catch(() => undefined);
           return;
         }
 
@@ -1396,14 +1429,7 @@ export default function App() {
     const previousLevel = progress.level;
     const previousPunishmentStatus = punishment.status;
     setPunishment(createNormalPunishment());
-    setProgress((current) => ({
-      ...current,
-      level: safeLevel,
-      exp:
-        safeLevel > previousLevel
-          ? 0
-          : Math.min(current.exp, expRequiredForLevel(safeLevel)),
-    }));
+    setProgress((current) => progressWithLevelRule(current, safeLevel));
     if (safeLevel > previousLevel) {
       showRoleUpgradeCinematic(previousLevel, safeLevel);
     }
@@ -1645,17 +1671,6 @@ export default function App() {
   function handleEnterRole(role: "husband" | "wife") {
     if (navigationLockedRef.current) return;
     navigationLockedRef.current = true;
-    if (hasCompletedRouteLoading(role)) {
-      runPixelTransition(() => {
-        loadingAttemptRef.current += 1;
-        commitLoadedRoute(role, true);
-        setShowSlaveRuling(
-          role === "wife" && isPunishmentCycleComplete(punishment),
-        );
-        preloadRouteAssets(role).catch(() => undefined);
-      });
-      return;
-    }
     runPixelTransition(() => runLoadingAttempt(role, true, "current"));
   }
 
@@ -1671,6 +1686,19 @@ export default function App() {
       setRoute("login");
       preloadRouteAssets("login").catch(() => undefined);
     });
+  }
+
+  function handleOpenChat(viewer: ChatSender) {
+    setChatMessages((current) => markChatMessagesRead(current, viewer));
+    setActiveChatViewer(viewer);
+  }
+
+  function handleSendChat(text: string) {
+    if (!activeChatViewer) return;
+    setChatMessages((current) => [
+      ...current,
+      createChatMessage(activeChatViewer, text),
+    ]);
   }
 
   function handleRetryLoading() {
@@ -1749,6 +1777,15 @@ export default function App() {
       />
     </>
   );
+  const chatOverlay = (
+    <ChatMessagePanel
+      isOpen={Boolean(activeChatViewer)}
+      viewer={activeChatViewer ?? "husband"}
+      messages={chatMessages}
+      onClose={() => setActiveChatViewer(null)}
+      onSend={handleSendChat}
+    />
+  );
 
   if (loadingOverlay && loadingBackdropMode === "room") {
     return (
@@ -1804,6 +1841,8 @@ export default function App() {
           onPunishStatus={handlePunishStatus}
           onRestoreNormal={handleRestoreNormal}
           onReturnToLogin={handleReturnToLogin}
+          chatUnreadCount={wifeChatUnreadCount}
+          onOpenChat={() => handleOpenChat("wife")}
         />
         <StoryModal
           story={showSlaveRuling ? null : story}
@@ -1816,6 +1855,7 @@ export default function App() {
           onContinueLabor={handleContinueSlaveLabor}
         />
         {loadingOverlay}
+        {chatOverlay}
         {pixelTransition}
         {cinematicOverlays}
       </main>
@@ -1939,6 +1979,8 @@ export default function App() {
           onPreviewNext={handlePreviewNext}
           onReturnToLogin={handleReturnToLogin}
           onSelectView={handleSelectView}
+          chatUnreadCount={husbandChatUnreadCount}
+          onOpenChat={() => handleOpenChat("husband")}
         />
 
         <TaskPage
@@ -1957,6 +1999,7 @@ export default function App() {
       />
       {decreeModal}
       {loadingOverlay}
+      {chatOverlay}
       {pixelTransition}
       {cinematicOverlays}
     </main>

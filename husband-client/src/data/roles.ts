@@ -3,9 +3,21 @@ import { expRequiredForLevel, salaryForLevel } from "../game/progression";
 import { publicAsset } from "../lib/assets";
 
 const roleImage = (level: number) =>
-  publicAsset(`/assets/roles/role-${String(level).padStart(2, "0")}.png`);
+  publicAsset(
+    {
+      0: "/assets/roles/role-00-street-vagrant.png",
+      3: "/assets/roles/role-03-trainee-maid.png",
+      8: "/assets/roles/role-08-housekeeper.png",
+      9: "/assets/roles/role-09-secretary.png",
+    }[level] ?? `/assets/roles/role-${String(level).padStart(2, "0")}.png`,
+  );
 const benefitImage = (level: number) =>
-  publicAsset(`/assets/benefits/benefit-${String(level).padStart(2, "0")}.png`);
+  publicAsset(
+    {
+      0: "/assets/benefits/benefit-00-street-vagrant.png",
+      3: "/assets/benefits/benefit-03-trainee-maid.png",
+    }[level] ?? `/assets/benefits/benefit-${String(level).padStart(2, "0")}.png`,
+  );
 
 function createRole(level: number, title: string, biography: string): Role {
   return {

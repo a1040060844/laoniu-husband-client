@@ -2,6 +2,7 @@ import { ProgressBar } from "./ProgressBar";
 import { RoleNavigator } from "./RoleNavigator";
 import { publicAsset } from "../lib/assets";
 import type { Role, ViewKey } from "../types/domain";
+import { ChatMessageButton } from "./ChatMessagePanel";
 import { AnimatedContent } from "./effects/AnimatedContent";
 import { ClickSpark } from "./effects/ClickSpark";
 import { CountUp } from "./effects/CountUp";
@@ -14,10 +15,12 @@ interface RolePageProps {
   canNext: boolean;
   roleCount: number;
   wallet: number;
+  chatUnreadCount: number;
   onPreviewPrev: () => void;
   onPreviewNext: () => void;
   onReturnToLogin: () => void;
   onSelectView: (view: ViewKey) => void;
+  onOpenChat: () => void;
 }
 
 export function RolePage({
@@ -27,10 +30,12 @@ export function RolePage({
   canPrev,
   canNext,
   roleCount = 12,
+  chatUnreadCount,
   onPreviewPrev,
   onPreviewNext,
   onReturnToLogin,
   onSelectView,
+  onOpenChat,
 }: RolePageProps) {
   const isPreviewing = previewRole.level !== role.level;
   const isLockedPreview = previewRole.level > role.level;
@@ -89,6 +94,13 @@ export function RolePage({
         零花钱 <strong>¥ <CountUp value={previewRole.salary} /></strong>
       </p>
 
+      <ChatMessageButton
+        className="role-chat-entry"
+        viewer="husband"
+        unreadCount={chatUnreadCount}
+        onClick={onOpenChat}
+      />
+
       <button
         className="side-guide side-guide--image"
         type="button"
@@ -116,6 +128,13 @@ export function RolePage({
         delay={80}
         duration={380}
       >
+        <p
+          className="role-wallet-line role-wallet-line--panel"
+          data-reward-target="money"
+        >
+          零花钱<strong>¥ <CountUp value={previewRole.salary} /></strong>
+        </p>
+
         {!isPreviewing && (
           <div className="exp-block exp-block--role" data-reward-target="exp">
             <strong>

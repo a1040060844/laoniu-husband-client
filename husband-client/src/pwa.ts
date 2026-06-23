@@ -33,6 +33,92 @@ export function setupViewportHeight() {
   window.visualViewport?.addEventListener("resize", updateAppViewport);
 }
 
+export function setupManualZoomLock() {
+  const preventDefault = (event: Event) => {
+    event.preventDefault();
+  };
+  const preventMultiTouchZoom = (event: TouchEvent) => {
+    if (event.touches.length > 1) {
+      event.preventDefault();
+    }
+  };
+  const preventShortcutZoom = (event: WheelEvent) => {
+    if (event.ctrlKey || event.metaKey) {
+      event.preventDefault();
+    }
+  };
+  const activeListener: AddEventListenerOptions = { passive: false };
+
+  document.addEventListener("touchmove", preventMultiTouchZoom, activeListener);
+  document.addEventListener("gesturestart", preventDefault, activeListener);
+  document.addEventListener("gesturechange", preventDefault, activeListener);
+  document.addEventListener("gestureend", preventDefault, activeListener);
+  window.addEventListener("wheel", preventShortcutZoom, activeListener);
+}
+
+export function setupEdgeSwipeBackGuard() {
+  const edgeWidth = 32;
+  const minSwipeX = 8;
+  let edgeTouchStart: { x: number; y: number } | null = null;
+  let isGuardingEdgeSwipe = false;
+  const activeCaptureListener: AddEventListenerOptions = {
+    capture: true,
+    passive: false,
+  };
+
+  const resetEdgeSwipe = () => {
+    edgeTouchStart = null;
+    isGuardingEdgeSwipe = false;
+  };
+
+  const preventEdgeSwipe = (event: TouchEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  document.addEventListener(
+    "touchstart",
+    (event) => {
+      if (event.touches.length !== 1) {
+        resetEdgeSwipe();
+        return;
+      }
+
+      const touch = event.touches[0];
+      edgeTouchStart =
+        touch && touch.clientX <= edgeWidth
+          ? { x: touch.clientX, y: touch.clientY }
+          : null;
+      isGuardingEdgeSwipe = false;
+    },
+    activeCaptureListener,
+  );
+
+  document.addEventListener(
+    "touchmove",
+    (event) => {
+      if (!edgeTouchStart) return;
+
+      const touch = event.touches[0];
+      if (!touch) {
+        resetEdgeSwipe();
+        return;
+      }
+
+      const deltaX = touch.clientX - edgeTouchStart.x;
+      const deltaY = Math.abs(touch.clientY - edgeTouchStart.y);
+      if (isGuardingEdgeSwipe || (deltaX > minSwipeX && deltaX > deltaY)) {
+        isGuardingEdgeSwipe = true;
+        preventEdgeSwipe(event);
+      }
+    },
+    activeCaptureListener,
+  );
+
+  document.addEventListener("touchend", resetEdgeSwipe, activeCaptureListener);
+  document.addEventListener("touchcancel", resetEdgeSwipe, activeCaptureListener);
+}
+
 export function registerServiceWorker() {
   if (!import.meta.env.PROD || !("serviceWorker" in navigator)) return;
 

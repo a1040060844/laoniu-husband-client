@@ -40,6 +40,22 @@ export function expRequiredForLevel(_level: number) {
   return LEVEL_EXP_REQUIRED;
 }
 
+export function progressWithLevelRule(
+  current: GameProgress,
+  nextLevel: number,
+): GameProgress {
+  const fromLevel = clampLevel(current.level);
+  const level = clampLevel(nextLevel);
+  return {
+    ...current,
+    level,
+    exp:
+      level > fromLevel
+        ? 0
+        : Math.min(Math.max(0, current.exp), expRequiredForLevel(level)),
+  };
+}
+
 export function salaryForLevel(level: number) {
   const safeLevel = clampLevel(level);
   return safeLevel === 0 ? 100 : 280 + (safeLevel - 1) * 20;
@@ -99,8 +115,12 @@ export function grantExperience(
 
   if (level < MAX_LEVEL && exp >= expRequiredForLevel(level)) {
     const from = roles[level];
-    level += 1;
-    exp = 0;
+    const upgradedProgress = progressWithLevelRule(
+      { ...current, level, exp },
+      level + 1,
+    );
+    level = upgradedProgress.level;
+    exp = upgradedProgress.exp;
     const to = roles[level];
     stories.push({
       title: "职务晋升",
@@ -198,14 +218,7 @@ export function settleTaskReward(
       const amount = Math.min(1, Math.max(1, Math.trunc(reward.value ?? 1)));
       const fromLevel = progress.level;
       const level = clampLevel(progress.level + amount);
-      progress = {
-        ...progress,
-        level,
-        exp:
-          level > fromLevel
-            ? 0
-            : Math.min(progress.exp, expRequiredForLevel(level)),
-      };
+      progress = progressWithLevelRule(progress, level);
       if (level !== fromLevel) {
         stories.push({
           title: "老妞大人直接赐予晋升",

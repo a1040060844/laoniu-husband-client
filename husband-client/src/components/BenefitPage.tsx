@@ -8,10 +8,6 @@ import { publicAsset } from "../lib/assets";
 import type { Benefit, BenefitStatus, Role, ViewKey } from "../types/domain";
 import { AnimatedContent } from "./effects/AnimatedContent";
 
-const AUTO_SCROLL_RESUME_DELAY_MS = 1200;
-const AUTO_SCROLL_SPEED_PX_PER_MS = 0.014;
-const AUTO_SCROLL_LOOP_EDGE_PX = 1;
-
 interface BenefitPageProps {
   role: Role;
   previewDirection: "none" | "next" | "prev";
@@ -139,7 +135,6 @@ export function BenefitPage({
   const [burstingBenefitId, setBurstingBenefitId] = useState<string | null>(
     null,
   );
-  const cloudViewportRef = useRef<HTMLDivElement | null>(null);
   const openTimerRef = useRef<number | null>(null);
   const isLockedPreview = role.level > currentLevel;
   const directionClass = `benefit-page--dir-${previewDirection}`;
@@ -150,6 +145,8 @@ export function BenefitPage({
     visibleBenefits.length <= 5
       ? 390
       : Math.max(520, visibleBenefits.length * 86 + 120);
+  const shouldLoopBubbles = visibleBenefits.length > 5;
+  const marqueeDuration = Math.max(18, visibleBenefits.length * 3.8);
   const cloudViewportClassName = "benefit-cloud-viewport";
   const visibleSelectedBenefit =
     !forceFrozen &&
@@ -170,100 +167,6 @@ export function BenefitPage({
     };
   }, []);
 
-  useEffect(() => {
-    const viewport = cloudViewportRef.current;
-    if (!viewport) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-    let animationFrame: number | null = null;
-    let resumeTimer: number | null = null;
-    let scrollWriteTimer: number | null = null;
-    let isPaused = false;
-    let isAutoScrollWrite = false;
-    let lastTimestamp: number | null = null;
-
-    const clearResumeTimer = () => {
-      if (resumeTimer !== null) {
-        window.clearTimeout(resumeTimer);
-        resumeTimer = null;
-      }
-    };
-
-    const pauseForUserInput = () => {
-      isPaused = true;
-      clearResumeTimer();
-      resumeTimer = window.setTimeout(() => {
-        isPaused = false;
-        lastTimestamp = null;
-      }, AUTO_SCROLL_RESUME_DELAY_MS);
-    };
-
-    const markAutoScrollWrite = () => {
-      isAutoScrollWrite = true;
-      if (scrollWriteTimer !== null) {
-        window.clearTimeout(scrollWriteTimer);
-      }
-      scrollWriteTimer = window.setTimeout(() => {
-        isAutoScrollWrite = false;
-        scrollWriteTimer = null;
-      }, 80);
-    };
-
-    const hasScrollableOverflow = () =>
-      viewport.scrollWidth - viewport.clientWidth > 2;
-
-    const tick = (timestamp: number) => {
-      if (lastTimestamp === null) {
-        lastTimestamp = timestamp;
-      }
-
-      if (!isPaused && hasScrollableOverflow()) {
-        const maxScrollLeft = viewport.scrollWidth - viewport.clientWidth;
-        const elapsed = Math.min(timestamp - lastTimestamp, 64);
-        let nextScrollLeft =
-          viewport.scrollLeft + elapsed * AUTO_SCROLL_SPEED_PX_PER_MS;
-
-        if (nextScrollLeft >= maxScrollLeft - AUTO_SCROLL_LOOP_EDGE_PX) {
-          nextScrollLeft = 0;
-        }
-
-        markAutoScrollWrite();
-        viewport.scrollLeft = nextScrollLeft;
-      }
-
-      lastTimestamp = timestamp;
-      animationFrame = window.requestAnimationFrame(tick);
-    };
-
-    const handleScroll = () => {
-      if (!isAutoScrollWrite) {
-        pauseForUserInput();
-      }
-    };
-
-    viewport.addEventListener("pointerdown", pauseForUserInput);
-    viewport.addEventListener("touchstart", pauseForUserInput, {
-      passive: true,
-    });
-    viewport.addEventListener("wheel", pauseForUserInput, { passive: true });
-    viewport.addEventListener("scroll", handleScroll, { passive: true });
-    animationFrame = window.requestAnimationFrame(tick);
-
-    return () => {
-      clearResumeTimer();
-      if (scrollWriteTimer !== null) {
-        window.clearTimeout(scrollWriteTimer);
-      }
-      if (animationFrame !== null) {
-        window.cancelAnimationFrame(animationFrame);
-      }
-      viewport.removeEventListener("pointerdown", pauseForUserInput);
-      viewport.removeEventListener("touchstart", pauseForUserInput);
-      viewport.removeEventListener("wheel", pauseForUserInput);
-      viewport.removeEventListener("scroll", handleScroll);
-    };
-  }, [cloudWidth, visibleBenefits.length]);
-
   function handleOpenBenefit(benefit: Benefit) {
     if (openTimerRef.current) {
       window.clearTimeout(openTimerRef.current);
@@ -274,6 +177,35 @@ export function BenefitPage({
       setBurstingBenefitId(null);
       openTimerRef.current = null;
     }, 260);
+  }
+
+  function renderBenefitBubbles(loopIndex = 0) {
+    return visibleBenefits.map((benefit, index) => {
+      const computed = forceFrozen
+        ? { status: "frozen" as BenefitStatus, text: "已冻结" }
+        : getStatus(currentLevel, benefit);
+      const { x, y } = getBubblePosition(index, visibleBenefits.length);
+
+      return (
+        <BenefitBubble
+          key={`${benefit.id}-${loopIndex}`}
+          benefit={benefit}
+          computedStatus={computed.status}
+          statusText={computed.text}
+          index={index}
+          isBursting={burstingBenefitId === benefit.id}
+          disabled={forceFrozen}
+          style={
+            {
+              "--bubble-x": `${x + loopIndex * cloudWidth}px`,
+              "--bubble-y": `${y}px`,
+              "--bubble-delay": `${index * 0.18}s`,
+            } as CSSProperties
+          }
+          onOpen={handleOpenBenefit}
+        />
+      );
+    });
   }
 
   return (
@@ -307,41 +239,31 @@ export function BenefitPage({
       </AnimatedContent>
 
       <div
-        ref={cloudViewportRef}
         className={cloudViewportClassName}
         aria-label="权益列表"
       >
         <div
-          className="benefit-cloud-track"
-          style={{ "--cloud-width": `${cloudWidth}px` } as CSSProperties}
+          className={`benefit-cloud-track${
+            shouldLoopBubbles ? " benefit-cloud-track--marquee" : ""
+          }`}
+          style={
+            {
+              "--cloud-width": `${cloudWidth}px`,
+              "--marquee-distance": `${cloudWidth}px`,
+              "--marquee-duration": `${marqueeDuration}s`,
+            } as CSSProperties
+          }
           onTouchStart={(event) => event.stopPropagation()}
           onTouchEnd={(event) => event.stopPropagation()}
         >
-          {visibleBenefits.map((benefit, index) => {
-            const computed = forceFrozen
-              ? { status: "frozen" as BenefitStatus, text: "已冻结" }
-              : getStatus(currentLevel, benefit);
-            const { x, y } = getBubblePosition(index, visibleBenefits.length);
-            return (
-              <BenefitBubble
-                key={benefit.id}
-                benefit={benefit}
-                computedStatus={computed.status}
-                statusText={computed.text}
-                index={index}
-                isBursting={burstingBenefitId === benefit.id}
-                disabled={forceFrozen}
-                style={
-                  {
-                    "--bubble-x": `${x}px`,
-                    "--bubble-y": `${y}px`,
-                    "--bubble-delay": `${index * 0.18}s`,
-                  } as CSSProperties
-                }
-                onOpen={handleOpenBenefit}
-              />
-            );
-          })}
+          {shouldLoopBubbles ? (
+            <>
+              {renderBenefitBubbles(0)}
+              {renderBenefitBubbles(1)}
+            </>
+          ) : (
+            renderBenefitBubbles(0)
+          )}
         </div>
       </div>
 

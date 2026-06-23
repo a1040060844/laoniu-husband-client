@@ -63,6 +63,7 @@ import type {
   TaskTimeType,
   WalletLedgerEntry,
 } from "../types/domain";
+import { ChatMessageButton } from "./ChatMessagePanel";
 import { AnimatedContent } from "./effects/AnimatedContent";
 import { ClickSpark } from "./effects/ClickSpark";
 import { WifeCommandMotion } from "./effects/WifeCommandMotion";
@@ -92,6 +93,8 @@ interface WifeDashboardProps {
   onPunishStatus: () => void;
   onRestoreNormal: () => void;
   onReturnToLogin: () => void;
+  chatUnreadCount: number;
+  onOpenChat: () => void;
 }
 
 interface TaskDraft {
@@ -359,8 +362,10 @@ export function WifeDashboard({
   onPunishStatus,
   onRestoreNormal,
   onReturnToLogin,
+  chatUnreadCount,
+  onOpenChat,
 }: WifeDashboardProps) {
-  const wifeImage = publicAsset("/assets/wife/wife-main.png");
+  const wifeImage = publicAsset("/assets/wife/wife-main.jpeg");
   const [sheet, setSheet] = useState<WifeSheet>(null);
   const [activePage, setActivePage] = useState<WifePage>("main");
   const [subPage, setSubPage] = useState<WifeSubPage | null>(null);
@@ -1029,10 +1034,16 @@ export function WifeDashboard({
                 >
                   -5
                 </button>
-                <div className="wife-exp-orb" aria-label="当前经验">
+                <div
+                  className="wife-exp-orb"
+                  aria-label={`当前经验 ${progress.exp} / ${requiredExp}`}
+                >
                   <Crown size={25} />
-                  <strong>{progress.exp}</strong>
-                  <span>/ {requiredExp}</span>
+                  <div className="wife-exp-orb__value" aria-hidden="true">
+                    <strong>{progress.exp}</strong>
+                    <span className="wife-exp-orb__slash">/</span>
+                    <span className="wife-exp-orb__required">{requiredExp}</span>
+                  </div>
                   <em>当前经验</em>
                 </div>
                 <button
@@ -1156,8 +1167,10 @@ export function WifeDashboard({
             href="#wife-main"
             onClick={handlePageLink("main")}
           >
-            <span aria-hidden="true">∨</span>
-            <span>上滑返回主页</span>
+            <img
+              src={publicAsset("/assets/ui/swipe-return.png")}
+              alt="上滑返回主页"
+            />
           </a>
         </section>
 
@@ -1192,8 +1205,10 @@ export function WifeDashboard({
               href="#wife-growth"
               onClick={handlePageLink("growth")}
             >
-              <ShieldCheck size={16} />
-              <span>下滑裁定老哥成长</span>
+              <img
+                src={publicAsset("/assets/ui/swipe-down-wife.png")}
+                alt="下滑裁定老哥成长"
+              />
             </a>
           </AnimatedContent>
 
@@ -1243,6 +1258,13 @@ export function WifeDashboard({
             </p>
           </AnimatedContent>
 
+          <ChatMessageButton
+            className="wife-chat-entry"
+            viewer="wife"
+            unreadCount={chatUnreadCount}
+            onClick={onOpenChat}
+          />
+
           <WifeCommandMotion
             as="nav"
             className="wife-actions"
@@ -1287,8 +1309,10 @@ export function WifeDashboard({
             href="#wife-today"
             onClick={handlePageLink("today")}
           >
-            <span aria-hidden="true">∨</span>
-            <span>上滑查看今日事务</span>
+            <img
+              src={publicAsset("/assets/ui/swipe-up-wife.png")}
+              alt="上滑查看今日事务"
+            />
           </a>
         </section>
 
@@ -1304,8 +1328,10 @@ export function WifeDashboard({
             href="#wife-main"
             onClick={handlePageLink("main")}
           >
-            <span aria-hidden="true">∧</span>
-            <span>下滑返回主页</span>
+            <img
+              src={publicAsset("/assets/ui/swipe-down-return.png")}
+              alt="下滑返回主页"
+            />
           </a>
 
           <AnimatedContent
@@ -1472,8 +1498,10 @@ export function WifeDashboard({
             href="#wife-main"
             onClick={handlePageLink("main")}
           >
-            <span aria-hidden="true">{"\u2227"}</span>
-            <span>{"\u4E0B\u6ED1\u8FD4\u56DE\u4E3B\u9875"}</span>
+            <img
+              src={publicAsset("/assets/ui/swipe-down-return.png")}
+              alt="下滑返回主页"
+            />
           </a>
 
           {subPage === "tasks" ? (
@@ -1860,7 +1888,11 @@ export function WifeDashboard({
 
       {sheet ? (
         <div className="modal-backdrop wife-sheet-backdrop" role="presentation">
-          <section className="wife-sheet" role="dialog" aria-modal="true">
+          <section
+            className={`wife-sheet${sheet === "task" ? " wife-sheet--task" : ""}`}
+            role="dialog"
+            aria-modal="true"
+          >
             <button
               className="icon-close"
               type="button"
@@ -1873,14 +1905,6 @@ export function WifeDashboard({
             {sheet === "task" ? (
               <>
                 <p className="kicker">发布任务</p>
-                <h2>模块化下达</h2>
-                <button
-                  className="task-publisher-quick-submit"
-                  type="button"
-                  onClick={submitTask}
-                >
-                  确定发布
-                </button>
                 <div className="task-publisher">
                   <section className="task-publisher-section">
                     <h3>选择任务内容</h3>
@@ -2298,6 +2322,13 @@ export function WifeDashboard({
                       <em>提交方式：老公完成后提交说明，老妞确认后结算奖励。</em>
                     </article>
                   </section>
+                  <button
+                    className="task-publisher-quick-submit"
+                    type="button"
+                    onClick={submitTask}
+                  >
+                    确定发布
+                  </button>
                 </div>
               </>
             ) : null}
@@ -2318,16 +2349,6 @@ export function WifeDashboard({
                     {roles[targetLevel]?.title}
                   </strong>
                 </div>
-                <input
-                  className="wife-level-range"
-                  type="range"
-                  min={0}
-                  max={roles.length - 1}
-                  step={1}
-                  value={targetLevel}
-                  onChange={(event) => setTargetLevel(Number(event.target.value))}
-                  aria-label={"\u6307\u5B9A\u7B49\u7EA7"}
-                />
                 <div
                   className="wife-level-module"
                   aria-label={"\u7B49\u7EA7\u9009\u62E9"}
