@@ -123,8 +123,22 @@ export function registerServiceWorker() {
   if (!import.meta.env.PROD || !("serviceWorker" in navigator)) return;
 
   window.addEventListener("load", () => {
+    const hadController = Boolean(navigator.serviceWorker.controller);
+    let isRefreshing = false;
+
+    if (hadController) {
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (isRefreshing) return;
+        isRefreshing = true;
+        window.location.reload();
+      });
+    }
+
     navigator.serviceWorker
-      .register(`${import.meta.env.BASE_URL}sw.js`)
+      .register(`${import.meta.env.BASE_URL}sw.js`, {
+        updateViaCache: "none",
+      })
+      .then((registration) => registration.update())
       .catch(() => undefined);
   });
 }

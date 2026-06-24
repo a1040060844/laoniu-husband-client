@@ -23,6 +23,7 @@ import { AnimatedContent } from "./effects/AnimatedContent";
 import { AnimatedList } from "./effects/AnimatedList";
 import { ClickSpark } from "./effects/ClickSpark";
 import { CountUp } from "./effects/CountUp";
+import { OrnateSwipeHint } from "./OrnateSwipeHint";
 
 type FilterKey = "all" | "todo" | "doing" | "submitted" | "completed";
 
@@ -153,17 +154,12 @@ export function TaskPage({
       <div className="task-scrim" />
 
       <div className="task-shell">
-        <button
-          className="swipe-hint swipe-hint--task-top swipe-hint--image"
-          type="button"
-          aria-label="下滑进入主页"
+        <OrnateSwipeHint
+          className="task-home-ornate-swipe"
+          direction="down"
+          text="下滑进入主页"
           onClick={() => onSelectView("role")}
-        >
-          <img
-            src={publicAsset("/assets/ui/swipe-down-return.png?v=7e938cd4")}
-            alt=""
-          />
-        </button>
+        />
 
         <AnimatedContent as="header" className="task-header" duration={340}>
           <div>

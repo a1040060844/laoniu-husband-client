@@ -3,6 +3,8 @@ import { RoleNavigator } from "./RoleNavigator";
 import { publicAsset } from "../lib/assets";
 import type { Role, ViewKey } from "../types/domain";
 import { ChatMessageButton } from "./ChatMessagePanel";
+import { OrnateSwipeHint } from "./OrnateSwipeHint";
+import { VerticalMagicSwipeHint } from "./VerticalMagicSwipeHint";
 import { AnimatedContent } from "./effects/AnimatedContent";
 import { ClickSpark } from "./effects/ClickSpark";
 import { CountUp } from "./effects/CountUp";
@@ -39,6 +41,9 @@ export function RolePage({
 }: RolePageProps) {
   const isPreviewing = previewRole.level !== role.level;
   const isLockedPreview = previewRole.level > role.level;
+  const isNearLevelUp =
+    previewRole.expRequired > 0 &&
+    previewRole.expCurrent / previewRole.expRequired >= 0.8;
   const directionClass = `role-page--dir-${previewDirection}`;
 
   return (
@@ -101,17 +106,10 @@ export function RolePage({
         onClick={onOpenChat}
       />
 
-      <button
-        className="side-guide side-guide--image"
-        type="button"
-        aria-label="下滑查看权益"
+      <VerticalMagicSwipeHint
+        className="role-benefit-magic-hint"
         onClick={() => onSelectView("benefits")}
-      >
-        <img
-          src={publicAsset("/assets/ui/swipe-down.png?v=2a55bb1a")}
-          alt=""
-        />
-      </button>
+      />
 
       <RoleNavigator
         canPrev={canPrev}
@@ -136,10 +134,20 @@ export function RolePage({
         </p>
 
         {!isPreviewing && (
-          <div className="exp-block exp-block--role" data-reward-target="exp">
-            <strong>
-              <CountUp value={previewRole.expCurrent} /> /{" "}
-              <CountUp value={previewRole.expRequired} />
+          <div
+            className={`exp-block exp-block--role role-exp${isNearLevelUp ? " is-near-level-up" : ""}`}
+            data-reward-target="exp"
+          >
+            <strong className="role-exp__value">
+              <CountUp
+                className="role-exp__current"
+                value={previewRole.expCurrent}
+              />{" "}
+              <span className="role-exp__slash">/</span>{" "}
+              <CountUp
+                className="role-exp__total"
+                value={previewRole.expRequired}
+              />
             </strong>
             <ProgressBar
               current={previewRole.expCurrent}
@@ -167,14 +175,12 @@ export function RolePage({
           ))}
         </div>
 
-        <button
-          className="swipe-hint swipe-hint--image"
-          type="button"
-          aria-label="上滑查看任务"
+        <OrnateSwipeHint
+          className="role-task-ornate-swipe"
+          direction="up"
+          text="上滑查看任务"
           onClick={() => onSelectView("tasks")}
-        >
-          <img src={publicAsset("/assets/ui/swipe-up.png")} alt="" />
-        </button>
+        />
       </AnimatedContent>
     </section>
   );

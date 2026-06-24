@@ -61,29 +61,29 @@ export function ChatMessageButton({
   onClick,
 }: ChatMessageButtonProps) {
   const label = chatActionLabel[viewer];
-  return (
-    <ClickSpark>
-      <button
-        className={`chat-message-button${className ? ` ${className}` : ""}`}
-        type="button"
-        aria-label={`${label}聊天留言`}
-        onClick={onClick}
-      >
-        <span>聊天留言</span>
-        <img
-          className="chat-message-button__image"
-          src={chatActionIcon[viewer]}
-          alt=""
-          draggable={false}
-        />
-        {unreadCount > 0 ? (
-          <b aria-label={`${unreadCount} 条未读留言`}>
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </b>
-        ) : null}
-      </button>
-    </ClickSpark>
+  const button = (
+    <button
+      className={`chat-message-button memorial-icon-button${className ? ` ${className}` : ""}`}
+      type="button"
+      aria-label={`${label}聊天留言`}
+      onClick={onClick}
+    >
+      <span>聊天留言</span>
+      <img
+        className="chat-message-button__image"
+        src={chatActionIcon[viewer]}
+        alt=""
+        draggable={false}
+      />
+      {unreadCount > 0 ? (
+        <b aria-label={`${unreadCount} 条未读留言`}>
+          {unreadCount > 9 ? "9+" : unreadCount}
+        </b>
+      ) : null}
+    </button>
   );
+
+  return viewer === "husband" ? button : <ClickSpark>{button}</ClickSpark>;
 }
 
 export function ChatMessagePanel({

@@ -10,7 +10,6 @@ import {
   Crown,
   FilePenLine,
   Gavel,
-  KeyRound,
   ScrollText,
   Shield,
   ShieldCheck,
@@ -42,6 +41,10 @@ import { publicAsset } from "../lib/assets";
 import {
   getPunishmentRemainingDays,
 } from "../lib/taskSystem";
+import {
+  eventLogRecordLabel,
+  walletLedgerRecordLabel,
+} from "../lib/recordLabels";
 import { resolveTaskSchedule, taskTypeForTimeConfig } from "../lib/taskSchedule";
 import {
   taskRewardChips,
@@ -64,6 +67,9 @@ import type {
   WalletLedgerEntry,
 } from "../types/domain";
 import { ChatMessageButton } from "./ChatMessagePanel";
+import { OrnateSwipeHint } from "./OrnateSwipeHint";
+import { SwipeBackHint } from "./SwipeBackHint";
+import { VerticalMagicSwipeHint } from "./VerticalMagicSwipeHint";
 import { AnimatedContent } from "./effects/AnimatedContent";
 import { ClickSpark } from "./effects/ClickSpark";
 import { WifeCommandMotion } from "./effects/WifeCommandMotion";
@@ -172,20 +178,6 @@ const orderOptions = [
   { name: "宵夜恩准", desc: "深夜表现优秀时开放一次", cost: "经验 -5" },
   { name: "甜点赏赐", desc: "适合任务完成后的轻量奖励", cost: "经验 -3" },
 ];
-
-const eventLogTypeLabel: Record<EventLog["type"], string> = {
-  benefit_approved: "权益恩准",
-  benefit_rejected: "权益驳回",
-  benefit_requested: "权益申请",
-  level_changed: "等级变化",
-  punishment_status_changed: "惩罚状态",
-  task_approved: "任务确认",
-  task_created: "任务发布",
-  task_expired: "任务过期",
-  task_rejected: "任务打回",
-  task_submitted: "任务提交",
-  wallet_ledger: "钱包流水",
-};
 
 const SWIPE_THRESHOLD = 60;
 const WHEEL_THRESHOLD = 42;
@@ -366,6 +358,9 @@ export function WifeDashboard({
   onOpenChat,
 }: WifeDashboardProps) {
   const wifeImage = publicAsset("/assets/wife/wife-main.jpeg");
+  const wifeHomeImage = publicAsset("/assets/wife/wife-home-throne.png");
+  const wifeGrowthImage = publicAsset("/assets/wife/wife-growth-library.png");
+  const wifeTodayBackground = publicAsset("/assets/wife/wife-today-bg.png");
   const [sheet, setSheet] = useState<WifeSheet>(null);
   const [activePage, setActivePage] = useState<WifePage>("main");
   const [subPage, setSubPage] = useState<WifeSubPage | null>(null);
@@ -459,10 +454,8 @@ export function WifeDashboard({
     title: draft.title,
     type: taskTypeForTimeConfig(draftTimeConfig),
   };
-  const recentTask =
-    submittedTasks[0] ??
-    tasks.find((task) => task.status === "doing" || task.status === "todo") ??
-    tasks[0];
+  const recentLog = logs[0];
+  const recentSubmittedTask = submittedTasks[0];
   const pendingRulingCount = submittedTasks.length;
   const pendingBenefitCount = pendingBenefits.length;
   const abnormalCount = Math.max(
@@ -934,7 +927,7 @@ export function WifeDashboard({
         <section className="wife-growth" id="wife-growth" aria-label="成长裁定">
           <img
             className="wife-growth__portrait"
-            src={wifeImage}
+            src={wifeGrowthImage}
             alt=""
           />
           <div className="wife-growth__shade" />
@@ -1162,22 +1155,19 @@ export function WifeDashboard({
             ) : null}
           </AnimatedContent>
 
-          <a
+          <OrnateSwipeHint
             className="wife-growth-cue"
+            direction="up"
             href="#wife-main"
             onClick={handlePageLink("main")}
-          >
-            <img
-              src={publicAsset("/assets/ui/swipe-return.png")}
-              alt="上滑返回主页"
-            />
-          </a>
+            text="上滑进入首页"
+          />
         </section>
 
         <section className="wife-hero" id="wife-main" aria-label="老婆端主控台">
           <img
-            className="wife-portrait"
-            src={wifeImage}
+            className="wife-portrait wife-portrait--home"
+            src={wifeHomeImage}
             alt=""
           />
           <div className="wife-hero__shade" />
@@ -1200,16 +1190,12 @@ export function WifeDashboard({
             <p>老妞端</p>
             <h1>老妞宝座</h1>
             <span>赏罚升降，皆由老妞大人裁定</span>
-            <a
-              className="wife-side-hint"
+            <VerticalMagicSwipeHint
+              className="wife-growth-magic-hint"
               href="#wife-growth"
               onClick={handlePageLink("growth")}
-            >
-              <img
-                src={publicAsset("/assets/ui/swipe-down-wife.png")}
-                alt="下滑裁定老哥成长"
-              />
-            </a>
+              text="下滑裁定老哥成长"
+            />
           </AnimatedContent>
 
           <AnimatedContent
@@ -1319,20 +1305,14 @@ export function WifeDashboard({
         <section className="wife-today" id="wife-today" aria-label="今日事务">
           <img
             className="wife-today__portrait"
-            src={wifeImage}
+            src={wifeTodayBackground}
             alt=""
           />
           <div className="wife-today__shade" />
-          <a
-            className="wife-today-back"
+          <SwipeBackHint
             href="#wife-main"
             onClick={handlePageLink("main")}
-          >
-            <img
-              src={publicAsset("/assets/ui/swipe-down-return.png")}
-              alt="下滑返回主页"
-            />
-          </a>
+          />
 
           <AnimatedContent
             as="header"
@@ -1358,12 +1338,26 @@ export function WifeDashboard({
                 <span>待裁定</span>
                 <strong>{pendingRulingCount}</strong>
                 <em>项</em>
+                <button
+                  className="wife-overview-action"
+                  type="button"
+                  onClick={() => openSubPage("review")}
+                >
+                  去处理
+                </button>
               </AnimatedContent>
               <AnimatedContent as="article" delay={45} duration={300}>
                 <ShieldCheck size={44} />
                 <span>待批准</span>
                 <strong>{pendingBenefitCount}</strong>
                 <em>项</em>
+                <button
+                  className="wife-overview-action"
+                  type="button"
+                  onClick={() => openSubPage("benefits")}
+                >
+                  去处理
+                </button>
               </AnimatedContent>
               <AnimatedContent
                 as="article"
@@ -1375,62 +1369,15 @@ export function WifeDashboard({
                 <span>异常</span>
                 <strong>{abnormalCount}</strong>
                 <em>条</em>
+                <button
+                  className="wife-overview-action"
+                  type="button"
+                  onClick={() => openSubPage("records")}
+                >
+                  去处理
+                </button>
               </AnimatedContent>
             </div>
-          </AnimatedContent>
-
-          <AnimatedContent
-            as="section"
-            className="wife-today-card wife-pending-panel"
-            aria-label="待老妞处理"
-            delay={80}
-            duration={370}
-          >
-            <h2>待老妞处理</h2>
-            <WifeCommandMotion as="div" className="wife-affair-list">
-              <article
-                data-wife-command="today-review"
-                data-wife-command-pending={
-                  pendingRulingCount ? "true" : undefined
-                }
-              >
-                <div className="wife-affair-icon">
-                  <ClipboardCheck size={31} />
-                </div>
-                <div>
-                  <h3>任务待审核</h3>
-                  <p>老哥提交了 {pendingRulingCount} 项任务，等待确认。</p>
-                </div>
-                <span>待裁定</span>
-                <button type="button" onClick={() => openSubPage("review")}>
-                  去审核
-                  <i aria-hidden="true">›</i>
-                </button>
-              </article>
-              <article
-                data-wife-command="today-benefit"
-                data-wife-command-pending={
-                  pendingBenefitCount ? "true" : undefined
-                }
-              >
-                <div className="wife-affair-icon">
-                  <KeyRound size={31} />
-                </div>
-                <div>
-                  <h3>权益申请</h3>
-                  <p>
-                    {pendingBenefitCount
-                      ? `${pendingBenefitCount} 项权益申请待批准。`
-                      : "暂无权益申请待处理。"}
-                  </p>
-                </div>
-                <span>待批准</span>
-                <button type="button" onClick={() => openSubPage("benefits")}>
-                  去处理
-                  <i aria-hidden="true">›</i>
-                </button>
-              </article>
-            </WifeCommandMotion>
           </AnimatedContent>
 
           <AnimatedContent
@@ -1465,22 +1412,55 @@ export function WifeDashboard({
             duration={390}
           >
             <h2>最近动态</h2>
-            <article className="wife-recent-item">
-              <div className="wife-affair-icon">
-                <ClipboardCheck size={29} />
-              </div>
-              <div>
-                <h3>{recentTask?.title || "早点休息"}</h3>
-                <p>老哥已提交，等待确认</p>
-                <strong>
-                  奖励：{recentTask ? taskRewardText(recentTask) : "+10 EXP"}
-                </strong>
-              </div>
-              <button type="button" onClick={() => openSubPage("review")}>
-                审核
-                <i aria-hidden="true">›</i>
-              </button>
-            </article>
+            {recentLog ? (
+              <article className="wife-recent-item">
+                <div className="wife-affair-icon">
+                  <ClipboardCheck size={29} />
+                </div>
+                <div>
+                  <h3>
+                    {eventLogRecordLabel(recentLog)} · {recentLog.title}
+                  </h3>
+                  <p>
+                    {[formatLogTime(recentLog.createdAt), recentLog.description]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                  {recentLog.taskTitle || recentLog.benefitName ? (
+                    <strong>
+                      {recentLog.taskTitle
+                        ? `任务：${recentLog.taskTitle}`
+                        : `权益：${recentLog.benefitName}`}
+                    </strong>
+                  ) : null}
+                </div>
+                <button type="button" onClick={() => openSubPage("records")}>
+                  查看
+                  <i aria-hidden="true">›</i>
+                </button>
+              </article>
+            ) : recentSubmittedTask ? (
+              <article className="wife-recent-item">
+                <div className="wife-affair-icon">
+                  <ClipboardCheck size={29} />
+                </div>
+                <div>
+                  <h3>{recentSubmittedTask.title}</h3>
+                  <p>
+                    {recentSubmittedTask.submitNote ||
+                      recentSubmittedTask.resultText ||
+                      "老哥已提交完成结果，等待裁定。"}
+                  </p>
+                  <strong>奖励：{taskRewardText(recentSubmittedTask)}</strong>
+                </div>
+                <button type="button" onClick={() => openSubPage("review")}>
+                  审核
+                  <i aria-hidden="true">›</i>
+                </button>
+              </article>
+            ) : (
+              <p className="wife-subpage-empty">暂无最近动态。</p>
+            )}
           </AnimatedContent>
         </section>
       </div>
@@ -1489,7 +1469,7 @@ export function WifeDashboard({
         <section className="wife-subpage" aria-label="老婆端子页面">
           <img
             className="wife-subpage__portrait"
-            src={wifeImage}
+            src={wifeTodayBackground}
             alt=""
           />
           <div className="wife-subpage__shade" />
@@ -1769,7 +1749,8 @@ export function WifeDashboard({
                     <span />
                     <div>
                       <h2>
-                        钱包流水 · {entry.source} · {formatLedgerAmount(entry)}
+                        {walletLedgerRecordLabel(entry)} · {entry.source} ·{" "}
+                        {formatLedgerAmount(entry)}
                       </h2>
                       <p>
                         {[
@@ -1789,7 +1770,7 @@ export function WifeDashboard({
                     <span />
                     <div>
                       <h2>
-                        {eventLogTypeLabel[log.type]} · {log.title}
+                        {eventLogRecordLabel(log)} · {log.title}
                       </h2>
                       <p>
                         {[formatLogTime(log.createdAt), log.description]

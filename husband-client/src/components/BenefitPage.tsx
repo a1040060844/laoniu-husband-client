@@ -3,8 +3,8 @@ import type { CSSProperties } from "react";
 import { Coins } from "lucide-react";
 import { BenefitBubble } from "./BenefitBubble";
 import { BenefitModal } from "./BenefitModal";
+import { OrnateSwipeHint } from "./OrnateSwipeHint";
 import { RoleNavigator } from "./RoleNavigator";
-import { publicAsset } from "../lib/assets";
 import type { Benefit, BenefitStatus, Role, ViewKey } from "../types/domain";
 import { AnimatedContent } from "./effects/AnimatedContent";
 
@@ -289,17 +289,12 @@ export function BenefitPage({
         <strong>¥ {role.salary}</strong>
       </AnimatedContent>
 
-      <button
-        className="swipe-hint swipe-hint--benefit swipe-hint--image"
-        type="button"
-        aria-label="上滑进入主页"
+      <OrnateSwipeHint
+        className="benefit-ornate-swipe"
+        direction="up"
+        text="上滑进入主页"
         onClick={() => onSelectView("role")}
-      >
-        <img
-          src={publicAsset("/assets/ui/swipe-return.png?v=b94ee0a3")}
-          alt=""
-        />
-      </button>
+      />
 
       <BenefitModal
         benefit={visibleSelectedBenefit}

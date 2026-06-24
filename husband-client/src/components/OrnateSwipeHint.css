@@ -1,0 +1,265 @@
+.ornate-swipe-hint {
+  position: relative;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(320px, 84vw);
+  padding: 0;
+  border: 0;
+  color: var(--gold-strong);
+  background: transparent;
+  box-shadow: none;
+  font-family: var(--serif);
+  text-decoration: none;
+  transform-origin: center bottom;
+  transition:
+    filter 160ms ease,
+    transform 120ms ease;
+}
+
+.ornate-swipe-arrow {
+  position: relative;
+  display: block;
+  width: 52px;
+  height: 25px;
+  margin-bottom: 5px;
+  filter: drop-shadow(0 0 5px rgba(226, 176, 94, 0.48));
+  animation: ornate-arrow-float 1.4s ease-in-out infinite;
+}
+
+.ornate-swipe-hint--down .ornate-swipe-arrow {
+  animation-name: ornate-arrow-float-down;
+}
+
+.ornate-swipe-arrow svg {
+  position: absolute;
+  left: 50%;
+  display: block;
+  color: rgba(248, 223, 172, 0.9);
+  transform: translateX(-50%);
+}
+
+.ornate-swipe-arrow svg:nth-child(1) {
+  top: -4px;
+  width: 29px;
+  height: 29px;
+  opacity: 0.94;
+  stroke-width: 1.45;
+}
+
+.ornate-swipe-arrow svg:nth-child(2) {
+  top: 4px;
+  width: 23px;
+  height: 23px;
+  opacity: 0.58;
+  stroke-width: 1.4;
+}
+
+.ornate-swipe-arrow svg:nth-child(3) {
+  top: 11px;
+  width: 17px;
+  height: 17px;
+  opacity: 0.3;
+  stroke-width: 1.35;
+}
+
+.ornate-swipe-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  gap: 10px;
+}
+
+.ornate-text {
+  flex: 0 0 auto;
+  color: rgba(248, 223, 172, 0.94);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  white-space: nowrap;
+  text-shadow:
+    0 0 5px rgba(248, 223, 172, 0.48),
+    0 0 12px rgba(185, 130, 53, 0.25);
+  animation: ornate-text-breath 2.8s ease-in-out infinite;
+}
+
+.ornate-line {
+  position: relative;
+  flex: 1 1 70px;
+  max-width: 82px;
+  height: 9px;
+  overflow: hidden;
+}
+
+.ornate-line::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(184, 132, 58, 0.24) 18%,
+    rgba(248, 223, 172, 0.76) 82%,
+    rgba(248, 223, 172, 0.18)
+  );
+}
+
+.ornate-line::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 58%;
+  width: 28px;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 231, 185, 0.72),
+    transparent
+  );
+  opacity: 0;
+  transform: translateX(0);
+  animation: ornate-line-shine 3.2s ease-in-out infinite;
+}
+
+.ornate-line--right {
+  transform: scaleX(-1);
+}
+
+.ornate-line svg {
+  position: absolute;
+  top: 1px;
+  right: 7px;
+  z-index: 1;
+  width: 7px;
+  height: 7px;
+  color: #ffe2aa;
+  fill: rgba(255, 226, 170, 0.2);
+  filter: drop-shadow(0 0 4px rgba(255, 218, 150, 0.72));
+  animation: ornate-star-blink 2.4s ease-in-out infinite;
+}
+
+.ornate-line--right svg {
+  animation-delay: 380ms;
+}
+
+.ornate-swipe-hint:active {
+  filter: drop-shadow(0 0 7px rgba(226, 176, 94, 0.34));
+  transform: translateY(-2px) scale(1.018);
+}
+
+.benefit-ornate-swipe {
+  position: absolute;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+  transform: translateX(-50%);
+}
+
+.benefit-ornate-swipe:active {
+  transform: translateX(-50%) translateY(-2px) scale(1.018);
+}
+
+.role-task-ornate-swipe {
+  position: static;
+  align-self: center;
+  flex: 0 0 auto;
+  margin-top: 0;
+  transform: translateY(-10px);
+}
+
+.role-task-ornate-swipe:active {
+  transform: translateY(-12px) scale(1.018);
+}
+
+.task-home-ornate-swipe {
+  justify-self: center;
+  margin: 0 auto 2px;
+}
+
+@keyframes ornate-arrow-float {
+  0%,
+  100% {
+    opacity: 0.58;
+    transform: translateY(4px);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes ornate-arrow-float-down {
+  0%,
+  100% {
+    opacity: 0.58;
+    transform: translateY(-4px);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateY(2px);
+  }
+}
+
+@keyframes ornate-text-breath {
+  0%,
+  100% {
+    opacity: 0.76;
+    text-shadow:
+      0 0 4px rgba(248, 223, 172, 0.38),
+      0 0 9px rgba(185, 130, 53, 0.2);
+  }
+
+  50% {
+    opacity: 1;
+    text-shadow:
+      0 0 7px rgba(248, 223, 172, 0.68),
+      0 0 15px rgba(185, 130, 53, 0.38);
+  }
+}
+
+@keyframes ornate-star-blink {
+  0%,
+  100% {
+    opacity: 0.22;
+    transform: scale(0.78);
+  }
+
+  48% {
+    opacity: 0.82;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes ornate-line-shine {
+  0%,
+  38% {
+    opacity: 0;
+    transform: translateX(0);
+  }
+
+  52% {
+    opacity: 0.62;
+  }
+
+  72%,
+  100% {
+    opacity: 0;
+    transform: translateX(-210%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ornate-swipe-arrow,
+  .ornate-text,
+  .ornate-line::after,
+  .ornate-line svg {
+    animation: none;
+  }
+}

@@ -14,6 +14,10 @@ import {
   resolveTaskSchedule,
   taskTypeForTimeConfig,
 } from "../src/lib/taskSchedule.ts";
+import {
+  eventLogRecordLabel,
+  walletLedgerRecordLabel,
+} from "../src/lib/recordLabels.ts";
 import type { Role, Task, TaskTimeConfig } from "../src/types/domain.ts";
 
 const roles: Role[] = Array.from({ length: 12 }, (_, level) => ({
@@ -41,6 +45,24 @@ function task(overrides: Partial<Task> = {}): Task {
     ...overrides,
   };
 }
+
+test("record prefixes describe the actual wallet, experience, level, and slave changes", () => {
+  assert.equal(walletLedgerRecordLabel({ amount: 10, unit: "CNY" }), "钱包流水");
+  assert.equal(walletLedgerRecordLabel({ amount: 10, unit: "EXP" }), "经验变化");
+  assert.equal(walletLedgerRecordLabel({ amount: 1, unit: "LEVEL" }), "等级提升");
+  assert.equal(walletLedgerRecordLabel({ amount: -1, unit: "LEVEL" }), "等级降低");
+  assert.equal(
+    eventLogRecordLabel({
+      id: "slave",
+      type: "punishment_status_changed",
+      title: "卖身奴隶状态",
+      createdAt: new Date(0).toISOString(),
+      fromStatus: "normal",
+      toStatus: "slave",
+    }),
+    "卖身奴隶",
+  );
+});
 
 test("hydrateProgress rejects invalid persisted numbers", () => {
   assert.equal(clampLevel(Number.NaN), 0);

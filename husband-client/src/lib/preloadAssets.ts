@@ -83,6 +83,8 @@ const routeAssets: Record<AppRoute, string[]> = {
   wife: [
     ...sharedRoleAssets,
     publicAsset("/assets/wife/wife-main.jpeg"),
+    publicAsset("/assets/wife/wife-home-throne.png"),
+    publicAsset("/assets/wife/wife-growth-library.png"),
   ],
 };
 
