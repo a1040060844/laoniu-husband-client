@@ -87,11 +87,6 @@ export function AppLoadingPage({
         <img className="loading-page__room" src={bgRoom} alt="" />
       ) : null}
       <div className="loading-page__shade" aria-hidden="true" />
-      {target === "husband" && phase !== "error" ? (
-        <span className="loading-stage__exp-prewarm" aria-hidden="true">
-          <span className="progress__shine" />
-        </span>
-      ) : null}
 
       <div className={`loading-stage loading-stage--${phase}`}>
         <img

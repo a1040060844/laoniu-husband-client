@@ -78,6 +78,7 @@ type WifeSheet = "task" | "review" | "benefit" | "level" | "redeem" | null;
 type WifePage = "today" | "main" | "growth";
 type WifeSubPage = "tasks" | "review" | "benefits" | "records" | "order";
 type RewardFormType = TaskRewardType | "experience_allowance";
+type GrowthFeedback = "exp-up" | "exp-down" | "level-up" | "level-down" | "punish";
 
 interface WifeDashboardProps {
   role: Role;
@@ -367,10 +368,17 @@ export function WifeDashboard({
   const [draft, setDraft] = useState<TaskDraft>(initialDraft);
   const [targetLevel, setTargetLevel] = useState(progress.level);
   const [armedPunish, setArmedPunish] = useState(false);
+  const [growthFeedback, setGrowthFeedback] = useState<GrowthFeedback | null>(null);
   const [reviewEdits, setReviewEdits] = useState<Record<string, ReviewEdit>>({});
   const [benefitRejectReasons, setBenefitRejectReasons] = useState<Record<string, string>>({});
   const touchStart = useRef<TouchPoint | null>(null);
   const wheelLocked = useRef(false);
+  const growthFeedbackTimer = useRef<number | null>(null);
+  const previousGrowthState = useRef({
+    exp: progress.exp,
+    level: role.level,
+    punishmentStatus: punishment.status,
+  });
 
   const isSlave = punishment.status === "slave";
   const displayRole = isSlave
@@ -404,6 +412,45 @@ export function WifeDashboard({
     ? punishment.requiredRecoveryExp
     : requiredExp;
   const statusProgressPercent = isSlave ? recoveryPercent : expPercent;
+  const isNearLevelUp = !isSlave && statusProgressPercent >= 80;
+
+  useEffect(() => {
+    const previous = previousGrowthState.current;
+    let nextFeedback: GrowthFeedback | null = null;
+
+    if (previous.punishmentStatus !== punishment.status) {
+      nextFeedback = "punish";
+    } else if (previous.level !== role.level) {
+      nextFeedback = role.level > previous.level ? "level-up" : "level-down";
+    } else if (previous.exp !== progress.exp) {
+      nextFeedback = progress.exp > previous.exp ? "exp-up" : "exp-down";
+    }
+
+    previousGrowthState.current = {
+      exp: progress.exp,
+      level: role.level,
+      punishmentStatus: punishment.status,
+    };
+
+    if (!nextFeedback) return;
+    setGrowthFeedback(nextFeedback);
+    if (growthFeedbackTimer.current) {
+      window.clearTimeout(growthFeedbackTimer.current);
+    }
+    growthFeedbackTimer.current = window.setTimeout(() => {
+      setGrowthFeedback(null);
+      growthFeedbackTimer.current = null;
+    }, 720);
+  }, [progress.exp, punishment.status, role.level]);
+
+  useEffect(
+    () => () => {
+      if (growthFeedbackTimer.current) {
+        window.clearTimeout(growthFeedbackTimer.current);
+      }
+    },
+    [],
+  );
 
   const submittedTasks = useMemo(
     () =>
@@ -924,7 +971,11 @@ export function WifeDashboard({
           transform: `translateY(calc(-${WIFE_PAGE_INDEX[activePage]} * var(--app-height)))`,
         }}
       >
-        <section className="wife-growth" id="wife-growth" aria-label="成长裁定">
+        <section
+          className={`wife-growth${activePage === "growth" ? " wife-growth--active" : ""}${growthFeedback ? ` wife-growth--feedback-${growthFeedback}` : ""}`}
+          id="wife-growth"
+          aria-label="成长裁定"
+        >
           <img
             className="wife-growth__portrait"
             src={wifeGrowthImage}
@@ -935,7 +986,7 @@ export function WifeDashboard({
           <AnimatedContent
             as="header"
             className="wife-growth-title"
-            duration={360}
+            duration={580}
           >
             <p>老妞端</p>
             <h1>成长裁定</h1>
@@ -944,10 +995,10 @@ export function WifeDashboard({
 
           <AnimatedContent
             as="section"
-            className="wife-growth-card wife-growth-status"
+            className={`wife-growth-card wife-growth-status${isNearLevelUp ? " is-near-level-up" : ""}`}
             aria-label="老哥成长状态"
-            delay={50}
-            duration={360}
+            delay={90}
+            duration={580}
           >
             <div className="wife-growth-status__head">
               <div>
@@ -974,7 +1025,7 @@ export function WifeDashboard({
               </strong>
             </div>
             <div
-              className="wife-growth-progress"
+              className={`wife-growth-progress${isNearLevelUp ? " is-near-level-up" : ""}`}
               aria-label={`${statusProgressLabel}进度 ${statusProgressPercent}%`}
             >
               <i style={{ width: `${statusProgressPercent}%` }} />
@@ -1004,8 +1055,8 @@ export function WifeDashboard({
             as="section"
             className="wife-growth-card wife-growth-control-card"
             aria-label="经验与等级调整"
-            delay={80}
-            duration={360}
+            delay={180}
+            duration={580}
           >
             <div className="wife-growth-section-title">
               <h2>经验与等级调整</h2>
@@ -1092,8 +1143,8 @@ export function WifeDashboard({
             as="section"
             className="wife-growth-card wife-punish-card"
             aria-label="惩罚状态"
-            delay={140}
-            duration={380}
+            delay={270}
+            duration={600}
           >
             <div className="wife-growth-section-title">
               <h2>惩罚状态</h2>
