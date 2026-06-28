@@ -48,16 +48,18 @@ function getStatus(
     benefit.cooldownUntil &&
     Date.parse(benefit.cooldownUntil) > Date.now()
   ) {
-    return { status: "cooldown", text: benefit.cooldownText ?? "冷却中" };
+    return { status: "cooldown", text: benefit.cooldownText ?? "未冷却" };
   }
   if (benefit.status === "cooldown" && !benefit.cooldownUntil) {
-    return { status: "cooldown", text: benefit.cooldownText ?? "冷却中" };
+    return { status: "cooldown", text: benefit.cooldownText ?? "未冷却" };
   }
   return {
     status: "available",
     text:
       (benefit.availableBonusCount ?? 0) > 0
         ? `奖励 ${benefit.availableBonusCount} 次`
+        : benefit.lastApprovedAt
+          ? "已使用"
         : "可申请",
   };
 }
@@ -194,7 +196,7 @@ export function BenefitPage({
           statusText={computed.text}
           index={index}
           isBursting={burstingBenefitId === benefit.id}
-          disabled={forceFrozen}
+          disabled={forceFrozen || computed.status !== "available"}
           style={
             {
               "--bubble-x": `${x + loopIndex * cloudWidth}px`,

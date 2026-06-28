@@ -209,8 +209,7 @@ export function settleTaskReward(
 
     if (reward.type === "allowance") {
       const amount = Math.max(0, Math.trunc(reward.value ?? 0));
-      progress = { ...progress, wallet: progress.wallet + amount };
-      if (amount > 0) resultTexts.push(`获得 ¥${amount} 零花钱`);
+      if (amount > 0) resultTexts.push(`计入月度赏赐 ¥${amount}`);
       return;
     }
 

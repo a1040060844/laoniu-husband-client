@@ -6,7 +6,34 @@ function isStandalonePwa() {
   );
 }
 
+const PHONE_PRO_MAX_PREVIEW_WIDTH = 430;
+const PHONE_PRO_MAX_PREVIEW_HEIGHT = 932;
+
+function isDesktopBrowserPreview() {
+  if (isStandalonePwa()) return false;
+
+  return (
+    window.matchMedia?.("(hover: hover) and (pointer: fine)").matches === true &&
+    window.innerWidth >= PHONE_PRO_MAX_PREVIEW_WIDTH
+  );
+}
+
 function updateAppViewport() {
+  if (isDesktopBrowserPreview()) {
+    document.documentElement.dataset.previewDevice = "phone-pro-max";
+    document.documentElement.style.setProperty(
+      "--app-width",
+      `${PHONE_PRO_MAX_PREVIEW_WIDTH}px`,
+    );
+    document.documentElement.style.setProperty(
+      "--app-height",
+      `${PHONE_PRO_MAX_PREVIEW_HEIGHT}px`,
+    );
+    return;
+  }
+
+  delete document.documentElement.dataset.previewDevice;
+
   const visualViewport = window.visualViewport;
   const width = Math.round(
     visualViewport?.width ??

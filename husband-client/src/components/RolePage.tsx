@@ -17,9 +17,12 @@ interface RolePageProps {
   canNext: boolean;
   roleCount: number;
   wallet: number;
+  nextAllowanceAmount: number;
+  nextAllowanceMonth: string;
   chatUnreadCount: number;
   onPreviewPrev: () => void;
   onPreviewNext: () => void;
+  onOpenAllowanceDetail: () => void;
   onReturnToLogin: () => void;
   onSelectView: (view: ViewKey) => void;
   onOpenChat: () => void;
@@ -32,9 +35,12 @@ export function RolePage({
   canPrev,
   canNext,
   roleCount = 12,
+  nextAllowanceAmount,
+  nextAllowanceMonth,
   chatUnreadCount,
   onPreviewPrev,
   onPreviewNext,
+  onOpenAllowanceDetail,
   onReturnToLogin,
   onSelectView,
   onOpenChat,
@@ -92,12 +98,16 @@ export function RolePage({
         <i />
       </AnimatedContent>
 
-      <p
+      <button
         className="role-wallet-line role-wallet-line--corner"
         data-reward-target="money"
+        type="button"
+        onClick={onOpenAllowanceDetail}
       >
-        零花钱 <strong>¥ <CountUp value={previewRole.salary} /></strong>
-      </p>
+        {"\u4E0B\u6708\u96F6\u82B1\u94B1"}
+        <strong>{"\u00A5"} <CountUp value={nextAllowanceAmount} /></strong>
+        <em>{nextAllowanceMonth}</em>
+      </button>
 
       <ChatMessageButton
         className="role-chat-entry"
@@ -126,12 +136,16 @@ export function RolePage({
         delay={80}
         duration={380}
       >
-        <p
+        <button
           className="role-wallet-line role-wallet-line--panel"
           data-reward-target="money"
+          type="button"
+          onClick={onOpenAllowanceDetail}
         >
-          零花钱<strong>¥ <CountUp value={previewRole.salary} /></strong>
-        </p>
+          {"\u4E0B\u6708\u96F6\u82B1\u94B1"}
+          <strong>{"\u00A5"} <CountUp value={nextAllowanceAmount} /></strong>
+          <em>{nextAllowanceMonth}</em>
+        </button>
 
         {!isPreviewing && (
           <div

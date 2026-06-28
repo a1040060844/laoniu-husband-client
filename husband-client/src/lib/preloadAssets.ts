@@ -12,6 +12,10 @@ import thoughtWifeFood1 from "../assets/login/speech/thought-wife-food-1.png";
 import thoughtWifeFood2 from "../assets/login/speech/thought-wife-food-2.png";
 import subtitle from "../assets/login/subtitle.png";
 import title from "../assets/login/title.png";
+import {
+  wifeLevelIllustrations,
+  wifeTaskCompleteIllustration,
+} from "../data/wifeIllustrations";
 import { spriteConfigs } from "../pages/loginSpriteData";
 
 export type AppRoute = "login" | "husband" | "wife";
@@ -62,6 +66,18 @@ const roleAssets = Array.from({ length: 12 }, (_, index) =>
 const benefitAssets = Array.from({ length: 12 }, (_, index) =>
   publicAsset(`/assets/benefits/benefit-${String(index).padStart(2, "0")}.png`),
 );
+const wifeLevelAssets = wifeLevelIllustrations.flatMap((illustration) =>
+  [
+    illustration.growthPath,
+    illustration.homePath,
+    illustration.todayPath,
+  ].flatMap((path) => (path ? [publicAsset(path)] : [])),
+);
+const wifeTaskCompleteAssets = [
+  wifeTaskCompleteIllustration.growthPath,
+  wifeTaskCompleteIllustration.homePath,
+  wifeTaskCompleteIllustration.todayPath,
+].map((path) => publicAsset(path));
 
 const sharedRoleAssets = [
   ...loadingAssets,
@@ -85,6 +101,9 @@ const routeAssets: Record<AppRoute, string[]> = {
     publicAsset("/assets/wife/wife-main.jpeg"),
     publicAsset("/assets/wife/wife-home-throne.png"),
     publicAsset("/assets/wife/wife-growth-library.png"),
+    publicAsset("/assets/wife/wife-today-bg.png"),
+    ...wifeLevelAssets,
+    ...wifeTaskCompleteAssets,
   ],
 };
 

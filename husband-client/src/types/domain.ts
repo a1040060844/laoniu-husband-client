@@ -20,8 +20,41 @@ export type DecreeType =
   | "task_created"
   | "task_approved"
   | "task_rejected"
+  | "wallet_ledger"
   | "benefit_approved"
   | "benefit_rejected";
+
+export type MonthlyAllowanceStatus =
+  | "PENDING_WIFE_ACTION"
+  | "PAYING"
+  | "WAITING_WIFE_CONFIRM"
+  | "PAID_CONFIRMED_BY_WIFE"
+  | "RECEIVED_BY_HUSBAND"
+  | "HUSBAND_REPORTED_NOT_RECEIVED"
+  | "RETRY_PAYING"
+  | "REBUKED_AS_BLIND"
+  | "CANCELLED_BY_WIFE";
+
+export interface MonthlyAllowanceRecord {
+  id: string;
+  month: string;
+  settlementMonth: string;
+  status: MonthlyAllowanceStatus;
+  roleLevel: number;
+  roleTitle: string;
+  baseSalary: number;
+  completedTaskCount: number;
+  taskBonus: number;
+  wifeAdjustmentAmount: number;
+  totalAmount: number;
+  wifeConfirmedAt?: string;
+  husbandReceivedAt?: string;
+  husbandReportedAt?: string;
+  cancelledAt?: string;
+  rebukedAt?: string;
+  retryCount: number;
+  creditedAt?: string;
+}
 
 export interface DecreeEvent {
   id: string;
@@ -193,6 +226,7 @@ export type EventLogType =
   | "task_approved"
   | "task_rejected"
   | "task_expired"
+  | "anomaly"
   | "level_changed"
   | "benefit_requested"
   | "benefit_approved"
@@ -247,6 +281,10 @@ export interface EventLog {
   toLevel?: number;
   fromStatus?: string;
   toStatus?: string;
+  anomalyKey?: string;
+  anomalyCategory?: string;
+  anomalySeverity?: number;
+  resolvedAt?: string;
 }
 
 export interface StoryEvent {

@@ -18,7 +18,18 @@ import {
   eventLogRecordLabel,
   walletLedgerRecordLabel,
 } from "../src/lib/recordLabels.ts";
-import type { Role, Task, TaskTimeConfig } from "../src/types/domain.ts";
+import { calculateActiveAnomalies } from "../src/lib/anomalyRules.ts";
+import {
+  aggregatePendingExperienceDecrees,
+  decreeAcknowledgeIds,
+} from "../src/lib/decreeQueue.ts";
+import {
+  createMonthlyAllowanceRecord,
+  mergeMonthlyAllowanceRecords,
+  roleAtEndOfMonth,
+  updateMonthlyAllowanceStatus,
+} from "../src/lib/monthlyAllowance.ts";
+import type { DecreeEvent, Role, Task, TaskTimeConfig } from "../src/types/domain.ts";
 
 const roles: Role[] = Array.from({ length: 12 }, (_, level) => ({
   level,
@@ -42,6 +53,20 @@ function task(overrides: Partial<Task> = {}): Task {
     rewardMoney: 0,
     deadline: "测试期限",
     status: "todo",
+    ...overrides,
+  };
+}
+
+function decree(overrides: Partial<DecreeEvent>): DecreeEvent {
+  return {
+    id: "decree-1",
+    type: "task_created",
+    title: "Task",
+    text: "Task",
+    tone: "normal",
+    createdAt: new Date(0).toISOString(),
+    target: "husband",
+    payload: {},
     ...overrides,
   };
 }
@@ -84,6 +109,44 @@ test("hydrateProgress rejects invalid persisted numbers", () => {
   );
 });
 
+test("pending wife experience changes are merged into one husband popup", () => {
+  const pending = aggregatePendingExperienceDecrees([
+    decree({ id: "task", type: "task_created", createdAt: "2026-06-26T00:00:00.000Z" }),
+    decree({
+      id: "exp-1",
+      type: "experience_granted",
+      title: "Grant",
+      text: "Grant",
+      tone: "upgrade",
+      createdAt: "2026-06-26T00:01:00.000Z",
+      payload: { amount: 10 },
+    }),
+    decree({
+      id: "exp-2",
+      type: "experience_granted",
+      title: "Grant",
+      text: "Grant",
+      tone: "upgrade",
+      createdAt: "2026-06-26T00:02:00.000Z",
+      payload: { amount: 10 },
+    }),
+    decree({
+      id: "penalty",
+      type: "experience_penalty",
+      title: "Penalty",
+      text: "Penalty",
+      tone: "down",
+      createdAt: "2026-06-26T00:03:00.000Z",
+      payload: { amount: -5 },
+    }),
+  ]);
+
+  assert.equal(pending.length, 2);
+  assert.equal(pending[1].type, "experience_granted");
+  assert.equal(pending[1].payload.amount, 15);
+  assert.deepEqual(decreeAcknowledgeIds(pending[1]), ["exp-1", "exp-2", "penalty"]);
+});
+
 test("experience resets to zero when a grant upgrades the role", () => {
   const current: GameProgress = {
     level: 1,
@@ -118,9 +181,148 @@ test("task rewards are settled only once per task cycle", () => {
   const first = settleTaskReward(current, completed, roles);
   const second = settleTaskReward(first.progress, completed, roles);
   assert.equal(first.progress.exp, 10);
-  assert.equal(first.progress.wallet, 5);
+  assert.equal(first.progress.wallet, 0);
   assert.deepEqual(second.progress, first.progress);
   assert.deepEqual(second.stories, []);
+});
+
+test("monthly allowance records settle the previous calendar month", () => {
+  const role = { ...roles[3], salary: 40, title: "测试职务" };
+  const record = createMonthlyAllowanceRecord({
+    month: "2026-07",
+    now: new Date(2026, 5, 20, 9, 0, 0, 0),
+    role,
+    tasks: [
+      task({
+        id: "june-money",
+        status: "confirmed",
+        confirmedAt: new Date(2026, 5, 15, 12).toISOString(),
+        rewards: [{ id: "money", type: "allowance", label: "12元", value: 12 }],
+      }),
+      task({
+        id: "july-money",
+        status: "confirmed",
+        confirmedAt: new Date(2026, 6, 1, 12).toISOString(),
+        rewards: [{ id: "money", type: "allowance", label: "99元", value: 99 }],
+      }),
+    ],
+  });
+
+  assert.equal(record.id, "allowance-2026-07");
+  assert.equal(record.settlementMonth, "2026-06");
+  assert.equal(record.completedTaskCount, 1);
+  assert.equal(record.taskBonus, 12);
+  assert.equal(record.totalAmount, 52);
+});
+
+test("monthly allowance role salary uses the settlement month end role", () => {
+  const settlementRole = roleAtEndOfMonth({
+    currentLevel: 4,
+    logs: [
+      {
+        id: "july-upgrade",
+        type: "level_changed",
+        title: "level 4",
+        createdAt: new Date(2026, 6, 1, 0, 0, 1).toISOString(),
+        fromLevel: 3,
+        toLevel: 4,
+      },
+    ],
+    month: "2026-06",
+    roles: roles.map((role, level) => ({
+      ...role,
+      salary: 100 + level * 10,
+    })),
+  });
+
+  const record = createMonthlyAllowanceRecord({
+    month: "2026-07",
+    role: settlementRole,
+    tasks: [],
+  });
+
+  assert.equal(record.roleLevel, 3);
+  assert.equal(record.baseSalary, 130);
+  assert.equal(record.totalAmount, 130);
+});
+
+test("monthly allowance wife adjustment cannot make total negative", () => {
+  const record = createMonthlyAllowanceRecord({
+    month: "2026-07",
+    now: new Date(2026, 6, 1),
+    role: { ...roles[1], salary: 20 },
+    tasks: [],
+    wifeAdjustmentAmount: -999,
+  });
+
+  assert.equal(record.totalAmount, 0);
+});
+
+test("monthly allowance status updates write the expected timestamps", () => {
+  const record = createMonthlyAllowanceRecord({
+    month: "2026-07",
+    now: new Date(2026, 6, 1),
+    role: roles[1],
+    tasks: [],
+  });
+  const updated = updateMonthlyAllowanceStatus(
+    record,
+    "HUSBAND_REPORTED_NOT_RECEIVED",
+    "2026-07-02T00:00:00.000Z",
+  );
+
+  assert.equal(updated.status, "HUSBAND_REPORTED_NOT_RECEIVED");
+  assert.equal(updated.husbandReportedAt, "2026-07-02T00:00:00.000Z");
+});
+
+test("monthly allowance merge keeps husband not-received reports over stale paid state", () => {
+  const paid = updateMonthlyAllowanceStatus(
+    createMonthlyAllowanceRecord({
+      month: "2026-07",
+      now: new Date(2026, 6, 1),
+      role: roles[1],
+      tasks: [],
+    }),
+    "PAID_CONFIRMED_BY_WIFE",
+    "2026-07-02T00:00:00.000Z",
+  );
+  const reported = updateMonthlyAllowanceStatus(
+    paid,
+    "HUSBAND_REPORTED_NOT_RECEIVED",
+    "2026-07-02T00:03:00.000Z",
+  );
+
+  const [merged] = mergeMonthlyAllowanceRecords([paid], [reported]);
+
+  assert.equal(merged.status, "HUSBAND_REPORTED_NOT_RECEIVED");
+  assert.equal(merged.husbandReportedAt, "2026-07-02T00:03:00.000Z");
+});
+
+test("monthly allowance merge preserves husband receipt timestamps over stale state", () => {
+  const paid = updateMonthlyAllowanceStatus(
+    createMonthlyAllowanceRecord({
+      month: "2026-07",
+      now: new Date(2026, 6, 1),
+      role: { ...roles[1], salary: 20 },
+      tasks: [],
+    }),
+    "PAID_CONFIRMED_BY_WIFE",
+    "2026-07-02T00:00:00.000Z",
+  );
+  const received = {
+    ...updateMonthlyAllowanceStatus(
+      paid,
+      "RECEIVED_BY_HUSBAND",
+      "2026-07-02T00:05:00.000Z",
+    ),
+    creditedAt: "2026-07-02T00:05:00.000Z",
+  };
+
+  const [merged] = mergeMonthlyAllowanceRecords([paid], [received]);
+
+  assert.equal(merged.status, "RECEIVED_BY_HUSBAND");
+  assert.equal(merged.husbandReceivedAt, "2026-07-02T00:05:00.000Z");
+  assert.equal(merged.creditedAt, "2026-07-02T00:05:00.000Z");
 });
 
 test("direct level-up task rewards reset current experience", () => {
@@ -212,4 +414,111 @@ test("open tasks become pending failures after their deadline", () => {
   const [result] = refreshTaskCycles([expired], now);
   assert.equal(result.status, "failed_pending");
   assert.equal(result.expiredAt, now.toISOString());
+});
+
+test("anomaly rules report the most severe no-completed-task threshold", () => {
+  const anomalies = calculateActiveAnomalies({
+    now: new Date("2026-06-10T00:00:00.000Z"),
+    tasks: [
+      task({
+        id: "idle-task",
+        createdAt: "2026-06-04T00:00:00.000Z",
+        status: "todo",
+      }),
+    ],
+    logs: [],
+    walletLedger: [],
+  });
+
+  assert.equal(
+    anomalies.filter((anomaly) => anomaly.category === "no_task_completed").length,
+    1,
+  );
+  assert.equal(
+    anomalies.some((anomaly) => anomaly.key === "no-task-completed:5"),
+    true,
+  );
+});
+
+test("anomaly rules report daily no-completed-task entries after seven days", () => {
+  const anomalies = calculateActiveAnomalies({
+    now: new Date("2026-06-13T00:00:00.000Z"),
+    tasks: [
+      task({
+        id: "long-idle-task",
+        createdAt: "2026-06-04T00:00:00.000Z",
+        status: "todo",
+      }),
+    ],
+    logs: [],
+    walletLedger: [],
+  });
+
+  assert.equal(
+    anomalies.some((anomaly) => anomaly.key === "no-task-completed:9"),
+    true,
+  );
+});
+
+test("anomaly rules report each timed-out task", () => {
+  const anomalies = calculateActiveAnomalies({
+    now: new Date("2026-06-10T00:00:00.000Z"),
+    tasks: [
+      task({
+        id: "timeout-task",
+        createdAt: "2026-06-08T00:00:00.000Z",
+        dueAt: "2026-06-09T00:00:00.000Z",
+        status: "doing",
+      }),
+    ],
+    logs: [],
+    walletLedger: [],
+  });
+
+  assert.equal(
+    anomalies.some((anomaly) => anomaly.key === "task-timeout:timeout-task"),
+    true,
+  );
+});
+
+test("anomaly rules report weekly no-experience thresholds", () => {
+  const anomalies = calculateActiveAnomalies({
+    now: new Date("2026-06-15T00:00:00.000Z"),
+    tasks: [
+      task({
+        id: "exp-watch-task",
+        createdAt: "2026-06-01T00:00:00.000Z",
+        status: "confirmed",
+        confirmedAt: "2026-06-02T00:00:00.000Z",
+      }),
+    ],
+    logs: [],
+    walletLedger: [],
+  });
+
+  assert.equal(
+    anomalies.some((anomaly) => anomaly.key === "no-experience:14"),
+    true,
+  );
+});
+
+test("anomaly rules report monthly no-level-up thresholds", () => {
+  const anomalies = calculateActiveAnomalies({
+    now: new Date("2026-08-10T00:00:00.000Z"),
+    tasks: [
+      task({
+        id: "level-watch-task",
+        createdAt: "2026-06-01T00:00:00.000Z",
+        status: "confirmed",
+        confirmedAt: "2026-06-02T00:00:00.000Z",
+      }),
+    ],
+    logs: [],
+    walletLedger: [],
+  });
+
+  assert.equal(
+    anomalies.some((anomaly) => anomaly.key === "no-level-up:2"),
+    true,
+  );
 });

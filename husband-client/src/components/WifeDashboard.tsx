@@ -13,7 +13,6 @@ import {
   ScrollText,
   Shield,
   ShieldCheck,
-  Utensils,
   X,
 } from "lucide-react";
 import {
@@ -21,6 +20,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type MouseEvent,
   type TouchEvent,
   type WheelEvent,
@@ -36,6 +36,10 @@ import {
   taskRewardOptions,
   taskTimeOptions,
 } from "../data/taskModules";
+import {
+  wifeIllustrationForLevel,
+  wifeTaskCompleteIllustration,
+} from "../data/wifeIllustrations";
 import { expRequiredForLevel, type GameProgress } from "../game/progression";
 import { publicAsset } from "../lib/assets";
 import {
@@ -45,6 +49,7 @@ import {
   eventLogRecordLabel,
   walletLedgerRecordLabel,
 } from "../lib/recordLabels";
+import type { ActiveAnomaly } from "../lib/anomalyRules";
 import { resolveTaskSchedule, taskTypeForTimeConfig } from "../lib/taskSchedule";
 import {
   taskRewardChips,
@@ -74,9 +79,16 @@ import { AnimatedContent } from "./effects/AnimatedContent";
 import { ClickSpark } from "./effects/ClickSpark";
 import { WifeCommandMotion } from "./effects/WifeCommandMotion";
 
-type WifeSheet = "task" | "review" | "benefit" | "level" | "redeem" | null;
+type WifeSheet =
+  | "task"
+  | "review"
+  | "benefit"
+  | "level"
+  | "wallet"
+  | "redeem"
+  | null;
 type WifePage = "today" | "main" | "growth";
-type WifeSubPage = "tasks" | "review" | "benefits" | "records" | "order";
+type WifeSubPage = "tasks" | "review" | "benefits" | "records";
 type RewardFormType = TaskRewardType | "experience_allowance";
 type GrowthFeedback = "exp-up" | "exp-down" | "level-up" | "level-down" | "punish";
 
@@ -86,6 +98,8 @@ interface WifeDashboardProps {
   tasks: Task[];
   logs: EventLog[];
   walletLedger: WalletLedgerEntry[];
+  activeAnomalies: ActiveAnomaly[];
+  taskCompleteIllustrationActive: boolean;
   punishment: Punishment;
   benefits: Benefit[];
   roles: Role[];
@@ -95,6 +109,9 @@ interface WifeDashboardProps {
   onApproveBenefit: (benefit: Benefit) => void;
   onRejectBenefit: (benefit: Benefit, reason?: string) => void;
   onAdjustExperience: (amount: number) => void;
+  onAdjustWallet: (amount: number) => void;
+  monthlyAllowanceBaseAmount: number;
+  monthlyAllowanceAdjustment: number;
   onSetLevel: (level: number) => void;
   onLevelDelta: (delta: number) => void;
   onPunishStatus: () => void;
@@ -167,18 +184,10 @@ const WIFE_PAGE_INDEX: Record<WifePage, number> = {
 
 const WIFE_SUB_PAGE_HASH: Record<WifeSubPage, string> = {
   benefits: "#wife-benefits",
-  order: "#wife-order",
   records: "#wife-records",
   review: "#wife-review",
   tasks: "#wife-tasks",
 };
-
-const orderOptions = [
-  { name: "奶茶特赦", desc: "奖励表现稳定时的一杯甜口慰问", cost: "权益申请" },
-  { name: "正餐加封", desc: "今日可指定一顿正餐安排", cost: "月薪抵扣 30" },
-  { name: "宵夜恩准", desc: "深夜表现优秀时开放一次", cost: "经验 -5" },
-  { name: "甜点赏赐", desc: "适合任务完成后的轻量奖励", cost: "经验 -3" },
-];
 
 const SWIPE_THRESHOLD = 60;
 const WHEEL_THRESHOLD = 42;
@@ -341,6 +350,8 @@ export function WifeDashboard({
   tasks,
   logs,
   walletLedger,
+  activeAnomalies,
+  taskCompleteIllustrationActive,
   punishment,
   benefits,
   roles,
@@ -350,6 +361,9 @@ export function WifeDashboard({
   onApproveBenefit,
   onRejectBenefit,
   onAdjustExperience,
+  onAdjustWallet,
+  monthlyAllowanceBaseAmount,
+  monthlyAllowanceAdjustment,
   onSetLevel,
   onLevelDelta,
   onPunishStatus,
@@ -358,15 +372,40 @@ export function WifeDashboard({
   chatUnreadCount,
   onOpenChat,
 }: WifeDashboardProps) {
-  const wifeImage = publicAsset("/assets/wife/wife-main.jpeg");
-  const wifeHomeImage = publicAsset("/assets/wife/wife-home-throne.png");
-  const wifeGrowthImage = publicAsset("/assets/wife/wife-growth-library.png");
-  const wifeTodayBackground = publicAsset("/assets/wife/wife-today-bg.png");
+  const wifeLevelIllustration = wifeIllustrationForLevel(progress.level);
+  const wifeIllustration = taskCompleteIllustrationActive
+    ? wifeTaskCompleteIllustration
+    : wifeLevelIllustration;
+  const wifeHomeImage = publicAsset(
+    wifeIllustration?.homePath ?? "/assets/wife/wife-home-throne.png",
+  );
+  const wifeGrowthImage = publicAsset(
+    wifeIllustration?.growthPath ?? "/assets/wife/wife-growth-library.png",
+  );
+  const wifeGrowthOffsetY =
+    !taskCompleteIllustrationActive && wifeLevelIllustration?.growthOffsetY
+      ? wifeLevelIllustration.growthOffsetY
+      : 0;
+  const wifeGrowthPortraitStyle = {
+    "--wife-growth-portrait-offset-y": `${wifeGrowthOffsetY}px`,
+  } as CSSProperties;
+  const wifeTodayBackground = publicAsset(
+    wifeIllustration?.todayPath ?? "/assets/wife/wife-today-bg.png",
+  );
+  const walletBaseAmount = Math.max(0, Math.trunc(monthlyAllowanceBaseAmount));
+  const currentMonthlyAllowanceTotal = Math.max(
+    0,
+    walletBaseAmount + Math.trunc(monthlyAllowanceAdjustment),
+  );
   const [sheet, setSheet] = useState<WifeSheet>(null);
   const [activePage, setActivePage] = useState<WifePage>("main");
   const [subPage, setSubPage] = useState<WifeSubPage | null>(null);
+  const [todayEnterKey, setTodayEnterKey] = useState(0);
   const [draft, setDraft] = useState<TaskDraft>(initialDraft);
   const [targetLevel, setTargetLevel] = useState(progress.level);
+  const [targetWalletTotal, setTargetWalletTotal] = useState(
+    currentMonthlyAllowanceTotal,
+  );
   const [armedPunish, setArmedPunish] = useState(false);
   const [growthFeedback, setGrowthFeedback] = useState<GrowthFeedback | null>(null);
   const [reviewEdits, setReviewEdits] = useState<Record<string, ReviewEdit>>({});
@@ -413,6 +452,29 @@ export function WifeDashboard({
     : requiredExp;
   const statusProgressPercent = isSlave ? recoveryPercent : expPercent;
   const isNearLevelUp = !isSlave && statusProgressPercent >= 80;
+
+  function resetWifeScroll(page: WifePage | "all" = "all") {
+    window.scrollTo(0, 0);
+    const selectors =
+      page === "all"
+        ? [".wife-growth", ".wife-today", ".wife-subpage"]
+        : page === "growth"
+          ? [".wife-growth"]
+          : page === "today"
+            ? [".wife-today", ".wife-subpage"]
+            : [];
+    const reset = () => {
+      selectors.forEach((selector) => {
+        document.querySelectorAll(selector).forEach((element) => {
+          if (element instanceof HTMLElement) {
+            element.scrollTop = 0;
+          }
+        });
+      });
+    };
+    reset();
+    window.requestAnimationFrame(reset);
+  }
 
   useEffect(() => {
     const previous = previousGrowthState.current;
@@ -501,18 +563,78 @@ export function WifeDashboard({
     title: draft.title,
     type: taskTypeForTimeConfig(draftTimeConfig),
   };
-  const recentLog = logs[0];
-  const recentSubmittedTask = submittedTasks[0];
+  const recentActivities = [
+    ...logs.map((log) => ({
+      action: "查看",
+      detail:
+        formatLevelChangeDetail(log) ||
+        (log.taskTitle || log.benefitName
+          ? log.taskTitle
+            ? `任务：${log.taskTitle}`
+            : `权益：${log.benefitName}`
+          : undefined),
+      description: [formatLogTime(log.createdAt), log.description]
+        .filter(Boolean)
+        .join(" · "),
+      icon: "log" as const,
+      id: `log-${log.id}`,
+      onClick: () => openSubPage("records"),
+      sortAt: log.createdAt,
+      title: `${eventLogRecordLabel(log)} · ${log.title}`,
+    })),
+    ...submittedTasks.map((task) => ({
+      action: "审核",
+      detail: `奖励：${taskRewardText(task)}`,
+      description:
+        task.submitNote || task.resultText || "老哥已提交完成结果，等待裁定。",
+      icon: "review" as const,
+      id: `task-${task.id}`,
+      onClick: () => openSubPage("review"),
+      sortAt: task.submittedAt || task.createdAt || "",
+      title: task.title,
+    })),
+  ]
+    .sort((a, b) => Date.parse(b.sortAt) - Date.parse(a.sortAt))
+    .slice(0, 2);
   const pendingRulingCount = submittedTasks.length;
   const pendingBenefitCount = pendingBenefits.length;
-  const abnormalCount = Math.max(
-    0,
-    tasks.filter(
-      (task) =>
-        task.status === "failed" ||
-        task.status === "expired" ||
-        task.status === "failed_pending",
-    ).length,
+  const abnormalCount = activeAnomalies.length;
+  const activeAnomalyKeys = useMemo(
+    () => new Set(activeAnomalies.map((anomaly) => anomaly.key)),
+    [activeAnomalies],
+  );
+  const pinnedAnomalyLogs = activeAnomalies.map((anomaly) => {
+    const existing = logs.find((log) => log.anomalyKey === anomaly.key);
+    return {
+      ...(existing ?? {
+        id: `active-${anomaly.key}`,
+        type: "anomaly" as const,
+        title: anomaly.title,
+        description: anomaly.description,
+        createdAt: anomaly.createdAt,
+        anomalyKey: anomaly.key,
+        anomalyCategory: anomaly.category,
+        anomalySeverity: anomaly.severity,
+      }),
+      description: existing?.description ?? anomaly.description,
+      title: existing?.title ?? anomaly.title,
+    };
+  });
+  const timelineLogs = logs.filter(
+    (log) => !log.anomalyKey || !activeAnomalyKeys.has(log.anomalyKey),
+  );
+  const targetWalletAdjustment = targetWalletTotal - walletBaseAmount;
+  const walletDelta = targetWalletAdjustment - monthlyAllowanceAdjustment;
+  const walletProgressMax = Math.max(
+    500,
+    100,
+    walletBaseAmount * 2,
+    currentMonthlyAllowanceTotal * 2,
+    targetWalletTotal,
+  );
+  const walletProgressPercent = Math.min(
+    100,
+    Math.round((targetWalletTotal / walletProgressMax) * 100),
   );
   const unlockedBenefits = useMemo(
     () => benefits.filter((benefit) => benefit.levelRequired <= progress.level),
@@ -621,6 +743,23 @@ export function WifeDashboard({
     return `${sign}${entry.amount}`;
   }
 
+  function formatRoleChangeLevel(level: number) {
+    const safeLevel = Math.min(Math.max(0, level), roles.length - 1);
+    const targetRole = roles[safeLevel];
+    return `Lv.${String(safeLevel).padStart(2, "0")} ${targetRole?.title ?? "未知职务"}`;
+  }
+
+  function formatLevelChangeDetail(log: EventLog) {
+    if (
+      log.type !== "level_changed" ||
+      typeof log.fromLevel !== "number" ||
+      typeof log.toLevel !== "number"
+    ) {
+      return "";
+    }
+    return `${formatRoleChangeLevel(log.fromLevel)} → ${formatRoleChangeLevel(log.toLevel)}`;
+  }
+
   useEffect(() => {
     function pageFromHash(): WifePage {
       const targetId = window.location.hash.slice(1);
@@ -630,8 +769,7 @@ export function WifeDashboard({
         targetId === "wife-tasks" ||
         targetId === "wife-review" ||
         targetId === "wife-benefits" ||
-        targetId === "wife-records" ||
-        targetId === "wife-order"
+        targetId === "wife-records"
       ) {
         return "today";
       }
@@ -644,13 +782,13 @@ export function WifeDashboard({
       if (targetId === "wife-review") return "review";
       if (targetId === "wife-benefits") return "benefits";
       if (targetId === "wife-records") return "records";
-      if (targetId === "wife-order") return "order";
       return null;
     }
 
     const syncHash = () => {
-      window.scrollTo(0, 0);
-      setActivePage(pageFromHash());
+      const page = pageFromHash();
+      resetWifeScroll(page);
+      setActivePage(page);
       setSubPage(subPageFromHash());
     };
     syncHash();
@@ -662,6 +800,16 @@ export function WifeDashboard({
   useEffect(() => {
     setTargetLevel(progress.level);
   }, [progress.level]);
+
+  useEffect(() => {
+    setTargetWalletTotal(currentMonthlyAllowanceTotal);
+  }, [currentMonthlyAllowanceTotal]);
+
+  useEffect(() => {
+    if (activePage === "today" && !subPage) {
+      setTodayEnterKey((current) => current + 1);
+    }
+  }, [activePage, subPage]);
 
   useEffect(() => {
     if (!armedPunish) return;
@@ -709,7 +857,7 @@ export function WifeDashboard({
     if (window.location.hash !== nextHash) {
       window.history.replaceState(null, "", nextHash);
     }
-    window.scrollTo(0, 0);
+    resetWifeScroll(page);
   }
 
   function openSubPage(page: WifeSubPage) {
@@ -719,7 +867,7 @@ export function WifeDashboard({
     if (window.location.hash !== nextHash) {
       window.history.replaceState(null, "", nextHash);
     }
-    window.scrollTo(0, 0);
+    resetWifeScroll("today");
   }
 
   function closeSubPage() {
@@ -728,11 +876,10 @@ export function WifeDashboard({
     if (window.location.hash !== "#wife-today") {
       window.history.replaceState(null, "", "#wife-today");
     }
-    window.scrollTo(0, 0);
+    resetWifeScroll("today");
   }
 
-  function handleTodayTab(event: MouseEvent<HTMLAnchorElement>) {
-    event.preventDefault();
+  function handleTodayTab() {
     closeSubPage();
   }
 
@@ -939,8 +1086,31 @@ export function WifeDashboard({
     setSheet("level");
   }
 
+  function openWalletSheet() {
+    setTargetWalletTotal(currentMonthlyAllowanceTotal);
+    setSheet("wallet");
+  }
+
+  function adjustTargetWallet(amount: number) {
+    setTargetWalletTotal((current) => Math.max(0, current + amount));
+  }
+
+  function updateTargetWalletFromRange(value: string) {
+    const nextValue = Number(value);
+    if (!Number.isFinite(nextValue)) return;
+    setTargetWalletTotal(Math.max(0, Math.trunc(nextValue)));
+  }
+
   function confirmTargetLevel() {
     onSetLevel(targetLevel);
+    setSheet(null);
+  }
+
+  function confirmTargetWallet() {
+    const amount = targetWalletAdjustment - monthlyAllowanceAdjustment;
+    if (amount !== 0) {
+      onAdjustWallet(amount);
+    }
     setSheet(null);
   }
 
@@ -979,6 +1149,7 @@ export function WifeDashboard({
           <img
             className="wife-growth__portrait"
             src={wifeGrowthImage}
+            style={wifeGrowthPortraitStyle}
             alt=""
           />
           <div className="wife-growth__shade" />
@@ -1080,15 +1251,14 @@ export function WifeDashboard({
                 </button>
                 <div
                   className="wife-exp-orb"
-                  aria-label={`当前经验 ${progress.exp} / ${requiredExp}`}
+                  aria-label={`经验 ${progress.exp} / ${requiredExp}`}
                 >
                   <Crown size={25} />
                   <div className="wife-exp-orb__value" aria-hidden="true">
                     <strong>{progress.exp}</strong>
-                    <span className="wife-exp-orb__slash">/</span>
+                    <span className="wife-exp-orb__divider" />
                     <span className="wife-exp-orb__required">{requiredExp}</span>
                   </div>
-                  <em>当前经验</em>
                 </div>
                 <button
                   type="button"
@@ -1137,6 +1307,32 @@ export function WifeDashboard({
                 </button>
               </WifeCommandMotion>
             </div>
+          </AnimatedContent>
+
+          <AnimatedContent
+            as="section"
+            className="wife-growth-card wife-wallet-card"
+            aria-label={"\u96F6\u82B1\u94B1\u7BA1\u7406"}
+            delay={225}
+            duration={590}
+          >
+            <div className="wife-growth-section-title">
+              <h2>{"\u96F6\u82B1\u94B1\u7BA1\u7406"}</h2>
+              <p>{"\u8C03\u6574\u4E0B\u6708\u9886\u53D6\u7684\u96F6\u82B1\u94B1\uFF0C\u6700\u7EC8\u7531\u6BCF\u6708\u8D4F\u8D50\u786E\u8BA4"}</p>
+            </div>
+                <button
+                  className="wife-wallet-action"
+              type="button"
+              onClick={openWalletSheet}
+            >
+              <BadgeDollarSign size={28} />
+                  <span>
+                    <strong>{"\u96F6\u82B1\u94B1\u8C03\u6574"}</strong>
+                    <em>
+                  {"\u4E0B\u6708\u9884\u8BA1"} {"\u00A5"}{currentMonthlyAllowanceTotal}
+                </em>
+                  </span>
+                </button>
           </AnimatedContent>
 
           <AnimatedContent
@@ -1341,19 +1537,20 @@ export function WifeDashboard({
             </button>
           </WifeCommandMotion>
 
-          <a
-            className="wife-scroll-cue"
+          <OrnateSwipeHint
+            className="wife-today-cue"
+            direction="up"
             href="#wife-today"
             onClick={handlePageLink("today")}
-          >
-            <img
-              src={publicAsset("/assets/ui/swipe-up-wife.png")}
-              alt="上滑查看今日事务"
-            />
-          </a>
+            text="上滑查看今日事务"
+          />
         </section>
 
-        <section className="wife-today" id="wife-today" aria-label="今日事务">
+        <section
+          className="wife-today"
+          id="wife-today"
+          aria-label="今日事务"
+        >
           <img
             className="wife-today__portrait"
             src={wifeTodayBackground}
@@ -1367,8 +1564,9 @@ export function WifeDashboard({
 
           <AnimatedContent
             as="header"
+            key={`wife-today-title-${todayEnterKey}`}
             className="wife-today-title"
-            duration={360}
+            duration={340}
           >
             <p>老妞端</p>
             <h1>今日事务</h1>
@@ -1377,14 +1575,14 @@ export function WifeDashboard({
 
           <AnimatedContent
             as="section"
+            key={`wife-today-overview-${todayEnterKey}`}
             className="wife-today-card wife-overview"
             aria-label="今日概览"
-            delay={50}
-            duration={360}
+            duration={340}
           >
             <h2>今日概览</h2>
             <div className="wife-overview-grid">
-              <AnimatedContent as="article" duration={300}>
+              <article>
                 <ClipboardList size={44} />
                 <span>待裁定</span>
                 <strong>{pendingRulingCount}</strong>
@@ -1394,10 +1592,10 @@ export function WifeDashboard({
                   type="button"
                   onClick={() => openSubPage("review")}
                 >
-                  去处理
+                  去裁定
                 </button>
-              </AnimatedContent>
-              <AnimatedContent as="article" delay={45} duration={300}>
+              </article>
+              <article>
                 <ShieldCheck size={44} />
                 <span>待批准</span>
                 <strong>{pendingBenefitCount}</strong>
@@ -1407,15 +1605,10 @@ export function WifeDashboard({
                   type="button"
                   onClick={() => openSubPage("benefits")}
                 >
-                  去处理
+                  去批准
                 </button>
-              </AnimatedContent>
-              <AnimatedContent
-                as="article"
-                className="wife-overview-alert"
-                delay={90}
-                duration={300}
-              >
+              </article>
+              <article className="wife-overview-alert">
                 <AlertTriangle size={44} />
                 <span>异常</span>
                 <strong>{abnormalCount}</strong>
@@ -1425,90 +1618,37 @@ export function WifeDashboard({
                   type="button"
                   onClick={() => openSubPage("records")}
                 >
-                  去处理
+                  去查看
                 </button>
-              </AnimatedContent>
+              </article>
             </div>
           </AnimatedContent>
 
           <AnimatedContent
             as="section"
-            className="wife-today-card wife-quick-panel"
-            aria-label="快速发布"
-            delay={110}
-            duration={380}
-          >
-            <h2>快速发布</h2>
-            <button
-              className="wife-quick-task"
-              type="button"
-              data-wife-command="quick-publish"
-              onClick={() => setSheet("task")}
-            >
-              <ScrollText size={39} />
-              <span>
-                <strong>发布新任务</strong>
-                <em>安排今日差事</em>
-              </span>
-              <i aria-hidden="true">›</i>
-            </button>
-            <p>任务发布后，老哥将在任务中心收到指令。</p>
-          </AnimatedContent>
-
-          <AnimatedContent
-            as="section"
+            key={`wife-today-recent-${todayEnterKey}`}
             className="wife-today-card wife-recent-panel"
             aria-label="最近动态"
-            delay={140}
-            duration={390}
+            duration={340}
           >
             <h2>最近动态</h2>
-            {recentLog ? (
-              <article className="wife-recent-item">
-                <div className="wife-affair-icon">
-                  <ClipboardCheck size={29} />
-                </div>
-                <div>
-                  <h3>
-                    {eventLogRecordLabel(recentLog)} · {recentLog.title}
-                  </h3>
-                  <p>
-                    {[formatLogTime(recentLog.createdAt), recentLog.description]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </p>
-                  {recentLog.taskTitle || recentLog.benefitName ? (
-                    <strong>
-                      {recentLog.taskTitle
-                        ? `任务：${recentLog.taskTitle}`
-                        : `权益：${recentLog.benefitName}`}
-                    </strong>
-                  ) : null}
-                </div>
-                <button type="button" onClick={() => openSubPage("records")}>
-                  查看
-                  <i aria-hidden="true">›</i>
-                </button>
-              </article>
-            ) : recentSubmittedTask ? (
-              <article className="wife-recent-item">
-                <div className="wife-affair-icon">
-                  <ClipboardCheck size={29} />
-                </div>
-                <div>
-                  <h3>{recentSubmittedTask.title}</h3>
-                  <p>
-                    {recentSubmittedTask.submitNote ||
-                      recentSubmittedTask.resultText ||
-                      "老哥已提交完成结果，等待裁定。"}
-                  </p>
-                  <strong>奖励：{taskRewardText(recentSubmittedTask)}</strong>
-                </div>
-                <button type="button" onClick={() => openSubPage("review")}>
-                  审核
-                  <i aria-hidden="true">›</i>
-                </button>
-              </article>
+            {recentActivities.length ? (
+              recentActivities.map((item) => (
+                <article className="wife-recent-item" key={item.id}>
+                  <div className="wife-affair-icon">
+                    <ClipboardCheck size={29} />
+                  </div>
+                  <div>
+                    <h3>{item.title}</h3>
+                    <p>{item.description}</p>
+                    {item.detail ? <strong>{item.detail}</strong> : null}
+                  </div>
+                  <button type="button" onClick={item.onClick}>
+                    {item.action}
+                    <i aria-hidden="true">›</i>
+                  </button>
+                </article>
+              ))
             ) : (
               <p className="wife-subpage-empty">暂无最近动态。</p>
             )}
@@ -1524,16 +1664,10 @@ export function WifeDashboard({
             alt=""
           />
           <div className="wife-subpage__shade" />
-          <a
-            className="wife-today-back"
+          <SwipeBackHint
             href="#wife-main"
             onClick={handlePageLink("main")}
-          >
-            <img
-              src={publicAsset("/assets/ui/swipe-down-return.png")}
-              alt="下滑返回主页"
-            />
-          </a>
+          />
 
           {subPage === "tasks" ? (
             <div className="wife-subpage-inner">
@@ -1698,6 +1832,15 @@ export function WifeDashboard({
                 {benefits.map((benefit) => {
                   const locked = benefit.levelRequired > progress.level;
                   const pending = Boolean(benefit.pendingRequest);
+                  const cooling =
+                    Boolean(
+                      benefit.cooldownUntil &&
+                        Date.parse(benefit.cooldownUntil) > Date.now(),
+                    ) ||
+                    (benefit.status === "cooldown" && !benefit.cooldownUntil);
+                  const used = Boolean(
+                    benefit.lastApprovedAt || benefit.cooldownUntil,
+                  );
                   return (
                     <article
                       key={benefit.id}
@@ -1758,10 +1901,12 @@ export function WifeDashboard({
                         </div>
                       ) : (
                         <span>
-                          {(benefit.availableBonusCount ?? 0) > 0
+                          {cooling
+                            ? "未冷却"
+                            : used
+                              ? "已使用"
+                              : (benefit.availableBonusCount ?? 0) > 0
                             ? `库存 ${benefit.availableBonusCount}`
-                            : benefit.cooldownUntil
-                              ? "冷却中"
                               : "可申请"}
                         </span>
                       )}
@@ -1780,7 +1925,7 @@ export function WifeDashboard({
                 <span>记录老哥近期表现与老妞裁定</span>
               </AnimatedContent>
               <div className="wife-record-timeline">
-                <article>
+                <article className="wife-record-current">
                   <span />
                   <div>
                     <h2>
@@ -1795,6 +1940,28 @@ export function WifeDashboard({
                     </p>
                   </div>
                 </article>
+                {pinnedAnomalyLogs.map((log) => (
+                  <article
+                    className="wife-record-anomaly wife-record-anomaly--active"
+                    key={`active-${log.id}`}
+                  >
+                    <span />
+                    <div>
+                      <h2>
+                        {eventLogRecordLabel(log)} 路 {log.title}
+                      </h2>
+                      <p>
+                        {[
+                          formatLogTime(log.createdAt),
+                          formatLevelChangeDetail(log),
+                          log.description,
+                        ]
+                          .filter(Boolean)
+                          .join(" 路 ")}
+                      </p>
+                    </div>
+                  </article>
+                ))}
                 {walletLedger.slice(0, 8).map((entry) => (
                   <article key={entry.id}>
                     <span />
@@ -1816,15 +1983,24 @@ export function WifeDashboard({
                     </div>
                   </article>
                 ))}
-                {logs.slice(0, 8).map((log) => (
-                  <article key={log.id}>
+                {timelineLogs.slice(0, 8).map((log) => (
+                  <article
+                    className={
+                      log.type === "anomaly" ? "wife-record-anomaly" : undefined
+                    }
+                    key={log.id}
+                  >
                     <span />
                     <div>
                       <h2>
                         {eventLogRecordLabel(log)} · {log.title}
                       </h2>
                       <p>
-                        {[formatLogTime(log.createdAt), log.description]
+                        {[
+                          formatLogTime(log.createdAt),
+                          formatLevelChangeDetail(log),
+                          log.description,
+                        ]
                           .filter(Boolean)
                           .join(" · ")}
                       </p>
@@ -1835,54 +2011,19 @@ export function WifeDashboard({
             </div>
           ) : null}
 
-          {subPage === "order" ? (
-            <div className="wife-subpage-inner">
-              <AnimatedContent as="header" className="wife-subpage-title" duration={340}>
-                <p>老妞端</p>
-                <h1>点餐殿</h1>
-                <span>老哥想吃什么，先由老妞大人恩准</span>
-              </AnimatedContent>
-              <div className="wife-order-panel">
-                <div>
-                  <strong>今日点餐权</strong>
-                  <span>
-                    {progress.level >= 2 ? "可提交申请" : "尚需继续服役"}
-                  </span>
-                </div>
-                <p>所有点餐都只是申请，最终是否批准以老妞大人裁定为准。</p>
-              </div>
-              <div className="wife-subpage-list wife-subpage-list--order">
-                {orderOptions.map((option) => (
-                  <article key={option.name}>
-                    <div className="wife-subpage-icon">
-                      <Utensils size={25} />
-                    </div>
-                    <div>
-                      <h2>{option.name}</h2>
-                      <p>{option.desc}</p>
-                      <small>{option.cost}</small>
-                    </div>
-                    <button type="button" onClick={() => setSheet("benefit")}>
-                      申请
-                    </button>
-                  </article>
-                ))}
-              </div>
-            </div>
-          ) : null}
         </section>
       ) : null}
 
       {activePage === "today" || subPage ? (
         <nav className="wife-today-tabs" aria-label="今日事务导航">
-          <a
+          <button
             className={!subPage ? "active" : undefined}
-            href="#wife-today"
+            type="button"
             onClick={handleTodayTab}
           >
             <Crown size={28} />
             今日
-          </a>
+          </button>
           <button
             className={subPage === "tasks" ? "active" : undefined}
             type="button"
@@ -1900,20 +2041,20 @@ export function WifeDashboard({
             权益
           </button>
           <button
+            className={subPage === "review" ? "active" : undefined}
+            type="button"
+            onClick={() => openSubPage("review")}
+          >
+            <ClipboardCheck size={28} />
+            审核
+          </button>
+          <button
             className={subPage === "records" ? "active" : undefined}
             type="button"
             onClick={() => openSubPage("records")}
           >
             <BookOpen size={28} />
             记录
-          </button>
-          <button
-            className={subPage === "order" ? "active" : undefined}
-            type="button"
-            onClick={() => openSubPage("order")}
-          >
-            <Utensils size={28} />
-            点餐
           </button>
         </nav>
       ) : null}
@@ -2407,6 +2548,76 @@ export function WifeDashboard({
                   onClick={confirmTargetLevel}
                 >
                   {"\u786E\u5B9A\u6307\u5B9A"}
+                </button>
+              </>
+            ) : null}
+
+            {sheet === "wallet" ? (
+              <>
+                <p className="kicker">{"\u8D4F\u8D50\u8C03\u6574"}</p>
+                <h2>{"\u4E0B\u6708\u9884\u8BA1\u96F6\u82B1\u94B1"}</h2>
+                <div className="wife-wallet-sheet-current">
+                  <span>
+                    {"\u5F53\u524D\u9884\u8BA1"} {"\u00A5"}{currentMonthlyAllowanceTotal}
+                    {" \u00B7 "}
+                    {"\u57FA\u7840"} {"\u00A5"}{walletBaseAmount}
+                  </span>
+                  <strong>
+                    {"\u76EE\u6807\u9884\u8BA1"} {"\u00A5"}{targetWalletTotal}
+                  </strong>
+                  <em
+                    className={
+                      walletDelta < 0
+                        ? "is-negative"
+                        : walletDelta > 0
+                          ? "is-positive"
+                          : undefined
+                    }
+                  >
+                    {walletDelta === 0
+                      ? `\u8C03\u6574\u9879 ${targetWalletAdjustment >= 0 ? "+" : ""}${targetWalletAdjustment}`
+                      : `\u8C03\u6574\u9879 ${targetWalletAdjustment >= 0 ? "+" : ""}${targetWalletAdjustment}\uFF0C\u672C\u6B21 ${walletDelta > 0 ? "+" : ""}${walletDelta}`}
+                  </em>
+                </div>
+                <div
+                  className="wife-wallet-progress"
+                  aria-label={"\u96F6\u82B1\u94B1\u76EE\u6807\u8FDB\u5EA6"}
+                >
+                  <i style={{ width: `${walletProgressPercent}%` }} />
+                  <b
+                    aria-hidden="true"
+                    style={{ left: `${walletProgressPercent}%` }}
+                  />
+                  <input
+                    aria-label={"\u8C03\u6574\u4E0B\u6708\u96F6\u82B1\u94B1\u9884\u8BA1\u603B\u989D"}
+                    max={walletProgressMax}
+                    min={0}
+                    step={1}
+                    type="range"
+                    value={targetWalletTotal}
+                    onChange={(event) =>
+                      updateTargetWalletFromRange(event.currentTarget.value)
+                    }
+                  />
+                </div>
+                <div className="wife-wallet-adjust-grid">
+                  {[-100, -10, 10, 100].map((amount) => (
+                    <button
+                      className={amount < 0 ? "is-negative" : undefined}
+                      key={amount}
+                      type="button"
+                      onClick={() => adjustTargetWallet(amount)}
+                    >
+                      {amount > 0 ? `+${amount}` : amount}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  className="primary-button"
+                  type="button"
+                  onClick={confirmTargetWallet}
+                >
+                  {"\u8BB0\u5165\u672C\u6708\u8D4F\u8D50"}
                 </button>
               </>
             ) : null}

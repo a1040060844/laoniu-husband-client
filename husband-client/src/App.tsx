@@ -12,6 +12,10 @@ import {
   HusbandVerticalPager,
 } from "./components/HusbandVerticalPager";
 import { ChatMessagePanel } from "./components/ChatMessagePanel";
+import {
+  MonthlyAllowanceModal,
+  type MonthlyAllowanceModalMode,
+} from "./components/MonthlyAllowanceModal";
 import { RolePage } from "./components/RolePage";
 import { SlavePage } from "./components/SlavePage";
 import { SlaveRulingModal } from "./components/SlaveRulingModal";
@@ -67,12 +71,31 @@ import {
   saveChatMessages,
   unreadChatCount,
 } from "./lib/chatMessages";
+import {
+  aggregatePendingExperienceDecrees,
+  decreeAcknowledgeIds,
+} from "./lib/decreeQueue";
+import { calculateActiveAnomalies } from "./lib/anomalyRules";
+import {
+  ALIPAY_RECEIVE_URL,
+  createMonthlyAllowanceRecord,
+  monthKeyForDate,
+  monthlyTaskBonus,
+  mergeMonthlyAllowanceRecords,
+  nextMonthKey,
+  openAlipayReceivePage,
+  previousMonthKeyForAllowanceMonth,
+  refreshMonthlyAllowanceRecord,
+  roleAtEndOfMonth,
+  updateMonthlyAllowanceStatus,
+} from "./lib/monthlyAllowance";
 import { taskRewardExp, taskRewardMoney, taskRewardText } from "./lib/taskRewards";
 import { LoginPage } from "./pages/LoginPage";
 import type {
   Benefit,
   DecreeEvent,
   EventLog,
+  MonthlyAllowanceRecord,
   StoryEvent,
   Task,
   TaskReward,
@@ -189,17 +212,43 @@ function formatDateTime(value?: string) {
   });
 }
 
-function getCurrentMonthKey() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-}
-
 function benefitCooldownMs(benefit: Benefit) {
   if (benefit.frequency.includes("2周")) return 14 * 24 * 60 * 60 * 1000;
   if (benefit.frequency.includes("周")) return 7 * 24 * 60 * 60 * 1000;
   if (benefit.frequency.includes("季")) return 90 * 24 * 60 * 60 * 1000;
   if (benefit.frequency.includes("月")) return 30 * 24 * 60 * 60 * 1000;
   return 7 * 24 * 60 * 60 * 1000;
+}
+
+function coolBenefitsForReachedLevels(
+  benefits: Benefit[],
+  fromLevel: number,
+  toLevel: number,
+  reachedAt: string,
+) {
+  if (toLevel <= fromLevel) return benefits;
+  const reachedAtMs = Date.parse(reachedAt);
+  const baseTime = Number.isNaN(reachedAtMs) ? Date.now() : reachedAtMs;
+
+  return benefits.map((benefit) => {
+    if (
+      benefit.levelRequired <= fromLevel ||
+      benefit.levelRequired > toLevel
+    ) {
+      return benefit;
+    }
+
+    const cooldownUntil = new Date(
+      baseTime + benefitCooldownMs(benefit),
+    ).toISOString();
+    return {
+      ...benefit,
+      cooldownUntil,
+      cooldownText: `未冷却至 ${formatDateTime(cooldownUntil)}`,
+      pendingRequest: undefined,
+      status: "cooldown" as const,
+    };
+  });
 }
 
 function benefitMatchesReward(benefit: Benefit, reward: TaskReward) {
@@ -262,17 +311,7 @@ function ledgerEntriesFromTask(task: Task, createdAt: string): WalletLedgerEntry
         };
       }
       if (reward.type === "allowance" && amount > 0) {
-        return {
-          id: ledgerId("ledger-money"),
-          type: "allowance",
-          source: "任务奖励",
-          amount,
-          unit: "CNY",
-          createdAt,
-          taskId: task.id,
-          taskTitle: task.title,
-          note: reward.label,
-        };
+        return null;
       }
       if (reward.type === "level_up") {
         return {
@@ -348,8 +387,15 @@ export default function App() {
     initialState.walletLedger,
   );
   const [decrees, setDecrees] = useState<DecreeEvent[]>(initialState.decrees);
+  const [monthlyAllowances, setMonthlyAllowances] = useState<
+    MonthlyAllowanceRecord[]
+  >(initialState.monthlyAllowances);
   const [selectedBenefit, setSelectedBenefit] = useState<Benefit | null>(null);
   const [story, setStory] = useState<StoryEvent | null>(null);
+  const [wifeTaskCompleteIllustrationActive, setWifeTaskCompleteIllustrationActive] =
+    useState(false);
+  const [monthlyAllowanceModalMode, setMonthlyAllowanceModalMode] =
+    useState<MonthlyAllowanceModalMode | null>(null);
   const [showSlaveRuling, setShowSlaveRuling] = useState(
     initialRoute === "wife" &&
       !shouldShowInitialLoading &&
@@ -357,6 +403,7 @@ export default function App() {
   );
   const [husbandSyncReady, setHusbandSyncReady] = useState(false);
   const [taskSystemReady, setTaskSystemReady] = useState(false);
+  const [anomalyClock, setAnomalyClock] = useState(() => Date.now());
   const [decreeSaving, setDecreeSaving] = useState(false);
   const [decreeError, setDecreeError] = useState<string>();
   const [loadingTarget, setLoadingTarget] = useState<AppRoute | null>(
@@ -375,9 +422,11 @@ export default function App() {
   const loadingPushHistoryRef = useRef(false);
   const pixelTransitionActionRef = useRef<(() => void) | null>(null);
   const decreesRef = useRef(initialState.decrees);
+  const monthlyAllowancesRef = useRef(initialState.monthlyAllowances);
   const lastRemoteFingerprintRef = useRef<string | null>(null);
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
-  const salaryProcessingRef = useRef(new Set<string>());
+  const allowanceSessionLocksRef = useRef(new Set<string>());
+  const allowanceCreditLocksRef = useRef(new Set<string>());
   const [pixelTransitionKey, setPixelTransitionKey] = useState(0);
   const [roleUpgradeCinematic, setRoleUpgradeCinematic] =
     useState<RoleUpgradeCinematicEvent | null>(null);
@@ -423,6 +472,53 @@ export default function App() {
 
   const currentRole = roleWithProgress(roles[progress.level], progress);
   const previewRole = roleWithProgress(roles[previewLevel], progress);
+  const currentAllowanceMonth = monthKeyForDate();
+  const nextAllowanceMonth = nextMonthKey();
+  const roleForAllowanceMonth = useCallback(
+    (allowanceMonth: string) =>
+      roleAtEndOfMonth({
+        currentLevel: progress.level,
+        logs,
+        month: previousMonthKeyForAllowanceMonth(allowanceMonth),
+        roles,
+      }),
+    [logs, progress.level],
+  );
+  const currentMonthlyAllowance = monthlyAllowances.find(
+    (record) => record.month === currentAllowanceMonth,
+  );
+  const nextMonthlyAllowance = monthlyAllowances.find(
+    (record) => record.month === nextAllowanceMonth,
+  );
+  const nextAllowanceRole = roleForAllowanceMonth(nextAllowanceMonth);
+  const nextAllowanceSettlementMonth =
+    nextMonthlyAllowance?.settlementMonth ??
+    previousMonthKeyForAllowanceMonth(nextAllowanceMonth);
+  const nextAllowanceTaskStats =
+    nextMonthlyAllowance ??
+    monthlyTaskBonus(tasks, nextAllowanceSettlementMonth);
+  const nextAllowanceBaseSalary =
+    nextMonthlyAllowance?.baseSalary ?? nextAllowanceRole.salary;
+  const nextAllowanceAdjustment =
+    nextMonthlyAllowance?.wifeAdjustmentAmount ?? 0;
+  const nextAllowanceTotal =
+    nextMonthlyAllowance?.totalAmount ??
+    Math.max(
+      0,
+      Math.trunc(nextAllowanceBaseSalary) +
+        Math.trunc(nextAllowanceTaskStats.taskBonus) +
+        Math.trunc(nextAllowanceAdjustment),
+    );
+  const activeAnomalies = useMemo(
+    () =>
+      calculateActiveAnomalies({
+        logs,
+        now: new Date(anomalyClock),
+        tasks,
+        walletLedger,
+      }),
+    [anomalyClock, logs, tasks, walletLedger],
+  );
   const husbandChatUnreadCount = unreadChatCount(chatMessages, "husband");
   const wifeChatUnreadCount = unreadChatCount(chatMessages, "wife");
 
@@ -432,9 +528,11 @@ export default function App() {
 
   const pendingDecrees = useMemo(
     () =>
-      decrees
-        .filter((decree) => decree.target === "husband" && !decree.acknowledgedAt)
-        .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt)),
+      aggregatePendingExperienceDecrees(
+        decrees
+          .filter((decree) => decree.target === "husband" && !decree.acknowledgedAt)
+          .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt)),
+      ),
     [decrees],
   );
   const activeDecree =
@@ -445,8 +543,13 @@ export default function App() {
       serverState.decrees,
       decreesRef.current,
     );
+    const mergedMonthlyAllowances = mergeMonthlyAllowanceRecords(
+      serverState.monthlyAllowances,
+      monthlyAllowancesRef.current,
+    );
     lastRemoteFingerprintRef.current = taskSystemFingerprint(serverState);
     decreesRef.current = mergedDecrees;
+    monthlyAllowancesRef.current = mergedMonthlyAllowances;
     setProgress(serverState.progress);
     setTasks(serverState.tasks);
     setLogs(serverState.logs);
@@ -454,6 +557,7 @@ export default function App() {
     setBenefits(serverState.benefits);
     setWalletLedger(serverState.walletLedger);
     setDecrees(mergedDecrees);
+    setMonthlyAllowances(mergedMonthlyAllowances);
   }, []);
 
   const enqueueSave = useCallback(
@@ -605,6 +709,52 @@ export default function App() {
     return nextLog;
   }
 
+  useEffect(() => {
+    const refreshAnomalyClock = () => setAnomalyClock(Date.now());
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refreshAnomalyClock();
+      }
+    };
+    const intervalId = window.setInterval(
+      refreshAnomalyClock,
+      60 * 60 * 1000,
+    );
+    window.addEventListener("focus", refreshAnomalyClock);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshAnomalyClock);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!taskSystemReady || !activeAnomalies.length) return;
+    setLogs((current) => {
+      const existingKeys = new Set(
+        current
+          .map((log) => log.anomalyKey)
+          .filter((key): key is string => Boolean(key)),
+      );
+      const missing = activeAnomalies.filter(
+        (anomaly) => !existingKeys.has(anomaly.key),
+      );
+      if (!missing.length) return current;
+      const nextLogs: EventLog[] = missing.map((anomaly) => ({
+        id: `log-anomaly-${anomaly.key}-${Date.now()}`,
+        type: "anomaly",
+        title: anomaly.title,
+        description: anomaly.description,
+        createdAt: anomaly.createdAt,
+        anomalyKey: anomaly.key,
+        anomalyCategory: anomaly.category,
+        anomalySeverity: anomaly.severity,
+      }));
+      return [...nextLogs, ...current];
+    });
+  }, [activeAnomalies, taskSystemReady]);
+
   function appendDecree(
     decree: Omit<DecreeEvent, "id" | "createdAt" | "target"> & {
       createdAt?: string;
@@ -647,6 +797,101 @@ export default function App() {
       unit: entry.unit,
       createdAt,
     });
+  }
+
+  function updateMonthlyAllowanceRecord(
+    recordId: string,
+    updater: (record: MonthlyAllowanceRecord) => MonthlyAllowanceRecord,
+  ) {
+    setMonthlyAllowances((current) =>
+      current.map((record) => (record.id === recordId ? updater(record) : record)),
+    );
+  }
+
+  function beginMonthlyAllowancePayment(record: MonthlyAllowanceRecord, retry = false) {
+    if (!ALIPAY_RECEIVE_URL) {
+      setMonthlyAllowanceModalMode("missing-config");
+      return;
+    }
+    updateMonthlyAllowanceRecord(record.id, (current) => ({
+      ...current,
+      retryCount: retry ? current.retryCount + 1 : current.retryCount,
+      status: retry ? "RETRY_PAYING" : "PAYING",
+    }));
+    openAlipayReceivePage();
+  }
+
+  function confirmMonthlyAllowancePaid(record: MonthlyAllowanceRecord) {
+    updateMonthlyAllowanceRecord(record.id, (current) =>
+      updateMonthlyAllowanceStatus(current, "PAID_CONFIRMED_BY_WIFE"),
+    );
+    setMonthlyAllowanceModalMode(null);
+  }
+
+  function reportMonthlyAllowanceMissing(record: MonthlyAllowanceRecord) {
+    updateMonthlyAllowanceRecord(record.id, (current) =>
+      updateMonthlyAllowanceStatus(current, "HUSBAND_REPORTED_NOT_RECEIVED"),
+    );
+    setMonthlyAllowanceModalMode(null);
+  }
+
+  function rebukeMonthlyAllowanceReport(record: MonthlyAllowanceRecord) {
+    updateMonthlyAllowanceRecord(record.id, (current) =>
+      updateMonthlyAllowanceStatus(current, "REBUKED_AS_BLIND"),
+    );
+    setMonthlyAllowanceModalMode(null);
+  }
+
+  function cancelMonthlyAllowance(record: MonthlyAllowanceRecord) {
+    updateMonthlyAllowanceRecord(record.id, (current) =>
+      updateMonthlyAllowanceStatus(current, "CANCELLED_BY_WIFE"),
+    );
+    setMonthlyAllowanceModalMode(null);
+  }
+
+  function creditMonthlyAllowance(
+    record: MonthlyAllowanceRecord,
+    status: "RECEIVED_BY_HUSBAND" | "REBUKED_AS_BLIND",
+  ) {
+    const creditedAt = new Date().toISOString();
+    const creditKey = `allowance-credit-${record.month}`;
+    const shouldCredit =
+      !record.creditedAt &&
+      !allowanceCreditLocksRef.current.has(creditKey) &&
+      record.totalAmount > 0;
+    if (shouldCredit) {
+      allowanceCreditLocksRef.current.add(creditKey);
+      setProgress((current) => ({
+        ...current,
+        wallet: current.wallet + record.totalAmount,
+      }));
+      addLedger({
+        id: creditKey,
+        type: "allowance",
+        source: "每月赏赐",
+        amount: record.totalAmount,
+        unit: "CNY",
+        monthKey: record.month,
+        createdAt: creditedAt,
+        note: `${record.month} 零花钱赏赐`,
+      });
+    }
+    updateMonthlyAllowanceRecord(record.id, (current) => ({
+      ...current,
+      status,
+      husbandReceivedAt: current.husbandReceivedAt ?? creditedAt,
+      creditedAt: current.creditedAt ?? creditedAt,
+    }));
+    setMonthlyAllowanceModalMode(null);
+  }
+
+  function acknowledgeCancelledAllowance(record: MonthlyAllowanceRecord) {
+    const acknowledgedAt = new Date().toISOString();
+    updateMonthlyAllowanceRecord(record.id, (current) => ({
+      ...current,
+      husbandReceivedAt: current.husbandReceivedAt ?? acknowledgedAt,
+    }));
+    setMonthlyAllowanceModalMode(null);
   }
 
   useEffect(() => {
@@ -728,6 +973,10 @@ export default function App() {
   }, [decrees]);
 
   useEffect(() => {
+    monthlyAllowancesRef.current = monthlyAllowances;
+  }, [monthlyAllowances]);
+
+  useEffect(() => {
     const state = {
       progress,
       punishment,
@@ -736,6 +985,7 @@ export default function App() {
       benefits,
       walletLedger,
       decrees,
+      monthlyAllowances,
     };
     persistLocalTaskSystem(state);
 
@@ -747,6 +997,10 @@ export default function App() {
           await saveTaskSystem({
             ...state,
             decrees: mergeDecrees(serverState.decrees, state.decrees),
+            monthlyAllowances: mergeMonthlyAllowanceRecords(
+              serverState.monthlyAllowances,
+              state.monthlyAllowances,
+            ),
           });
         }).catch(() => undefined);
     }, 250);
@@ -757,6 +1011,7 @@ export default function App() {
     decrees,
     enqueueSave,
     logs,
+    monthlyAllowances,
     progress,
     punishment,
     tasks,
@@ -766,9 +1021,10 @@ export default function App() {
   useEffect(() => {
     if (!activeDecree || activeDecree.readAt) return;
     const readAt = new Date().toISOString();
+    const readIds = new Set(decreeAcknowledgeIds(activeDecree));
     setDecrees((current) =>
       current.map((decree) =>
-        decree.id === activeDecree.id ? { ...decree, readAt } : decree,
+        readIds.has(decree.id) ? { ...decree, readAt } : decree,
       ),
     );
   }, [activeDecree]);
@@ -838,6 +1094,14 @@ export default function App() {
     setProgress(settled.progress);
     if (settled.progress.level > progress.level) {
       showRoleUpgradeCinematic(progress.level, settled.progress.level);
+      setBenefits((current) =>
+        coolBenefitsForReachedLevels(
+          current,
+          progress.level,
+          settled.progress.level,
+          rewardedAt,
+        ),
+      );
     }
     const entries = newlyRewardedTasks.flatMap((task) =>
       ledgerEntriesFromTask(task, rewardedAt),
@@ -925,35 +1189,146 @@ export default function App() {
   }, [commitLoadedRoute, punishment, runLoadingAttempt, runPixelTransition]);
 
   useEffect(() => {
-    if (!taskSystemReady || punishment.status === "slave") return;
-    const monthKey = getCurrentMonthKey();
-    if (
-      walletLedger.some(
-        (entry) => entry.type === "salary" && entry.monthKey === monthKey,
-      )
-    ) {
-      salaryProcessingRef.current.add(monthKey);
+    if (!taskSystemReady) return;
+    setMonthlyAllowances((current) => {
+      let next = current;
+      let changed = false;
+
+      [currentAllowanceMonth, nextAllowanceMonth].forEach((allowanceMonth) => {
+        const existing = next.find((record) => record.month === allowanceMonth);
+        const settlementRole = roleForAllowanceMonth(allowanceMonth);
+        if (!existing) {
+          next = [
+            createMonthlyAllowanceRecord({
+              month: allowanceMonth,
+              role: settlementRole,
+              tasks,
+            }),
+            ...next,
+          ];
+          changed = true;
+          return;
+        }
+        if (existing.status !== "PENDING_WIFE_ACTION") return;
+        const refreshed = refreshMonthlyAllowanceRecord(
+          existing,
+          settlementRole,
+          tasks,
+        );
+        if (
+          refreshed.roleLevel === existing.roleLevel &&
+          refreshed.roleTitle === existing.roleTitle &&
+          refreshed.baseSalary === existing.baseSalary &&
+          refreshed.completedTaskCount === existing.completedTaskCount &&
+          refreshed.taskBonus === existing.taskBonus &&
+          refreshed.totalAmount === existing.totalAmount
+        ) {
+          return;
+        }
+        next = next.map((record) =>
+          record.id === existing.id ? refreshed : record,
+        );
+        changed = true;
+      });
+
+      if (!changed) {
+        return current;
+      }
+      return next;
+    });
+  }, [
+    currentAllowanceMonth,
+    nextAllowanceMonth,
+    roleForAllowanceMonth,
+    taskSystemReady,
+    tasks,
+  ]);
+
+  useEffect(() => {
+    const record = currentMonthlyAllowance;
+    if (!taskSystemReady || !record) {
+      setMonthlyAllowanceModalMode(null);
       return;
     }
-    if (salaryProcessingRef.current.has(monthKey)) return;
-    salaryProcessingRef.current.add(monthKey);
-    const salary = currentRole.salary;
-    const createdAt = new Date().toISOString();
-    setProgress((current) => ({
-      ...current,
-      wallet: current.wallet + salary,
-    }));
-    addLedger({
-      id: `salary-${monthKey}`,
-      type: "salary",
-      source: "月薪发放",
-      amount: salary,
-      unit: "CNY",
-      monthKey,
-      createdAt,
-      note: `${monthKey} 月薪`,
-    });
-  }, [currentRole.salary, punishment.status, taskSystemReady, walletLedger]);
+
+    if (route === "wife") {
+      if (punishment.status === "slave" && record.status === "PENDING_WIFE_ACTION") {
+        const key = `paused:${record.id}`;
+        if (!allowanceSessionLocksRef.current.has(key)) {
+          setMonthlyAllowanceModalMode("wife-paused");
+        }
+        return;
+      }
+      if (record.status === "PENDING_WIFE_ACTION") {
+        const key = `pending:${record.id}`;
+        if (!allowanceSessionLocksRef.current.has(key)) {
+          setMonthlyAllowanceModalMode("wife-pending");
+        }
+        return;
+      }
+      if (record.status === "WAITING_WIFE_CONFIRM") {
+        setMonthlyAllowanceModalMode("wife-confirm");
+        return;
+      }
+      if (record.status === "HUSBAND_REPORTED_NOT_RECEIVED") {
+        setMonthlyAllowanceModalMode("wife-dispute");
+        return;
+      }
+    }
+
+    if (route === "husband" && husbandSyncReady) {
+      if (record.status === "PAID_CONFIRMED_BY_WIFE" && !record.husbandReceivedAt) {
+        setMonthlyAllowanceModalMode("husband-paid");
+        return;
+      }
+      if (record.status === "REBUKED_AS_BLIND" && !record.husbandReceivedAt) {
+        setMonthlyAllowanceModalMode("husband-rebuked");
+        return;
+      }
+      if (record.status === "CANCELLED_BY_WIFE" && !record.husbandReceivedAt) {
+        setMonthlyAllowanceModalMode("husband-cancelled");
+        return;
+      }
+    }
+
+    setMonthlyAllowanceModalMode(null);
+  }, [
+    currentMonthlyAllowance,
+    husbandSyncReady,
+    punishment.status,
+    route,
+    taskSystemReady,
+  ]);
+
+  useEffect(() => {
+    if (route !== "wife") return;
+    const handleReturn = () => {
+      if (document.visibilityState && document.visibilityState !== "visible") {
+        return;
+      }
+      const record = currentMonthlyAllowance;
+      if (!record || (record.status !== "PAYING" && record.status !== "RETRY_PAYING")) {
+        return;
+      }
+      const key = `return:${record.id}:${record.retryCount}`;
+      if (allowanceSessionLocksRef.current.has(key)) return;
+      allowanceSessionLocksRef.current.add(key);
+      updateMonthlyAllowanceRecord(record.id, (current) => ({
+        ...current,
+        status: "WAITING_WIFE_CONFIRM",
+      }));
+      setMonthlyAllowanceModalMode("wife-confirm");
+    };
+
+    window.addEventListener("pageshow", handleReturn);
+    window.addEventListener("focus", handleReturn);
+    document.addEventListener("visibilitychange", handleReturn);
+    return () => {
+      window.removeEventListener("pageshow", handleReturn);
+      window.removeEventListener("focus", handleReturn);
+      document.removeEventListener("visibilitychange", handleReturn);
+    };
+  }, [currentMonthlyAllowance, route]);
 
   function handleSelectView(view: ViewKey) {
     const pageMap: Record<ViewKey, number> = {
@@ -1089,6 +1464,7 @@ export default function App() {
       ),
     );
     if (target) {
+      setWifeTaskCompleteIllustrationActive(true);
       const log = addLog({
         type: "task_approved",
         title: target.title,
@@ -1170,6 +1546,45 @@ export default function App() {
   function handleUseBenefit(benefit: Benefit) {
     if (punishment.status === "slave") return;
     const currentBenefit = benefits.find((item) => item.id === benefit.id) ?? benefit;
+    if (progress.level < currentBenefit.levelRequired) {
+      setSelectedBenefit(null);
+      setStory({
+        title: "权益未解锁",
+        text: `「${currentBenefit.name}」需要达到 Lv.${String(currentBenefit.levelRequired).padStart(2, "0")} 后才可使用。`,
+        tone: "normal",
+      });
+      return;
+    }
+    if (currentBenefit.pendingRequest) {
+      setSelectedBenefit(null);
+      setStory({
+        title: "权益待审批",
+        text: `「${currentBenefit.name}」已提交申请，等待老婆大人裁定。`,
+        tone: "normal",
+      });
+      return;
+    }
+    if (
+      currentBenefit.cooldownUntil &&
+      Date.parse(currentBenefit.cooldownUntil) > Date.now()
+    ) {
+      setSelectedBenefit(null);
+      setStory({
+        title: "权益未冷却",
+        text: `「${currentBenefit.name}」尚未冷却完成，需等到 ${formatDateTime(currentBenefit.cooldownUntil)} 后重新达到等级才可使用。`,
+        tone: "normal",
+      });
+      return;
+    }
+    if (currentBenefit.status === "cooldown" && !currentBenefit.cooldownUntil) {
+      setSelectedBenefit(null);
+      setStory({
+        title: "权益未冷却",
+        text: `「${currentBenefit.name}」尚未冷却完成，暂不可使用。`,
+        tone: "normal",
+      });
+      return;
+    }
     if ((currentBenefit.availableBonusCount ?? 0) > 0) {
       const usedAt = new Date().toISOString();
       setBenefits((current) =>
@@ -1204,27 +1619,6 @@ export default function App() {
       setStory({
         title: `使用：${currentBenefit.name}`,
         text: `已消耗 1 次「${currentBenefit.name}」奖励库存，不进入冷却申请。`,
-        tone: "normal",
-      });
-      return;
-    }
-    if (currentBenefit.pendingRequest) {
-      setSelectedBenefit(null);
-      setStory({
-        title: "权益待审批",
-        text: `「${currentBenefit.name}」已提交申请，等待老婆大人裁定。`,
-        tone: "normal",
-      });
-      return;
-    }
-    if (
-      currentBenefit.cooldownUntil &&
-      Date.parse(currentBenefit.cooldownUntil) > Date.now()
-    ) {
-      setSelectedBenefit(null);
-      setStory({
-        title: "权益冷却中",
-        text: `「${currentBenefit.name}」冷却至 ${formatDateTime(currentBenefit.cooldownUntil)}。`,
         tone: "normal",
       });
       return;
@@ -1274,7 +1668,7 @@ export default function App() {
               ...item,
               lastApprovedAt: approvedAt,
               cooldownUntil,
-              cooldownText: `冷却至 ${formatDateTime(cooldownUntil)}`,
+              cooldownText: `未冷却至 ${formatDateTime(cooldownUntil)}`,
               pendingRequest: undefined,
               status: "cooldown",
             }
@@ -1355,6 +1749,14 @@ export default function App() {
       setProgress(result.progress);
       if (result.progress.level > progress.level) {
         showRoleUpgradeCinematic(progress.level, result.progress.level);
+        setBenefits((current) =>
+          coolBenefitsForReachedLevels(
+            current,
+            progress.level,
+            result.progress.level,
+            createdAt,
+          ),
+        );
       }
       if (result.stories.length) {
         setStory(result.stories[result.stories.length - 1]);
@@ -1424,6 +1826,63 @@ export default function App() {
     });
   }
 
+  function handleAdjustWallet(amount: number) {
+    if (amount === 0) return;
+    if (
+      nextMonthlyAllowance &&
+      nextMonthlyAllowance.status !== "PENDING_WIFE_ACTION"
+    ) {
+      setStory({
+        title: "下月赏赐已定",
+        text: "下个月的赏赐已经进入支付或确认流程，暂不可再调整金额。",
+        tone: "normal",
+      });
+      return;
+    }
+    setMonthlyAllowances((current) => {
+      const existing = current.find(
+        (record) => record.month === nextAllowanceMonth,
+      );
+      const settlementRole = roleForAllowanceMonth(nextAllowanceMonth);
+      const record =
+        existing ??
+        createMonthlyAllowanceRecord({
+          month: nextAllowanceMonth,
+          role: settlementRole,
+          tasks,
+        });
+      if (record.status !== "PENDING_WIFE_ACTION") return current;
+      const wifeAdjustmentAmount = record.wifeAdjustmentAmount + amount;
+      const nextRecord = refreshMonthlyAllowanceRecord(
+        {
+          ...record,
+          wifeAdjustmentAmount,
+        },
+        settlementRole,
+        tasks,
+      );
+      if (!existing) return [nextRecord, ...current];
+      return current.map((item) =>
+        item.id === record.id ? nextRecord : item,
+      );
+    });
+  }
+
+  function handleOpenNextAllowanceDetail() {
+    const roleTitle = nextMonthlyAllowance?.roleTitle ?? nextAllowanceRole.title;
+    const completedTaskCount =
+      nextMonthlyAllowance?.completedTaskCount ??
+      nextAllowanceTaskStats.completedTaskCount;
+    const taskBonus =
+      nextMonthlyAllowance?.taskBonus ?? nextAllowanceTaskStats.taskBonus;
+    const adjustment = nextAllowanceAdjustment;
+    setStory({
+      title: "下月零花钱明细",
+      text: `${nextAllowanceMonth} 发放的是 ${nextAllowanceSettlementMonth} 的零花钱。职务「${roleTitle}」工资 ¥${nextAllowanceBaseSalary}，任务奖励 ${completedTaskCount} 项共 ¥${taskBonus}，老妞调整 ${adjustment >= 0 ? "+" : ""}${adjustment}，预计合计 ¥${nextAllowanceTotal}。`,
+      tone: "normal",
+    });
+  }
+
   function handleSetLevel(level: number, reason: string) {
     const safeLevel = clampLevel(level);
     const previousLevel = progress.level;
@@ -1432,6 +1891,14 @@ export default function App() {
     setProgress((current) => progressWithLevelRule(current, safeLevel));
     if (safeLevel > previousLevel) {
       showRoleUpgradeCinematic(previousLevel, safeLevel);
+      setBenefits((current) =>
+        coolBenefitsForReachedLevels(
+          current,
+          previousLevel,
+          safeLevel,
+          new Date().toISOString(),
+        ),
+      );
     }
     if (safeLevel !== previousLevel) {
       addLedger({
@@ -1570,6 +2037,16 @@ export default function App() {
       exp: restoredExp,
       wallet: restoredWallet,
     }));
+    if (restoredLevel > progress.level) {
+      setBenefits((current) =>
+        coolBenefitsForReachedLevels(
+          current,
+          progress.level,
+          restoredLevel,
+          new Date().toISOString(),
+        ),
+      );
+    }
     setPreviewLevel(restoredLevel);
     if (restoredWallet !== progress.wallet) {
       addLedger({
@@ -1640,13 +2117,87 @@ export default function App() {
     setShowSlaveRuling(false);
   }
 
+  function dismissMonthlyAllowanceModal() {
+    const record = currentMonthlyAllowance;
+    if (record && monthlyAllowanceModalMode === "wife-pending") {
+      allowanceSessionLocksRef.current.add(`pending:${record.id}`);
+    }
+    if (record && monthlyAllowanceModalMode === "wife-paused") {
+      allowanceSessionLocksRef.current.add(`paused:${record.id}`);
+    }
+    setMonthlyAllowanceModalMode(null);
+  }
+
+  function handleMonthlyAllowancePrimary() {
+    const record = currentMonthlyAllowance;
+    if (!record || !monthlyAllowanceModalMode) return;
+    if (monthlyAllowanceModalMode === "wife-pending") {
+      beginMonthlyAllowancePayment(record);
+      return;
+    }
+    if (
+      monthlyAllowanceModalMode === "wife-paused" ||
+      monthlyAllowanceModalMode === "missing-config"
+    ) {
+      dismissMonthlyAllowanceModal();
+      return;
+    }
+    if (monthlyAllowanceModalMode === "wife-confirm") {
+      confirmMonthlyAllowancePaid(record);
+      return;
+    }
+    if (monthlyAllowanceModalMode === "wife-dispute") {
+      beginMonthlyAllowancePayment(record, true);
+      return;
+    }
+    if (monthlyAllowanceModalMode === "husband-paid") {
+      creditMonthlyAllowance(record, "RECEIVED_BY_HUSBAND");
+      return;
+    }
+    if (monthlyAllowanceModalMode === "husband-rebuked") {
+      creditMonthlyAllowance(record, "REBUKED_AS_BLIND");
+      return;
+    }
+    if (monthlyAllowanceModalMode === "husband-cancelled") {
+      acknowledgeCancelledAllowance(record);
+    }
+  }
+
+  function handleMonthlyAllowanceSecondary() {
+    const record = currentMonthlyAllowance;
+    if (!record || !monthlyAllowanceModalMode) return;
+    if (monthlyAllowanceModalMode === "wife-pending") {
+      dismissMonthlyAllowanceModal();
+      return;
+    }
+    if (monthlyAllowanceModalMode === "wife-confirm") {
+      beginMonthlyAllowancePayment(record, true);
+      return;
+    }
+    if (monthlyAllowanceModalMode === "wife-dispute") {
+      rebukeMonthlyAllowanceReport(record);
+      return;
+    }
+    if (monthlyAllowanceModalMode === "husband-paid") {
+      reportMonthlyAllowanceMissing(record);
+    }
+  }
+
+  function handleMonthlyAllowanceTertiary() {
+    const record = currentMonthlyAllowance;
+    if (record && monthlyAllowanceModalMode === "wife-dispute") {
+      cancelMonthlyAllowance(record);
+    }
+  }
+
   async function handleAcknowledgeDecree() {
     if (!activeDecree || decreeSaving) return;
     setDecreeSaving(true);
     setDecreeError(undefined);
     const acknowledgedAt = new Date().toISOString();
+    const acknowledgedIds = new Set(decreeAcknowledgeIds(activeDecree));
     const localAcknowledged = decrees.map((decree) =>
-      decree.id === activeDecree.id
+      acknowledgedIds.has(decree.id)
         ? { ...decree, acknowledgedAt }
         : decree,
     );
@@ -1656,6 +2207,7 @@ export default function App() {
         const nextState = {
           ...serverState,
           decrees: mergeDecrees(serverState.decrees, localAcknowledged),
+          monthlyAllowances,
         };
         await saveTaskSystem(nextState);
         return nextState;
@@ -1670,6 +2222,7 @@ export default function App() {
 
   function handleEnterRole(role: "husband" | "wife") {
     if (navigationLockedRef.current) return;
+    setWifeTaskCompleteIllustrationActive(false);
     navigationLockedRef.current = true;
     runPixelTransition(() => runLoadingAttempt(role, true, "current"));
   }
@@ -1678,6 +2231,7 @@ export default function App() {
     runPixelTransition(() => {
       loadingAttemptRef.current += 1;
       navigationLockedRef.current = false;
+      setWifeTaskCompleteIllustrationActive(false);
       window.history.pushState(null, "", "/");
       setLoadingTarget(null);
       setLoadingPhase("loading");
@@ -1758,6 +2312,23 @@ export default function App() {
       onAcknowledge={handleAcknowledgeDecree}
     />
   );
+  const monthlyAllowanceModal =
+    monthlyAllowanceModalMode && currentMonthlyAllowance ? (
+      <MonthlyAllowanceModal
+        mode={monthlyAllowanceModalMode}
+        record={currentMonthlyAllowance}
+        onPrimary={handleMonthlyAllowancePrimary}
+        onSecondary={handleMonthlyAllowanceSecondary}
+        onTertiary={handleMonthlyAllowanceTertiary}
+        onDismiss={
+          monthlyAllowanceModalMode === "wife-pending" ||
+          monthlyAllowanceModalMode === "wife-paused" ||
+          monthlyAllowanceModalMode === "missing-config"
+            ? dismissMonthlyAllowanceModal
+            : undefined
+        }
+      />
+    ) : null;
   const cinematicOverlays = (
     <>
       {roleUpgradeCinematic ? (
@@ -1817,6 +2388,8 @@ export default function App() {
           tasks={tasks}
           logs={logs}
           walletLedger={walletLedger}
+          activeAnomalies={activeAnomalies}
+          taskCompleteIllustrationActive={wifeTaskCompleteIllustrationActive}
           punishment={punishment}
           benefits={sortedBenefits}
           roles={roles}
@@ -1826,6 +2399,11 @@ export default function App() {
           onApproveBenefit={handleApproveBenefit}
           onRejectBenefit={handleRejectBenefit}
           onAdjustExperience={handleAdjustExperience}
+          onAdjustWallet={handleAdjustWallet}
+          monthlyAllowanceBaseAmount={
+            nextAllowanceBaseSalary + nextAllowanceTaskStats.taskBonus
+          }
+          monthlyAllowanceAdjustment={nextAllowanceAdjustment}
           onSetLevel={(level) =>
             handleSetLevel(
               level,
@@ -1849,6 +2427,7 @@ export default function App() {
           confirmLabel="下旨"
           onClose={() => setStory(null)}
         />
+        {monthlyAllowanceModal}
         <SlaveRulingModal
           open={showSlaveRuling}
           onRestore={handleRestoreNormal}
@@ -1933,6 +2512,7 @@ export default function App() {
           story={activeDecree ? null : story}
           onClose={() => setStory(null)}
         />
+        {monthlyAllowanceModal}
         {decreeModal}
         {loadingOverlay}
         {pixelTransition}
@@ -1975,8 +2555,11 @@ export default function App() {
           canNext={previewLevel < roles.length - 1}
           roleCount={roles.length}
           wallet={progress.wallet}
+          nextAllowanceAmount={nextAllowanceTotal}
+          nextAllowanceMonth={nextAllowanceMonth}
           onPreviewPrev={handlePreviewPrev}
           onPreviewNext={handlePreviewNext}
+          onOpenAllowanceDetail={handleOpenNextAllowanceDetail}
           onReturnToLogin={handleReturnToLogin}
           onSelectView={handleSelectView}
           chatUnreadCount={husbandChatUnreadCount}
@@ -1997,6 +2580,7 @@ export default function App() {
         story={activeDecree ? null : story}
         onClose={() => setStory(null)}
       />
+      {monthlyAllowanceModal}
       {decreeModal}
       {loadingOverlay}
       {chatOverlay}

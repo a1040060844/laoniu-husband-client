@@ -583,16 +583,18 @@ export function LoginPage({ isEntering = false, onEnterRole }: LoginPageProps) {
     if (!stage) return;
 
     const updateLovePlaquePosition = () => {
-      const scale = Math.max(
+      const scale = Math.min(
         stage.clientWidth / LOGIN_BG_WIDTH,
         stage.clientHeight / LOGIN_BG_HEIGHT,
       );
       const renderedWidth = LOGIN_BG_WIDTH * scale;
-      const horizontalCrop = (renderedWidth - stage.clientWidth) / 2;
+      const renderedHeight = LOGIN_BG_HEIGHT * scale;
+      const horizontalOffset = (stage.clientWidth - renderedWidth) / 2;
+      const verticalOffset = (stage.clientHeight - renderedHeight) / 2;
 
       setLovePlaquePosition({
-        x: TREE_PLAQUE_CENTER.x * scale - horizontalCrop,
-        y: TREE_PLAQUE_CENTER.y * scale,
+        x: horizontalOffset + TREE_PLAQUE_CENTER.x * scale,
+        y: verticalOffset + TREE_PLAQUE_CENTER.y * scale,
       });
     };
 
@@ -949,7 +951,7 @@ export function LoginPage({ isEntering = false, onEnterRole }: LoginPageProps) {
             lovePlaquePosition
               ? {
                   left: `${lovePlaquePosition.x}px`,
-                  top: `${lovePlaquePosition.y - 2}px`,
+                  top: `${lovePlaquePosition.y}px`,
                 }
               : { visibility: "hidden" }
           }

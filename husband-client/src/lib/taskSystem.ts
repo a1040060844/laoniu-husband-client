@@ -13,6 +13,8 @@ import type {
   EventLogType,
   Benefit,
   BenefitRequest,
+  MonthlyAllowanceRecord,
+  MonthlyAllowanceStatus,
   Punishment,
   PunishmentStatus,
   Task,
@@ -36,6 +38,7 @@ export interface TaskSystemState {
   benefits: Benefit[];
   walletLedger: WalletLedgerEntry[];
   decrees: DecreeEvent[];
+  monthlyAllowances: MonthlyAllowanceRecord[];
 }
 
 export const PROGRESS_STORAGE_KEY = "laoniu-husband-progress-v1";
@@ -45,6 +48,8 @@ export const PUNISHMENT_STORAGE_KEY = "laoniu-husband-punishment-v1";
 export const BENEFITS_STORAGE_KEY = "laoniu-husband-benefits-v1";
 export const WALLET_LEDGER_STORAGE_KEY = "laoniu-husband-wallet-ledger-v1";
 export const DECREES_STORAGE_KEY = "laoniu-husband-decrees-v1";
+export const MONTHLY_ALLOWANCES_STORAGE_KEY =
+  "laoniu-husband-monthly-allowances-v1";
 export const DEFAULT_PUNISHMENT_DURATION_DAYS = 7;
 export const DEFAULT_REQUIRED_RECOVERY_EXP = 100;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -63,8 +68,21 @@ const decreeTypes = new Set<DecreeType>([
   "task_created",
   "task_approved",
   "task_rejected",
+  "wallet_ledger",
   "benefit_approved",
   "benefit_rejected",
+]);
+
+const monthlyAllowanceStatuses = new Set<MonthlyAllowanceStatus>([
+  "PENDING_WIFE_ACTION",
+  "PAYING",
+  "WAITING_WIFE_CONFIRM",
+  "PAID_CONFIRMED_BY_WIFE",
+  "RECEIVED_BY_HUSBAND",
+  "HUSBAND_REPORTED_NOT_RECEIVED",
+  "RETRY_PAYING",
+  "REBUKED_AS_BLIND",
+  "CANCELLED_BY_WIFE",
 ]);
 
 export const initialPunishment: Punishment = {
@@ -100,6 +118,7 @@ const statusMap: Record<string, TaskStatus> = {
 };
 
 const eventTypeMap: Record<string, EventLogType> = {
+  anomaly: "anomaly",
   benefit_approved: "benefit_approved",
   benefit_requested: "benefit_requested",
   level_changed: "level_changed",
@@ -385,6 +404,18 @@ function normalizeEventLog(raw: unknown): EventLog | null {
     fromStatus:
       typeof value.fromStatus === "string" ? value.fromStatus : undefined,
     toStatus: typeof value.toStatus === "string" ? value.toStatus : undefined,
+    anomalyKey:
+      typeof value.anomalyKey === "string" ? value.anomalyKey : undefined,
+    anomalyCategory:
+      typeof value.anomalyCategory === "string"
+        ? value.anomalyCategory
+        : undefined,
+    anomalySeverity:
+      typeof value.anomalySeverity === "number"
+        ? value.anomalySeverity
+        : undefined,
+    resolvedAt:
+      typeof value.resolvedAt === "string" ? value.resolvedAt : undefined,
   };
 }
 
@@ -599,6 +630,73 @@ export function mergeDecrees(
   );
 }
 
+function normalizeMonthlyAllowanceRecord(
+  raw: unknown,
+): MonthlyAllowanceRecord | null {
+  if (!raw || typeof raw !== "object") return null;
+  const value = raw as Record<string, unknown>;
+  if (
+    typeof value.id !== "string" ||
+    typeof value.month !== "string" ||
+    typeof value.status !== "string" ||
+    !monthlyAllowanceStatuses.has(value.status as MonthlyAllowanceStatus)
+  ) {
+    return null;
+  }
+
+  const baseSalary = safeNonNegativeInt(value.baseSalary);
+  const taskBonus = safeNonNegativeInt(value.taskBonus);
+  const wifeAdjustmentAmount = safeSignedInt(value.wifeAdjustmentAmount);
+  const totalAmount = safeNonNegativeInt(
+    value.totalAmount,
+    Math.max(0, baseSalary + taskBonus + wifeAdjustmentAmount),
+  );
+
+  return {
+    id: value.id,
+    month: value.month,
+    settlementMonth:
+      typeof value.settlementMonth === "string"
+        ? value.settlementMonth
+        : value.month,
+    status: value.status as MonthlyAllowanceStatus,
+    roleLevel: safeNonNegativeInt(value.roleLevel),
+    roleTitle:
+      typeof value.roleTitle === "string" ? value.roleTitle : "未知职务",
+    baseSalary,
+    completedTaskCount: safeNonNegativeInt(value.completedTaskCount),
+    taskBonus,
+    wifeAdjustmentAmount,
+    totalAmount,
+    wifeConfirmedAt:
+      typeof value.wifeConfirmedAt === "string" ? value.wifeConfirmedAt : undefined,
+    husbandReceivedAt:
+      typeof value.husbandReceivedAt === "string"
+        ? value.husbandReceivedAt
+        : undefined,
+    husbandReportedAt:
+      typeof value.husbandReportedAt === "string"
+        ? value.husbandReportedAt
+        : undefined,
+    cancelledAt:
+      typeof value.cancelledAt === "string" ? value.cancelledAt : undefined,
+    rebukedAt:
+      typeof value.rebukedAt === "string" ? value.rebukedAt : undefined,
+    retryCount: safeNonNegativeInt(value.retryCount),
+    creditedAt:
+      typeof value.creditedAt === "string" ? value.creditedAt : undefined,
+  };
+}
+
+export function hydrateMonthlyAllowances(
+  raw: unknown,
+): MonthlyAllowanceRecord[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map(normalizeMonthlyAllowanceRecord)
+    .filter((record): record is MonthlyAllowanceRecord => Boolean(record));
+}
+
 function safePositiveInt(value: unknown, fallback: number) {
   const number = Number(value);
   if (!Number.isFinite(number)) return fallback;
@@ -609,6 +707,12 @@ function safeNonNegativeInt(value: unknown, fallback = 0) {
   const number = Number(value);
   if (!Number.isFinite(number)) return fallback;
   return Math.max(0, Math.trunc(number));
+}
+
+function safeSignedInt(value: unknown, fallback = 0) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.trunc(number);
 }
 
 function safeOptionalNonNegativeInt(value: unknown) {
@@ -732,6 +836,9 @@ function stateFromUnknown(raw: unknown): TaskSystemState {
       benefits: hydrateBenefits(readJson(BENEFITS_STORAGE_KEY)),
       walletLedger: hydrateWalletLedger(readJson(WALLET_LEDGER_STORAGE_KEY)),
       decrees: hydrateDecrees(readJson(DECREES_STORAGE_KEY)),
+      monthlyAllowances: hydrateMonthlyAllowances(
+        readJson(MONTHLY_ALLOWANCES_STORAGE_KEY),
+      ),
     };
   }
 
@@ -749,6 +856,7 @@ function stateFromUnknown(raw: unknown): TaskSystemState {
     benefits,
     walletLedger,
     decrees,
+    monthlyAllowances,
     totalExp,
     wallet,
     ...extras
@@ -796,6 +904,7 @@ function stateFromUnknown(raw: unknown): TaskSystemState {
     benefits: hydrateBenefits(benefits),
     walletLedger: hydrateWalletLedger(walletLedger),
     decrees: hydrateDecrees(decrees),
+    monthlyAllowances: hydrateMonthlyAllowances(monthlyAllowances),
   };
 }
 
@@ -817,6 +926,10 @@ export function persistLocalTaskSystem(state: TaskSystemState) {
     JSON.stringify(state.walletLedger),
   );
   localStorage.setItem(DECREES_STORAGE_KEY, JSON.stringify(state.decrees));
+  localStorage.setItem(
+    MONTHLY_ALLOWANCES_STORAGE_KEY,
+    JSON.stringify(state.monthlyAllowances),
+  );
 }
 
 function serializeTaskSystem(state: TaskSystemState) {
@@ -831,6 +944,7 @@ function serializeTaskSystem(state: TaskSystemState) {
     benefits: state.benefits,
     walletLedger: state.walletLedger,
     decrees: state.decrees,
+    monthlyAllowances: state.monthlyAllowances,
   };
 }
 

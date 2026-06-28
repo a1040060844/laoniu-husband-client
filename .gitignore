@@ -5,6 +5,7 @@ laoniu-miniprogram/remote-assets/
 app-data/
 *.log
 *.tsbuildinfo
+husband-client/.env.local
 
 .DS_Store
 Thumbs.db

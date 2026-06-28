@@ -1,6 +1,7 @@
 import type { EventLog, WalletLedgerEntry } from "../types/domain";
 
 const eventLogTypeLabel: Record<EventLog["type"], string> = {
+  anomaly: "异常",
   benefit_approved: "权益恩准",
   benefit_rejected: "权益驳回",
   benefit_requested: "权益申请",

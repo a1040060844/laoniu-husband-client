@@ -36,7 +36,7 @@ const iconMap = {
 
 const statusTextFallback: Record<BenefitStatus, string> = {
   available: "可申请",
-  cooldown: "冷却中",
+  cooldown: "未冷却",
   pending: "待审批",
   frozen: "已冻结",
   locked: "未解锁",
