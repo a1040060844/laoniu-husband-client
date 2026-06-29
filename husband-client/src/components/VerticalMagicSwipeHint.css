@@ -264,10 +264,14 @@
   transform: translateY(2px) scale(1.018);
 }
 
+.vertical-magic-hint.role-benefit-magic-hint {
+  top: 60px;
+}
+
 .vertical-magic-hint.wife-growth-magic-hint {
   position: fixed;
-  top: calc(env(safe-area-inset-top, 0px) - 52px);
-  right: calc(env(safe-area-inset-right, 0px) + 6px);
+  top: 48px;
+  right: calc(env(safe-area-inset-right, 0px) + 4px);
   z-index: 50;
   width: 54px;
 }
@@ -305,7 +309,7 @@
 
 @media (max-width: 390px) {
   .vertical-magic-hint.wife-growth-magic-hint {
-    right: calc(env(safe-area-inset-right, 0px) + 6px);
+    right: calc(env(safe-area-inset-right, 0px) + 4px);
   }
 }
 

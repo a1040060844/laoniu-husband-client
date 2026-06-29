@@ -8,6 +8,7 @@ import {
   ClipboardCheck,
   ClipboardList,
   Crown,
+  Gift,
   FilePenLine,
   Gavel,
   ScrollText,
@@ -72,6 +73,7 @@ import type {
   WalletLedgerEntry,
 } from "../types/domain";
 import { ChatMessageButton } from "./ChatMessagePanel";
+import { MusicToggleButton, NotificationButton } from "./NotificationCenter";
 import { OrnateSwipeHint } from "./OrnateSwipeHint";
 import { SwipeBackHint } from "./SwipeBackHint";
 import { VerticalMagicSwipeHint } from "./VerticalMagicSwipeHint";
@@ -92,6 +94,16 @@ type WifeSubPage = "tasks" | "review" | "benefits" | "records";
 type RewardFormType = TaskRewardType | "experience_allowance";
 type GrowthFeedback = "exp-up" | "exp-down" | "level-up" | "level-down" | "punish";
 
+export interface WifeIllustrationTransitionEvent {
+  id: string;
+  fromHomePath: string;
+  toHomePath: string;
+}
+
+interface ActiveWifeIllustrationTransition extends WifeIllustrationTransitionEvent {
+  waitForMainPage: boolean;
+}
+
 interface WifeDashboardProps {
   role: Role;
   progress: GameProgress;
@@ -110,6 +122,7 @@ interface WifeDashboardProps {
   onRejectBenefit: (benefit: Benefit, reason?: string) => void;
   onAdjustExperience: (amount: number) => void;
   onAdjustWallet: (amount: number) => void;
+  onTipHusband: () => void;
   monthlyAllowanceBaseAmount: number;
   monthlyAllowanceAdjustment: number;
   onSetLevel: (level: number) => void;
@@ -118,7 +131,11 @@ interface WifeDashboardProps {
   onRestoreNormal: () => void;
   onReturnToLogin: () => void;
   chatUnreadCount: number;
+  hasNotificationUnread: boolean;
+  illustrationTransition?: WifeIllustrationTransitionEvent | null;
   onOpenChat: () => void;
+  onOpenNotifications: () => void;
+  onIllustrationTransitionDone?: (id: string) => void;
 }
 
 interface TaskDraft {
@@ -362,6 +379,7 @@ export function WifeDashboard({
   onRejectBenefit,
   onAdjustExperience,
   onAdjustWallet,
+  onTipHusband,
   monthlyAllowanceBaseAmount,
   monthlyAllowanceAdjustment,
   onSetLevel,
@@ -370,7 +388,11 @@ export function WifeDashboard({
   onRestoreNormal,
   onReturnToLogin,
   chatUnreadCount,
+  hasNotificationUnread,
+  illustrationTransition,
   onOpenChat,
+  onOpenNotifications,
+  onIllustrationTransitionDone,
 }: WifeDashboardProps) {
   const wifeLevelIllustration = wifeIllustrationForLevel(progress.level);
   const wifeIllustration = taskCompleteIllustrationActive
@@ -406,13 +428,17 @@ export function WifeDashboard({
   const [targetWalletTotal, setTargetWalletTotal] = useState(
     currentMonthlyAllowanceTotal,
   );
+  const [isBackgroundMusicEnabled, setIsBackgroundMusicEnabled] = useState(false);
   const [armedPunish, setArmedPunish] = useState(false);
   const [growthFeedback, setGrowthFeedback] = useState<GrowthFeedback | null>(null);
+  const [activeIllustrationTransition, setActiveIllustrationTransition] =
+    useState<ActiveWifeIllustrationTransition | null>(null);
   const [reviewEdits, setReviewEdits] = useState<Record<string, ReviewEdit>>({});
   const [benefitRejectReasons, setBenefitRejectReasons] = useState<Record<string, string>>({});
   const touchStart = useRef<TouchPoint | null>(null);
   const wheelLocked = useRef(false);
   const growthFeedbackTimer = useRef<number | null>(null);
+  const lastIllustrationTransitionId = useRef<string | null>(null);
   const previousGrowthState = useRef({
     exp: progress.exp,
     level: role.level,
@@ -818,6 +844,19 @@ export function WifeDashboard({
   }, [armedPunish]);
 
   useEffect(() => {
+    if (!illustrationTransition) return;
+    if (lastIllustrationTransitionId.current === illustrationTransition.id) {
+      return;
+    }
+    lastIllustrationTransitionId.current = illustrationTransition.id;
+    setActiveIllustrationTransition({
+      ...illustrationTransition,
+      waitForMainPage: activePage !== "main",
+    });
+    setWifePage("main");
+  }, [activePage, illustrationTransition]);
+
+  useEffect(() => {
     if (draft.moduleId === "custom") return;
     const target =
       draft.moduleId === "cleaning" && draft.target === "自定义区域"
@@ -996,6 +1035,13 @@ export function WifeDashboard({
       event.preventDefault();
       setWifePage(page);
     };
+  }
+
+  function handleIllustrationTransitionEnd() {
+    if (!activeIllustrationTransition) return;
+    const completedId = activeIllustrationTransition.id;
+    setActiveIllustrationTransition(null);
+    onIllustrationTransitionDone?.(completedId);
   }
 
   function updateDraft<K extends keyof TaskDraft>(key: K, value: TaskDraft[K]) {
@@ -1320,8 +1366,9 @@ export function WifeDashboard({
               <h2>{"\u96F6\u82B1\u94B1\u7BA1\u7406"}</h2>
               <p>{"\u8C03\u6574\u4E0B\u6708\u9886\u53D6\u7684\u96F6\u82B1\u94B1\uFF0C\u6700\u7EC8\u7531\u6BCF\u6708\u8D4F\u8D50\u786E\u8BA4"}</p>
             </div>
-                <button
-                  className="wife-wallet-action"
+            <div className="wife-wallet-actions">
+              <button
+                className="wife-wallet-action"
               type="button"
               onClick={openWalletSheet}
             >
@@ -1333,6 +1380,18 @@ export function WifeDashboard({
                 </em>
                   </span>
                 </button>
+              <button
+                className="wife-wallet-action wife-wallet-action--tip"
+                type="button"
+                onClick={onTipHusband}
+              >
+                <Gift size={28} />
+                <span>
+                  <strong>打赏想</strong>
+                  <em>跳转支付宝</em>
+                </span>
+              </button>
+            </div>
           </AnimatedContent>
 
           <AnimatedContent
@@ -1417,6 +1476,26 @@ export function WifeDashboard({
             src={wifeHomeImage}
             alt=""
           />
+          {activeIllustrationTransition ? (
+            <div
+              className={`wife-illustration-transition${
+                activeIllustrationTransition.waitForMainPage
+                  ? " wife-illustration-transition--after-page-shift"
+                  : ""
+              }`}
+              aria-hidden="true"
+            >
+              <img
+                className="wife-portrait wife-portrait--home wife-illustration-transition__old"
+                src={publicAsset(activeIllustrationTransition.fromHomePath)}
+                alt=""
+              />
+              <span
+                className="wife-illustration-transition__canvas"
+                onAnimationEnd={handleIllustrationTransitionEnd}
+              />
+            </div>
+          ) : null}
           <div className="wife-hero__shade" />
 
           <ClickSpark>
@@ -1432,6 +1511,22 @@ export function WifeDashboard({
               />
             </button>
           </ClickSpark>
+          <div className="wife-login-controls" aria-label="wife quick controls">
+            <NotificationButton
+              className="wife-login-notification-entry"
+              viewer="wife"
+              hasUnread={hasNotificationUnread}
+              compact
+              onClick={onOpenNotifications}
+            />
+            <MusicToggleButton
+              className="wife-login-music-entry"
+              enabled={isBackgroundMusicEnabled}
+              onToggle={() =>
+                setIsBackgroundMusicEnabled((current) => !current)
+              }
+            />
+          </div>
 
           <AnimatedContent as="header" className="wife-title" duration={360}>
             <p>老妞端</p>

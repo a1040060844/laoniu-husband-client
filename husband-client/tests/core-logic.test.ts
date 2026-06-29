@@ -22,6 +22,7 @@ import { calculateActiveAnomalies } from "../src/lib/anomalyRules.ts";
 import {
   aggregatePendingExperienceDecrees,
   decreeAcknowledgeIds,
+  pendingWifeRoleUpgradeDecrees,
 } from "../src/lib/decreeQueue.ts";
 import {
   createMonthlyAllowanceRecord,
@@ -29,7 +30,20 @@ import {
   roleAtEndOfMonth,
   updateMonthlyAllowanceStatus,
 } from "../src/lib/monthlyAllowance.ts";
-import type { DecreeEvent, Role, Task, TaskTimeConfig } from "../src/types/domain.ts";
+import {
+  buildNotificationQueue,
+  createNotification,
+  markNotificationSkipped,
+  markNotificationViewed,
+} from "../src/lib/notifications.ts";
+import { wifeHomeIllustrationTransitionForLevelChange } from "../src/data/wifeIllustrations.ts";
+import type {
+  DecreeEvent,
+  NotificationEvent,
+  Role,
+  Task,
+  TaskTimeConfig,
+} from "../src/types/domain.ts";
 
 const roles: Role[] = Array.from({ length: 12 }, (_, level) => ({
   level,
@@ -145,6 +159,204 @@ test("pending wife experience changes are merged into one husband popup", () => 
   assert.equal(pending[1].type, "experience_granted");
   assert.equal(pending[1].payload.amount, 15);
   assert.deepEqual(decreeAcknowledgeIds(pending[1]), ["exp-1", "exp-2", "penalty"]);
+});
+
+test("wife-target decrees do not enter the husband popup queue", () => {
+  const decrees = [
+    decree({
+      id: "wife-upgrade",
+      type: "level_changed",
+      target: "wife",
+      tone: "upgrade",
+      payload: { fromLevel: 1, toLevel: 2 },
+    }),
+    decree({
+      id: "husband-exp",
+      type: "experience_granted",
+      tone: "upgrade",
+      payload: { amount: 8 },
+    }),
+  ];
+  const husbandPending = aggregatePendingExperienceDecrees(
+    decrees.filter((item) => item.target === "husband"),
+  );
+
+  assert.equal(husbandPending.length, 1);
+  assert.equal(husbandPending[0].id, "husband-exp");
+});
+
+test("wife role upgrade queue includes only unacknowledged upgrades", () => {
+  const pending = pendingWifeRoleUpgradeDecrees([
+    decree({
+      id: "wife-up",
+      type: "level_changed",
+      target: "wife",
+      tone: "upgrade",
+      createdAt: "2026-06-26T00:02:00.000Z",
+      payload: { fromLevel: 1, toLevel: 2 },
+    }),
+    decree({
+      id: "wife-down",
+      type: "level_changed",
+      target: "wife",
+      tone: "down",
+      createdAt: "2026-06-26T00:01:00.000Z",
+      payload: { fromLevel: 2, toLevel: 1 },
+    }),
+    decree({
+      id: "wife-acknowledged",
+      type: "level_changed",
+      target: "wife",
+      tone: "upgrade",
+      acknowledgedAt: "2026-06-26T00:03:00.000Z",
+      payload: { fromLevel: 2, toLevel: 3 },
+    }),
+    decree({
+      id: "husband-up",
+      type: "level_changed",
+      tone: "upgrade",
+      payload: { fromLevel: 1, toLevel: 2 },
+    }),
+  ]);
+
+  assert.deepEqual(
+    pending.map((item) => item.id),
+    ["wife-up"],
+  );
+});
+
+test("wife home illustration transition only appears across illustration ranges", () => {
+  assert.deepEqual(wifeHomeIllustrationTransitionForLevelChange(4, 5), {
+    fromHomePath: "/assets/wife/wife-home-level-03-04.png",
+    toHomePath: "/assets/wife/wife-home-level-05-06.png",
+  });
+
+  assert.equal(wifeHomeIllustrationTransitionForLevelChange(3, 4), null);
+  assert.equal(wifeHomeIllustrationTransitionForLevelChange(5, 4), null);
+  assert.equal(wifeHomeIllustrationTransitionForLevelChange(2, 3), null);
+});
+
+test("notification queue orders unread notices by creation time", () => {
+  const notifications: NotificationEvent[] = [
+    createNotification({
+      target: "husband",
+      source: "story",
+      sourceId: "late",
+      title: "Late",
+      text: "Late",
+      createdAt: "2026-06-26T00:02:00.000Z",
+    }),
+    createNotification({
+      target: "husband",
+      source: "story",
+      sourceId: "early",
+      title: "Early",
+      text: "Early",
+      createdAt: "2026-06-26T00:01:00.000Z",
+    }),
+  ];
+
+  const queue = buildNotificationQueue({
+    decrees: [],
+    notifications,
+    target: "husband",
+  });
+
+  assert.deepEqual(
+    queue.map((item) => item.title),
+    ["Early", "Late"],
+  );
+  assert.equal(queue[0].remainingCount, 1);
+});
+
+test("skipping a notification keeps it in the unread queue", () => {
+  const [notification] = [
+    createNotification({
+      target: "wife",
+      source: "story",
+      sourceId: "skipped",
+      title: "Skipped",
+      text: "Skipped",
+    }),
+  ];
+  const skipped = markNotificationSkipped([notification], notification.id);
+
+  const queue = buildNotificationQueue({
+    decrees: [],
+    notifications: skipped,
+    target: "wife",
+  });
+
+  assert.equal(queue.length, 1);
+  assert.equal(queue[0].title, "Skipped");
+});
+
+test("viewing a notification removes it from the unread queue", () => {
+  const notification = createNotification({
+    target: "husband",
+    source: "monthly_allowance",
+    sourceId: "paid",
+    title: "Paid",
+    text: "Paid",
+  });
+  const viewed = markNotificationViewed([notification], notification.id);
+
+  const queue = buildNotificationQueue({
+    decrees: [],
+    notifications: viewed,
+    target: "husband",
+  });
+
+  assert.equal(queue.length, 0);
+});
+
+test("acknowledged decrees do not appear in the notification queue", () => {
+  const queue = buildNotificationQueue({
+    decrees: [
+      decree({
+        id: "ack",
+        type: "task_created",
+        acknowledgedAt: "2026-06-26T00:02:00.000Z",
+      }),
+    ],
+    notifications: [],
+    target: "husband",
+  });
+
+  assert.equal(queue.length, 0);
+});
+
+test("notification queue only includes the selected target side", () => {
+  const notifications = [
+    createNotification({
+      target: "husband",
+      source: "story",
+      sourceId: "husband-only",
+      title: "Husband",
+      text: "Husband",
+    }),
+    createNotification({
+      target: "wife",
+      source: "story",
+      sourceId: "wife-only",
+      title: "Wife",
+      text: "Wife",
+    }),
+  ];
+
+  const husbandQueue = buildNotificationQueue({
+    decrees: [],
+    notifications,
+    target: "husband",
+  });
+  const wifeQueue = buildNotificationQueue({
+    decrees: [],
+    notifications,
+    target: "wife",
+  });
+
+  assert.deepEqual(husbandQueue.map((item) => item.title), ["Husband"]);
+  assert.deepEqual(wifeQueue.map((item) => item.title), ["Wife"]);
 });
 
 test("experience resets to zero when a grant upgrades the role", () => {

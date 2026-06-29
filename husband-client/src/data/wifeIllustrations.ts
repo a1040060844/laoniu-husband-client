@@ -5,6 +5,11 @@ export interface WifeIllustrationSet {
   todayPath: string;
 }
 
+export interface WifeHomeIllustrationTransition {
+  fromHomePath: string;
+  toHomePath: string;
+}
+
 interface WifeLevelIllustration extends WifeIllustrationSet {
   maxLevel: number;
   minLevel: number;
@@ -63,4 +68,17 @@ export function wifeIllustrationForLevel(level: number) {
     (illustration) =>
       level >= illustration.minLevel && level <= illustration.maxLevel,
   );
+}
+
+export function wifeHomeIllustrationTransitionForLevelChange(
+  fromLevel: number,
+  toLevel: number,
+): WifeHomeIllustrationTransition | null {
+  if (toLevel <= fromLevel) return null;
+
+  const fromHomePath = wifeIllustrationForLevel(fromLevel)?.homePath;
+  const toHomePath = wifeIllustrationForLevel(toLevel)?.homePath;
+  if (!fromHomePath || !toHomePath || fromHomePath === toHomePath) return null;
+
+  return { fromHomePath, toHomePath };
 }

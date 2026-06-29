@@ -75,3 +75,24 @@ export function decreeAcknowledgeIds(decree: DecreeEvent) {
   }
   return [decree.id];
 }
+
+export function pendingWifeRoleUpgradeDecrees(decrees: DecreeEvent[]) {
+  return decrees
+    .filter((decree) => {
+      if (
+        decree.target !== "wife" ||
+        decree.type !== "level_changed" ||
+        decree.acknowledgedAt
+      ) {
+        return false;
+      }
+      const fromLevel = Number(decree.payload.fromLevel);
+      const toLevel = Number(decree.payload.toLevel);
+      return (
+        Number.isFinite(fromLevel) &&
+        Number.isFinite(toLevel) &&
+        toLevel > fromLevel
+      );
+    })
+    .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
+}

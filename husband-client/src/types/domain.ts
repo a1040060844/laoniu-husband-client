@@ -2,12 +2,30 @@ export type ViewKey = "role" | "benefits" | "tasks";
 
 export type ChatSender = "husband" | "wife";
 
+export type NotificationTarget = ChatSender;
+export type NotificationSource = "decree" | "story" | "monthly_allowance";
+export type NotificationTone = "upgrade" | "down" | "punish" | "normal";
+
 export interface ChatMessage {
   id: string;
   sender: ChatSender;
   text: string;
   createdAt: string;
   readBy: ChatSender[];
+}
+
+export interface NotificationEvent {
+  id: string;
+  target: NotificationTarget;
+  source: NotificationSource;
+  sourceId: string;
+  title: string;
+  text: string;
+  tone: NotificationTone;
+  createdAt: string;
+  viewedAt?: string;
+  skippedAt?: string;
+  payload?: Record<string, unknown>;
 }
 
 export type DecreeType =
@@ -61,9 +79,9 @@ export interface DecreeEvent {
   type: DecreeType;
   title: string;
   text: string;
-  tone: "upgrade" | "down" | "punish" | "normal";
+  tone: NotificationTone;
   createdAt: string;
-  target: "husband";
+  target: "husband" | "wife";
   readAt?: string;
   acknowledgedAt?: string;
   sourceLogId?: string;
@@ -290,5 +308,6 @@ export interface EventLog {
 export interface StoryEvent {
   title: string;
   text: string;
-  tone?: "upgrade" | "down" | "punish" | "normal";
+  tone?: NotificationTone;
+  notificationId?: string;
 }

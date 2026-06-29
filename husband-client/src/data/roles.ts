@@ -11,6 +11,7 @@ const roleImage = (level: number) =>
       9: "/assets/roles/role-09-secretary.png",
     }[level] ?? `/assets/roles/role-${String(level).padStart(2, "0")}.png`,
   );
+
 const benefitImage = (level: number) =>
   publicAsset(
     {
@@ -36,12 +37,12 @@ export const roles: Role[] = [
   createRole(
     0,
     "流落街头",
-    "一个惹恼了大人物被逐出家门的小可怜，只能靠微薄救济勉强维持生计，随时面临被遗忘的风险。",
+    "一位被逐出家门的可怜人，只能靠微薄救济勉强维持生计，随时面临被遗忘的风险。",
   ),
   createRole(
     1,
     "落魄女仆",
-    "一个流落街头、身无分文，被老妞大人好心收留的女仆，连规矩都还没学会。",
+    "刚被老妞大人收留的新人，规矩还没有学会，做事也常常手忙脚乱。",
   ),
   createRole(
     2,
@@ -56,7 +57,7 @@ export const roles: Role[] = [
   createRole(
     4,
     "见习侍从",
-    "已能完成基础差事的小跟班，虽然不出彩，但总算不再频繁犯错。",
+    "已经能完成基础差事的小跟班，虽然还不出彩，但总算不再频繁犯错。",
   ),
   createRole(
     5,
@@ -71,7 +72,7 @@ export const roles: Role[] = [
   createRole(
     7,
     "管事助理",
-    "能独立处理小事务的执行者，已经可以分担部分压力，但仍需指示。",
+    "能够独立处理小事务的执行者，已经可以分担部分压力，但仍需要指示。",
   ),
   createRole(
     8,
@@ -91,6 +92,6 @@ export const roles: Role[] = [
   createRole(
     11,
     "大内总管",
-    "一人之下的最高掌权者，深受信任，既能掌控全局，也拥有一定的反向话语权。",
+    "一人之下的最高掌权者，深受信任，既能掌控全局，也拥有一定的话语权。",
   ),
 ];

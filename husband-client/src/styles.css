@@ -536,6 +536,16 @@ button {
   user-select: none;
 }
 
+.role-login-controls {
+  position: absolute;
+  top: calc(50% + 34px);
+  left: -8px;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .hero-title i {
   display: block;
   width: 108px;
@@ -1061,13 +1071,129 @@ button {
   line-height: 1;
 }
 
+.notification-button {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  min-width: 76px;
+  min-height: 76px;
+  padding: 0;
+  border: 1px solid rgba(231, 199, 141, 0.26);
+  border-radius: 999px;
+  color: rgba(246, 221, 174, 0.9);
+  background:
+    radial-gradient(circle at 50% 38%, rgba(231, 199, 141, 0.2), transparent 48%),
+    linear-gradient(180deg, rgba(26, 20, 14, 0.78), rgba(7, 6, 5, 0.88));
+  box-shadow:
+    inset 0 0 16px rgba(231, 199, 141, 0.1),
+    0 12px 26px rgba(0, 0, 0, 0.42);
+  isolation: isolate;
+}
+
+.notification-button > span {
+  position: absolute;
+  bottom: 10px;
+  color: rgba(231, 199, 141, 0.74);
+  font-family: var(--serif);
+  font-size: 11px;
+  letter-spacing: 2px;
+}
+
+.notification-button__icon {
+  margin-top: -8px;
+  filter:
+    drop-shadow(0 5px 9px rgba(0, 0, 0, 0.48))
+    drop-shadow(0 0 8px rgba(231, 199, 141, 0.22));
+}
+
+.notification-button b {
+  position: absolute;
+  top: 5px;
+  right: 7px;
+  z-index: 2;
+  width: 13px;
+  height: 13px;
+  border: 1px solid rgba(255, 219, 177, 0.78);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 34% 26%, #ffb199, transparent 31%),
+    linear-gradient(180deg, #b52920, #620d0a);
+  box-shadow:
+    0 0 11px rgba(215, 54, 45, 0.66),
+    0 5px 12px rgba(0, 0, 0, 0.48);
+}
+
+.notification-button--compact {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  min-height: 42px;
+  border-color: rgba(231, 199, 141, 0.42);
+  background:
+    radial-gradient(circle at 50% 34%, rgba(255, 233, 178, 0.23), transparent 48%),
+    linear-gradient(180deg, rgba(30, 22, 14, 0.8), rgba(8, 6, 4, 0.9));
+  box-shadow:
+    inset 0 0 13px rgba(255, 229, 174, 0.12),
+    0 0 12px rgba(214, 176, 108, 0.2),
+    0 8px 18px rgba(0, 0, 0, 0.46);
+}
+
+.notification-button--compact > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.notification-button--compact .notification-button__icon {
+  width: 23px;
+  height: 23px;
+  margin-top: 0;
+}
+
+.notification-button--compact b {
+  top: 1px;
+  right: 2px;
+  width: 9px;
+  height: 9px;
+}
+
+.music-toggle-button {
+  color: rgba(178, 152, 105, 0.78);
+  opacity: 0.82;
+}
+
+.music-toggle-button.is-active {
+  color: #fff0c8;
+  opacity: 1;
+  border-color: rgba(255, 225, 163, 0.62);
+  box-shadow:
+    inset 0 0 14px rgba(255, 229, 174, 0.16),
+    0 0 16px rgba(214, 176, 108, 0.32),
+    0 8px 18px rgba(0, 0, 0, 0.46);
+}
+
 .role-chat-entry {
   position: absolute;
-  top: max(108px, calc(env(safe-area-inset-top) + 96px));
+  top: max(196px, calc(env(safe-area-inset-top) + 184px));
   left: 18px;
   z-index: 3;
   width: 84px;
   min-height: 84px;
+}
+
+.role-notification-entry {
+  position: absolute;
+  top: max(204px, calc(env(safe-area-inset-top) + 192px));
+  left: 22px;
+  z-index: 3;
 }
 
 .role-chat-entry span:not(.chat-message-button__ornament) {
@@ -2170,6 +2296,7 @@ button {
 }
 
 .story-modal {
+  position: relative;
   align-self: center;
   padding: 28px 24px 22px;
   text-align: center;
@@ -3229,6 +3356,117 @@ button {
   }
 }
 
+@keyframes wife-illustration-old-release {
+  0%,
+  37.4% {
+    opacity: 1;
+  }
+
+  37.5%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes wife-illustration-canvas-reveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.98);
+    filter: blur(0);
+  }
+
+  37.5% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+
+  62.5% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.2);
+    filter: blur(18px);
+  }
+}
+
+@keyframes wife-illustration-canvas-glint {
+  0%,
+  28% {
+    opacity: 0;
+    transform: translateX(-18%);
+  }
+
+  37.5% {
+    opacity: 0.76;
+    transform: translateX(0);
+  }
+
+  62.5%,
+  100% {
+    opacity: 0;
+    transform: translateX(18%);
+  }
+}
+
+@keyframes wife-illustration-canvas-edge {
+  0%,
+  37.5% {
+    opacity: 0;
+    transform: scale(0.74);
+  }
+
+  62.5% {
+    opacity: 0.72;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.36);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wife-illustration-transition__old {
+    animation: wife-illustration-old-release 680ms ease-out
+      var(--wife-illustration-transition-delay) both;
+  }
+
+  .wife-illustration-transition__canvas,
+  .wife-illustration-transition__canvas::before,
+  .wife-illustration-transition__canvas::after {
+    transform: none;
+    filter: none;
+  }
+
+  .wife-illustration-transition__canvas {
+    animation: wife-illustration-canvas-reduced 680ms ease-out
+      var(--wife-illustration-transition-delay) both;
+  }
+
+  .wife-illustration-transition__canvas::before,
+  .wife-illustration-transition__canvas::after {
+    animation: none;
+  }
+}
+
+@keyframes wife-illustration-canvas-reduced {
+  0%,
+  100% {
+    opacity: 0;
+  }
+
+  45%,
+  56% {
+    opacity: 1;
+  }
+}
+
 .wife-pager-track {
   position: absolute;
   top: 0;
@@ -3284,6 +3522,71 @@ button {
   transform-origin: center center;
   background: #000;
   filter: saturate(0.96) contrast(1.08) brightness(0.84);
+}
+
+.wife-illustration-transition {
+  --wife-illustration-transition-delay: 0ms;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.wife-illustration-transition--after-page-shift {
+  --wife-illustration-transition-delay: 660ms;
+}
+
+.wife-illustration-transition__old {
+  z-index: 0;
+  opacity: 1;
+  animation: wife-illustration-old-release 4000ms ease-in-out
+    var(--wife-illustration-transition-delay) both;
+}
+
+.wife-illustration-transition__canvas {
+  position: absolute;
+  inset: -8%;
+  z-index: 1;
+  display: block;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(20, 16, 10, 0.92), #000 52%),
+    linear-gradient(135deg, rgba(216, 168, 82, 0.08), transparent 42%),
+    #000;
+  opacity: 0;
+  transform: scale(0.98);
+  transform-origin: 50% 50%;
+  filter: blur(0);
+  box-shadow:
+    inset 0 0 80px rgba(224, 174, 84, 0.12),
+    0 0 32px rgba(0, 0, 0, 0.72);
+  animation: wife-illustration-canvas-reveal 4000ms cubic-bezier(0.2, 0.78, 0.22, 1)
+    var(--wife-illustration-transition-delay) both;
+}
+
+.wife-illustration-transition__canvas::before,
+.wife-illustration-transition__canvas::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.wife-illustration-transition__canvas::before {
+  background:
+    linear-gradient(90deg, transparent, rgba(238, 197, 120, 0.14), transparent),
+    radial-gradient(circle at 50% 50%, rgba(238, 197, 120, 0.18), transparent 28%);
+  animation: wife-illustration-canvas-glint 4000ms ease-out
+    var(--wife-illustration-transition-delay) both;
+}
+
+.wife-illustration-transition__canvas::after {
+  inset: 16%;
+  border: 1px solid rgba(238, 197, 120, 0.18);
+  box-shadow: 0 0 28px rgba(238, 197, 120, 0.12);
+  animation: wife-illustration-canvas-edge 4000ms ease-out
+    var(--wife-illustration-transition-delay) both;
 }
 
 .wife-hero__shade {
@@ -3349,6 +3652,16 @@ button {
   user-select: none;
 }
 
+.wife-login-controls {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 50px);
+  left: calc(env(safe-area-inset-left, 0px) + 8px);
+  z-index: 21;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .wife-title p,
 .wife-panel-title {
   display: flex;
@@ -3392,6 +3705,21 @@ button {
   font-family: var(--serif);
   font-size: 12px;
   letter-spacing: 2px;
+}
+
+.wife-title-controls {
+  position: absolute;
+  top: 27px;
+  left: calc(50% + 99px);
+  z-index: 8;
+  display: grid;
+  gap: 7px;
+  justify-items: center;
+}
+
+.wife-title-notification-entry,
+.wife-title-music-entry {
+  flex: none;
 }
 
 .wife-status-card {
@@ -3559,11 +3887,18 @@ button {
 
 .wife-chat-entry {
   position: absolute;
-  top: calc(env(safe-area-inset-top, 0px) + 70px);
+  top: calc(env(safe-area-inset-top, 0px) + 104px);
   left: calc(env(safe-area-inset-left, 0px) + 18px);
   z-index: 7;
   width: 84px;
   min-height: 84px;
+}
+
+.wife-notification-entry {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 162px);
+  left: calc(env(safe-area-inset-left, 0px) + 22px);
+  z-index: 7;
 }
 
 .wife-chat-entry span:not(.chat-message-button__ornament) {
@@ -4139,6 +4474,12 @@ button {
   font-style: normal;
 }
 
+.wife-wallet-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
 .wife-wallet-action {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -4189,6 +4530,14 @@ button {
 .wife-wallet-action:active {
   filter: brightness(1.09);
   transform: scale(0.985) translateY(1px);
+}
+
+.wife-wallet-action--tip {
+  border-color: rgba(255, 216, 143, 0.5);
+  background:
+    radial-gradient(circle at 22% 16%, rgba(255, 228, 166, 0.16), transparent 42%),
+    linear-gradient(180deg, rgba(231, 199, 141, 0.16), transparent 58%),
+    rgba(5, 4, 3, 0.64);
 }
 
 .wife-punish-card {
@@ -7610,13 +7959,13 @@ button {
   }
 
   .role-chat-entry {
-    top: max(102px, calc(env(safe-area-inset-top) + 90px));
+    top: max(190px, calc(env(safe-area-inset-top) + 178px));
     width: 78px;
     min-height: 78px;
   }
 
   .wife-chat-entry {
-    top: calc(env(safe-area-inset-top, 0px) + 64px);
+    top: calc(env(safe-area-inset-top, 0px) + 98px);
     width: 78px;
     min-height: 78px;
   }

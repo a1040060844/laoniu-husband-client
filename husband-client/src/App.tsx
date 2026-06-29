@@ -16,12 +16,17 @@ import {
   MonthlyAllowanceModal,
   type MonthlyAllowanceModalMode,
 } from "./components/MonthlyAllowanceModal";
+import { NotificationReplayModal } from "./components/NotificationCenter";
 import { RolePage } from "./components/RolePage";
 import { SlavePage } from "./components/SlavePage";
 import { SlaveRulingModal } from "./components/SlaveRulingModal";
 import { StoryModal } from "./components/StoryModal";
 import { TaskPage } from "./components/TaskPage";
-import { WifeDashboard } from "./components/WifeDashboard";
+import { TipAmountModal } from "./components/TipAmountModal";
+import {
+  WifeDashboard,
+  type WifeIllustrationTransitionEvent,
+} from "./components/WifeDashboard";
 import { PixelTransition } from "./components/effects/PixelTransition";
 import {
   RoleUpgradeCinematic,
@@ -36,6 +41,7 @@ import {
   type TaskRewardFlightEvent,
 } from "./components/effects/TaskRewardFlight";
 import { roles } from "./data/roles";
+import { wifeHomeIllustrationTransitionForLevelChange } from "./data/wifeIllustrations";
 import {
   MIN_LEVEL,
   clampLevel,
@@ -74,7 +80,19 @@ import {
 import {
   aggregatePendingExperienceDecrees,
   decreeAcknowledgeIds,
+  pendingWifeRoleUpgradeDecrees,
 } from "./lib/decreeQueue";
+import {
+  buildNotificationQueue,
+  createNotification,
+  hasUnreadNotifications,
+  markNotificationSkipped,
+  markNotificationViewed,
+  mergeNotifications,
+  notificationId,
+  upsertNotification,
+  type NotificationQueueItem,
+} from "./lib/notifications";
 import { calculateActiveAnomalies } from "./lib/anomalyRules";
 import {
   ALIPAY_RECEIVE_URL,
@@ -96,6 +114,7 @@ import type {
   DecreeEvent,
   EventLog,
   MonthlyAllowanceRecord,
+  NotificationEvent,
   StoryEvent,
   Task,
   TaskReward,
@@ -121,6 +140,8 @@ type LoadedTaskSystem = Awaited<ReturnType<typeof loadTaskSystem>>;
 let taskSystemLoadPromise: Promise<LoadedTaskSystem | null> | null = null;
 const MIN_LOADING_DURATION_MS = 3_000;
 const DAILY_LOADING_STORAGE_KEY = "laoniu.daily-loading-delay-date.v1";
+const OPEN_ROUTE_STORAGE_KEY = "laoniu.open-route.v1";
+const WIFE_TIP_PENDING_STORAGE_KEY = "laoniu-wife-tip-pending-v1";
 let dailyLoadingDelayCompletedInMemory = false;
 
 function loadTaskSystemOnce() {
@@ -185,6 +206,78 @@ function markDailyLoadingDelayComplete() {
     window.localStorage.setItem(DAILY_LOADING_STORAGE_KEY, todayStorageKey());
   } catch {
     // The in-memory flag still prevents repeated forced waits this session.
+  }
+}
+
+function rememberOpenRoute(route: Exclude<AppRoute, "login">) {
+  try {
+    window.sessionStorage.setItem(OPEN_ROUTE_STORAGE_KEY, route);
+  } catch {
+    // Session resume is an enhancement; normal loading still works without it.
+  }
+}
+
+function clearOpenRoute() {
+  try {
+    window.sessionStorage.removeItem(OPEN_ROUTE_STORAGE_KEY);
+  } catch {
+    // Nothing to clear when storage is blocked.
+  }
+}
+
+function canResumeOpenRouteWithoutLoading(
+  route: RouteKey,
+  loadingPreview: boolean,
+) {
+  if (route === "login" || loadingPreview || !hasCompletedDailyLoadingDelay()) {
+    return false;
+  }
+  try {
+    return window.sessionStorage.getItem(OPEN_ROUTE_STORAGE_KEY) === route;
+  } catch {
+    return false;
+  }
+}
+
+function createPendingWifeTip() {
+  const pending = {
+    id: `wife-tip-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    startedAt: new Date().toISOString(),
+  };
+  try {
+    window.localStorage.setItem(
+      WIFE_TIP_PENDING_STORAGE_KEY,
+      JSON.stringify(pending),
+    );
+  } catch {
+    // If localStorage is unavailable, the current session can still continue.
+  }
+  return pending;
+}
+
+function readPendingWifeTip() {
+  try {
+    const raw = window.localStorage.getItem(WIFE_TIP_PENDING_STORAGE_KEY);
+    if (!raw) return null;
+    const value = JSON.parse(raw) as { id?: unknown; startedAt?: unknown };
+    if (typeof value.id !== "string") return null;
+    return {
+      id: value.id,
+      startedAt:
+        typeof value.startedAt === "string"
+          ? value.startedAt
+          : new Date().toISOString(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function clearPendingWifeTip() {
+  try {
+    window.localStorage.removeItem(WIFE_TIP_PENDING_STORAGE_KEY);
+  } catch {
+    // Nothing else to clean up when storage is blocked.
   }
 }
 
@@ -368,7 +461,8 @@ export default function App() {
     initialRoute !== "login" && isLoadingPreviewRoute(initialRoute),
   ).current;
   const shouldShowInitialLoading = useRef(
-    initialRoute !== "login",
+    initialRoute !== "login" &&
+      !canResumeOpenRouteWithoutLoading(initialRoute, initialLoadingPreview),
   ).current;
   const [route, setRoute] = useState<RouteKey>(initialRoute);
   const [activePage, setActivePage] = useState<number>(HUSBAND_PAGES.ROLE);
@@ -387,6 +481,9 @@ export default function App() {
     initialState.walletLedger,
   );
   const [decrees, setDecrees] = useState<DecreeEvent[]>(initialState.decrees);
+  const [notifications, setNotifications] = useState<NotificationEvent[]>(
+    initialState.notifications,
+  );
   const [monthlyAllowances, setMonthlyAllowances] = useState<
     MonthlyAllowanceRecord[]
   >(initialState.monthlyAllowances);
@@ -396,6 +493,7 @@ export default function App() {
     useState(false);
   const [monthlyAllowanceModalMode, setMonthlyAllowanceModalMode] =
     useState<MonthlyAllowanceModalMode | null>(null);
+  const [tipAmountModalOpen, setTipAmountModalOpen] = useState(false);
   const [showSlaveRuling, setShowSlaveRuling] = useState(
     initialRoute === "wife" &&
       !shouldShowInitialLoading &&
@@ -422,6 +520,7 @@ export default function App() {
   const loadingPushHistoryRef = useRef(false);
   const pixelTransitionActionRef = useRef<(() => void) | null>(null);
   const decreesRef = useRef(initialState.decrees);
+  const notificationsRef = useRef(initialState.notifications);
   const monthlyAllowancesRef = useRef(initialState.monthlyAllowances);
   const lastRemoteFingerprintRef = useRef<string | null>(null);
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
@@ -430,6 +529,8 @@ export default function App() {
   const [pixelTransitionKey, setPixelTransitionKey] = useState(0);
   const [roleUpgradeCinematic, setRoleUpgradeCinematic] =
     useState<RoleUpgradeCinematicEvent | null>(null);
+  const [wifeIllustrationTransition, setWifeIllustrationTransition] =
+    useState<WifeIllustrationTransitionEvent | null>(null);
   const [taskRewardFlight, setTaskRewardFlight] =
     useState<TaskRewardFlightEvent | null>(null);
   const [slaveStateCinematic, setSlaveStateCinematic] =
@@ -440,6 +541,11 @@ export default function App() {
   const [activeChatViewer, setActiveChatViewer] = useState<ChatSender | null>(
     null,
   );
+  const [activeNotificationViewer, setActiveNotificationViewer] =
+    useState<ChatSender | null>(null);
+  const [decreeAutoPaused, setDecreeAutoPaused] = useState(false);
+  const [skippedMonthlyNotificationIds, setSkippedMonthlyNotificationIds] =
+    useState<Set<string>>(() => new Set());
 
   const runPixelTransition = useCallback((action: () => void) => {
     pixelTransitionActionRef.current = action;
@@ -449,6 +555,7 @@ export default function App() {
   const showRoleUpgradeCinematic = useCallback(
     (fromLevel: number, toLevel: number) => {
       if (toLevel <= fromLevel) return;
+      if (route === "wife") return;
       const fromRole = roles[clampLevel(fromLevel)];
       const toRole = roles[clampLevel(toLevel)];
       setRoleUpgradeCinematic({
@@ -461,7 +568,7 @@ export default function App() {
         toRoleImage: toRole.roleImage,
       });
     },
-    [],
+    [route],
   );
 
   const handlePixelCovered = useCallback(() => {
@@ -536,7 +643,50 @@ export default function App() {
     [decrees],
   );
   const activeDecree =
-    route === "husband" && husbandSyncReady ? pendingDecrees[0] ?? null : null;
+    route === "husband" && husbandSyncReady && !decreeAutoPaused
+      ? pendingDecrees[0] ?? null
+      : null;
+  const activeHusbandUpgradeDecree =
+    activeDecree?.type === "level_changed" &&
+    Number(activeDecree.payload.toLevel) > Number(activeDecree.payload.fromLevel)
+      ? activeDecree
+      : null;
+  const pendingWifeUpgradeDecrees = useMemo(
+    () => pendingWifeRoleUpgradeDecrees(decrees),
+    [decrees],
+  );
+  const activeWifeUpgradeDecree =
+    route === "wife" && taskSystemReady
+      ? pendingWifeUpgradeDecrees[0] ?? null
+      : null;
+  const husbandNotificationQueue = useMemo(
+    () =>
+      buildNotificationQueue({
+        decrees: pendingDecrees,
+        notifications,
+        target: "husband",
+      }),
+    [notifications, pendingDecrees],
+  );
+  const wifeNotificationQueue = useMemo(
+    () =>
+      buildNotificationQueue({
+        decrees,
+        notifications,
+        target: "wife",
+      }),
+    [decrees, notifications],
+  );
+  const activeNotificationQueue =
+    activeNotificationViewer === "wife"
+      ? wifeNotificationQueue
+      : activeNotificationViewer === "husband"
+        ? husbandNotificationQueue
+        : [];
+  const activeNotificationItem = activeNotificationQueue[0] ?? null;
+  const hasHusbandNotificationUnread =
+    hasUnreadNotifications(husbandNotificationQueue);
+  const hasWifeNotificationUnread = hasUnreadNotifications(wifeNotificationQueue);
 
   const applyRemoteState = useCallback((serverState: LoadedTaskSystem) => {
     const mergedDecrees = mergeDecrees(
@@ -547,8 +697,13 @@ export default function App() {
       serverState.monthlyAllowances,
       monthlyAllowancesRef.current,
     );
+    const mergedNotifications = mergeNotifications(
+      serverState.notifications,
+      notificationsRef.current,
+    );
     lastRemoteFingerprintRef.current = taskSystemFingerprint(serverState);
     decreesRef.current = mergedDecrees;
+    notificationsRef.current = mergedNotifications;
     monthlyAllowancesRef.current = mergedMonthlyAllowances;
     setProgress(serverState.progress);
     setTasks(serverState.tasks);
@@ -557,6 +712,7 @@ export default function App() {
     setBenefits(serverState.benefits);
     setWalletLedger(serverState.walletLedger);
     setDecrees(mergedDecrees);
+    setNotifications(mergedNotifications);
     setMonthlyAllowances(mergedMonthlyAllowances);
   }, []);
 
@@ -580,6 +736,7 @@ export default function App() {
       if (pushHistory && window.location.pathname !== nextPath) {
         window.history.pushState(null, "", nextPath);
       }
+      rememberOpenRoute(target);
       setRoute(target);
       setLoadingPercent(100);
       setLoadingPhase("loading");
@@ -758,16 +915,67 @@ export default function App() {
   function appendDecree(
     decree: Omit<DecreeEvent, "id" | "createdAt" | "target"> & {
       createdAt?: string;
+      target?: DecreeEvent["target"];
     },
   ) {
     const nextDecree: DecreeEvent = {
       ...decree,
       id: decreeId(),
       createdAt: decree.createdAt ?? new Date().toISOString(),
-      target: "husband",
+      target: decree.target ?? "husband",
     };
     setDecrees((current) => [...current, nextDecree]);
     return nextDecree;
+  }
+
+  function appendWifeRoleUpgradeDecree({
+    fromLevel,
+    toLevel,
+    createdAt,
+    sourceLogId,
+    reason,
+  }: {
+    fromLevel: number;
+    toLevel: number;
+    createdAt: string;
+    sourceLogId?: string;
+    reason: string;
+  }) {
+    const safeFromLevel = clampLevel(fromLevel);
+    const safeToLevel = clampLevel(toLevel);
+    if (safeToLevel <= safeFromLevel) return;
+
+    const notificationKey =
+      sourceLogId ?? `${safeFromLevel}-${safeToLevel}-${createdAt}`;
+    const nextDecree: DecreeEvent = {
+      id: decreeId(),
+      type: "level_changed",
+      title: "老哥职务变化",
+      text: `老哥已由「${roles[safeFromLevel].title}」晋升为「${roles[safeToLevel].title}」。`,
+      tone: "upgrade",
+      createdAt,
+      target: "wife",
+      sourceLogId,
+      payload: {
+        fromLevel: safeFromLevel,
+        toLevel: safeToLevel,
+        reason,
+        notificationKey,
+      },
+    };
+
+    setDecrees((current) => {
+      const alreadyExists = current.some((decree) => {
+        if (decree.target !== "wife" || decree.type !== "level_changed") {
+          return false;
+        }
+        return (
+          (Boolean(sourceLogId) && decree.sourceLogId === sourceLogId) ||
+          decree.payload.notificationKey === notificationKey
+        );
+      });
+      return alreadyExists ? current : [...current, nextDecree];
+    });
   }
 
   function addLedger(
@@ -799,6 +1007,136 @@ export default function App() {
     });
   }
 
+  function appendNotification(notification: NotificationEvent) {
+    setNotifications((current) => {
+      const existing = current.find((item) => item.id === notification.id);
+      if (
+        existing &&
+        existing.title === notification.title &&
+        existing.text === notification.text &&
+        existing.viewedAt === notification.viewedAt &&
+        existing.skippedAt === notification.skippedAt
+      ) {
+        return current;
+      }
+      return upsertNotification(current, notification);
+    });
+    return notification;
+  }
+
+  function showStory(
+    nextStory: StoryEvent,
+    options: {
+      notify?: boolean;
+      target?: ChatSender;
+      sourceId?: string;
+      createdAt?: string;
+    } = {},
+  ) {
+    if (!options.notify) {
+      setStory(nextStory);
+      return;
+    }
+
+    const target =
+      options.target ?? (route === "wife" ? "wife" : "husband");
+    const sourceId =
+      options.sourceId ??
+      `story-${target}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+    const notification = appendNotification(
+      createNotification({
+        target,
+        source: "story",
+        sourceId,
+        title: nextStory.title,
+        text: nextStory.text,
+        tone: nextStory.tone ?? "normal",
+        createdAt: options.createdAt,
+      }),
+    );
+    setStory({ ...nextStory, notificationId: notification.id });
+  }
+
+  function monthlyAllowanceNotificationSourceId(
+    mode: MonthlyAllowanceModalMode,
+    record: MonthlyAllowanceRecord,
+  ) {
+    return `monthly-${mode}-${record.id}`;
+  }
+
+  function monthlyAllowanceNotification(
+    mode: MonthlyAllowanceModalMode,
+    record: MonthlyAllowanceRecord,
+  ) {
+    const sourceId = monthlyAllowanceNotificationSourceId(mode, record);
+    if (mode === "wife-confirm") {
+      return createNotification({
+        target: "wife",
+        source: "monthly_allowance",
+        sourceId,
+        title: "确认本月赏赐",
+        text: `${record.month} 的零花钱等待老妞大人确认，合计 ¥${record.totalAmount}。`,
+        tone: "upgrade",
+        payload: { mode, recordId: record.id },
+      });
+    }
+    if (mode === "wife-dispute") {
+      return createNotification({
+        target: "wife",
+        source: "monthly_allowance",
+        sourceId,
+        title: "老哥说没收到",
+        text: `${record.month} 的赏赐被老哥标记为未收到，请重新处理或裁定。`,
+        tone: "down",
+        payload: { mode, recordId: record.id },
+      });
+    }
+    if (mode === "husband-paid") {
+      return createNotification({
+        target: "husband",
+        source: "monthly_allowance",
+        sourceId,
+        title: "本月赏赐已发",
+        text: `老妞大人确认发放 ${record.month} 零花钱，合计 ¥${record.totalAmount}。`,
+        tone: "upgrade",
+        payload: { mode, recordId: record.id },
+      });
+    }
+    if (mode === "husband-rebuked") {
+      return createNotification({
+        target: "husband",
+        source: "monthly_allowance",
+        sourceId,
+        title: "不许再闹",
+        text: "老妞大人裁定赏赐已经发出，不许再闹。",
+        tone: "punish",
+        payload: { mode, recordId: record.id },
+      });
+    }
+    if (mode === "husband-cancelled") {
+      return createNotification({
+        target: "husband",
+        source: "monthly_allowance",
+        sourceId,
+        title: "本月赏赐取消",
+        text: "老妞大人裁定本月赏赐取消，暂不发放。",
+        tone: "punish",
+        payload: { mode, recordId: record.id },
+      });
+    }
+    return null;
+  }
+
+  function ensureMonthlyAllowanceNotification(
+    mode: MonthlyAllowanceModalMode,
+    record: MonthlyAllowanceRecord,
+  ) {
+    const notification = monthlyAllowanceNotification(mode, record);
+    if (!notification) return null;
+    appendNotification(notification);
+    return notification;
+  }
+
   function updateMonthlyAllowanceRecord(
     recordId: string,
     updater: (record: MonthlyAllowanceRecord) => MonthlyAllowanceRecord,
@@ -819,6 +1157,66 @@ export default function App() {
       status: retry ? "RETRY_PAYING" : "PAYING",
     }));
     openAlipayReceivePage();
+  }
+
+  function beginWifeTipPayment() {
+    if (!ALIPAY_RECEIVE_URL) {
+      showStory({
+        title: "无法跳转支付宝",
+        text: "尚未配置支付宝收款链接，请在环境变量 VITE_ALIPAY_RECEIVE_URL 中填写后再去打赏。",
+        tone: "down",
+      });
+      return;
+    }
+    createPendingWifeTip();
+    openAlipayReceivePage();
+  }
+
+  function dismissTipAmountModal() {
+    clearPendingWifeTip();
+    setTipAmountModalOpen(false);
+  }
+
+  function confirmWifeTipAmount(amount: number) {
+    const safeAmount = Math.max(1, Math.trunc(amount));
+    const pending = readPendingWifeTip();
+    const createdAt = new Date().toISOString();
+    clearPendingWifeTip();
+    setTipAmountModalOpen(false);
+
+    setProgress((current) => ({
+      ...current,
+      wallet: current.wallet + safeAmount,
+    }));
+    const log = addLedger({
+      id: pending?.id ? `ledger-${pending.id}` : ledgerId("ledger-tip"),
+      type: "allowance",
+      source: "老妞打赏",
+      amount: safeAmount,
+      unit: "CNY",
+      createdAt,
+      note: `老妞大人打赏 ¥${safeAmount}`,
+    });
+    appendDecree({
+      type: "wallet_ledger",
+      title: "老妞打赏",
+      text: `老妞大人刚刚打赏了你 ¥${safeAmount}。`,
+      tone: "upgrade",
+      target: "husband",
+      createdAt,
+      sourceLogId: log.id,
+      payload: {
+        amount: safeAmount,
+        unit: "CNY",
+        source: "wife_tip",
+        pendingTipId: pending?.id,
+      },
+    });
+    showStory({
+      title: "打赏已记录",
+      text: `已记下这次打赏 ¥${safeAmount}，老哥端会收到弹窗。`,
+      tone: "upgrade",
+    });
   }
 
   function confirmMonthlyAllowancePaid(record: MonthlyAllowanceRecord) {
@@ -973,6 +1371,10 @@ export default function App() {
   }, [decrees]);
 
   useEffect(() => {
+    notificationsRef.current = notifications;
+  }, [notifications]);
+
+  useEffect(() => {
     monthlyAllowancesRef.current = monthlyAllowances;
   }, [monthlyAllowances]);
 
@@ -985,6 +1387,7 @@ export default function App() {
       benefits,
       walletLedger,
       decrees,
+      notifications,
       monthlyAllowances,
     };
     persistLocalTaskSystem(state);
@@ -997,6 +1400,10 @@ export default function App() {
           await saveTaskSystem({
             ...state,
             decrees: mergeDecrees(serverState.decrees, state.decrees),
+            notifications: mergeNotifications(
+              serverState.notifications,
+              state.notifications,
+            ),
             monthlyAllowances: mergeMonthlyAllowanceRecords(
               serverState.monthlyAllowances,
               state.monthlyAllowances,
@@ -1012,6 +1419,7 @@ export default function App() {
     enqueueSave,
     logs,
     monthlyAllowances,
+    notifications,
     progress,
     punishment,
     tasks,
@@ -1031,7 +1439,7 @@ export default function App() {
 
   useEffect(() => {
     setDecreeError(undefined);
-  }, [activeDecree?.id]);
+  }, [activeDecree?.id, activeWifeUpgradeDecree?.id]);
 
   useEffect(() => {
     const rewardedAt = new Date().toISOString();
@@ -1072,11 +1480,19 @@ export default function App() {
             current.recoveryExp + recoveryExp,
           ),
         }));
-        setStory({
-          title: "恢复经验累计",
-          text: `卖身奴隶状态下，任务奖励转入恢复进度：+${recoveryExp}。`,
-          tone: "normal",
-        });
+        showStory(
+          {
+            title: "恢复经验累计",
+            text: `卖身奴隶状态下，任务奖励转入恢复进度：+${recoveryExp}。`,
+            tone: "normal",
+          },
+          {
+            notify: true,
+            target: "husband",
+            sourceId: `recovery-${rewardedAt}`,
+            createdAt: rewardedAt,
+          },
+        );
         addLedger({
           type: "punishment",
           source: "恢复经验",
@@ -1094,6 +1510,12 @@ export default function App() {
     setProgress(settled.progress);
     if (settled.progress.level > progress.level) {
       showRoleUpgradeCinematic(progress.level, settled.progress.level);
+      appendWifeRoleUpgradeDecree({
+        fromLevel: progress.level,
+        toLevel: settled.progress.level,
+        createdAt: rewardedAt,
+        reason: "任务奖励触发升级",
+      });
       setBenefits((current) =>
         coolBenefitsForReachedLevels(
           current,
@@ -1161,7 +1583,14 @@ export default function App() {
         ),
       );
     }
-    setStory(settled.stories[settled.stories.length - 1]);
+    if (settled.progress.level <= progress.level) {
+      showStory(settled.stories[settled.stories.length - 1], {
+        notify: true,
+        target: "husband",
+        sourceId: `settled-${rewardedAt}`,
+        createdAt: rewardedAt,
+      });
+    }
   }, [progress, punishment.status, showRoleUpgradeCinematic, tasks]);
 
   useEffect(() => {
@@ -1178,6 +1607,15 @@ export default function App() {
           setIsLoading(false);
           setRoute("login");
           preloadRouteAssets("login").catch(() => undefined);
+          return;
+        }
+
+        if (canResumeOpenRouteWithoutLoading(nextRoute, false)) {
+          commitLoadedRoute(nextRoute, false);
+          setShowSlaveRuling(
+            nextRoute === "wife" && isPunishmentCycleComplete(punishment),
+          );
+          preloadRouteAssets(nextRoute).catch(() => undefined);
           return;
         }
 
@@ -1267,26 +1705,41 @@ export default function App() {
         return;
       }
       if (record.status === "WAITING_WIFE_CONFIRM") {
-        setMonthlyAllowanceModalMode("wife-confirm");
+        const notification = ensureMonthlyAllowanceNotification("wife-confirm", record);
+        if (!notification || !skippedMonthlyNotificationIds.has(notification.id)) {
+          setMonthlyAllowanceModalMode("wife-confirm");
+        }
         return;
       }
       if (record.status === "HUSBAND_REPORTED_NOT_RECEIVED") {
-        setMonthlyAllowanceModalMode("wife-dispute");
+        const notification = ensureMonthlyAllowanceNotification("wife-dispute", record);
+        if (!notification || !skippedMonthlyNotificationIds.has(notification.id)) {
+          setMonthlyAllowanceModalMode("wife-dispute");
+        }
         return;
       }
     }
 
     if (route === "husband" && husbandSyncReady) {
       if (record.status === "PAID_CONFIRMED_BY_WIFE" && !record.husbandReceivedAt) {
-        setMonthlyAllowanceModalMode("husband-paid");
+        const notification = ensureMonthlyAllowanceNotification("husband-paid", record);
+        if (!notification || !skippedMonthlyNotificationIds.has(notification.id)) {
+          setMonthlyAllowanceModalMode("husband-paid");
+        }
         return;
       }
       if (record.status === "REBUKED_AS_BLIND" && !record.husbandReceivedAt) {
-        setMonthlyAllowanceModalMode("husband-rebuked");
+        const notification = ensureMonthlyAllowanceNotification("husband-rebuked", record);
+        if (!notification || !skippedMonthlyNotificationIds.has(notification.id)) {
+          setMonthlyAllowanceModalMode("husband-rebuked");
+        }
         return;
       }
       if (record.status === "CANCELLED_BY_WIFE" && !record.husbandReceivedAt) {
-        setMonthlyAllowanceModalMode("husband-cancelled");
+        const notification = ensureMonthlyAllowanceNotification("husband-cancelled", record);
+        if (!notification || !skippedMonthlyNotificationIds.has(notification.id)) {
+          setMonthlyAllowanceModalMode("husband-cancelled");
+        }
         return;
       }
     }
@@ -1297,6 +1750,7 @@ export default function App() {
     husbandSyncReady,
     punishment.status,
     route,
+    skippedMonthlyNotificationIds,
     taskSystemReady,
   ]);
 
@@ -1329,6 +1783,27 @@ export default function App() {
       document.removeEventListener("visibilitychange", handleReturn);
     };
   }, [currentMonthlyAllowance, route]);
+
+  useEffect(() => {
+    if (route !== "wife") return;
+    const handleReturn = () => {
+      if (document.visibilityState && document.visibilityState !== "visible") {
+        return;
+      }
+      if (!readPendingWifeTip()) return;
+      setTipAmountModalOpen(true);
+    };
+
+    handleReturn();
+    window.addEventListener("pageshow", handleReturn);
+    window.addEventListener("focus", handleReturn);
+    document.addEventListener("visibilitychange", handleReturn);
+    return () => {
+      window.removeEventListener("pageshow", handleReturn);
+      window.removeEventListener("focus", handleReturn);
+      document.removeEventListener("visibilitychange", handleReturn);
+    };
+  }, [route]);
 
   function handleSelectView(view: ViewKey) {
     const pageMap: Record<ViewKey, number> = {
@@ -1383,11 +1858,19 @@ export default function App() {
         createdAt: submittedAt,
       });
     }
-    setStory({
-      title: "任务已提交",
-      text: "你把结果递到老婆大人案前，经验和零花钱会在她确认后正式入账。",
-      tone: "normal",
-    });
+    showStory(
+      {
+        title: "任务已提交",
+        text: "你把结果递到老婆大人案前，经验和零花钱会在她确认后正式入账。",
+        tone: "normal",
+      },
+      {
+        notify: true,
+        target: "husband",
+        sourceId: `task-submit-${id}-${submittedAt}`,
+        createdAt: submittedAt,
+      },
+    );
   }
 
   function handleCreateTask(task: Task) {
@@ -1411,11 +1894,19 @@ export default function App() {
       sourceLogId: log.id,
       payload: { taskId: nextTask.id, taskType: nextTask.type },
     });
-    setStory({
-      title: "任务已下达",
-      text: `老婆大人发布了「${nextTask.title}」，老哥即刻进入待命状态。`,
-      tone: nextTask.type === "urgent" ? "punish" : "normal",
-    });
+    showStory(
+      {
+        title: "任务已下达",
+        text: `老婆大人发布了「${nextTask.title}」，老哥即刻进入待命状态。`,
+        tone: nextTask.type === "urgent" ? "punish" : "normal",
+      },
+      {
+        notify: true,
+        target: "wife",
+        sourceId: `task-create-${nextTask.id}`,
+        createdAt,
+      },
+    );
   }
 
   function handleApproveTask(id: string, decision?: TaskReviewDecision) {
@@ -1536,11 +2027,19 @@ export default function App() {
         payload: { taskId: target.id, reason: rejectReason },
       });
     }
-    setStory({
-      title: "任务被打回",
-      text: "老婆大人轻轻敲了敲桌面：这次不算，重新来过。",
-      tone: "punish",
-    });
+    showStory(
+      {
+        title: "任务被打回",
+        text: "老婆大人轻轻敲了敲桌面：这次不算，重新来过。",
+        tone: "punish",
+      },
+      {
+        notify: true,
+        target: "wife",
+        sourceId: `task-reject-${id}-${rejectedAt}`,
+        createdAt: rejectedAt,
+      },
+    );
   }
 
   function handleUseBenefit(benefit: Benefit) {
@@ -1649,11 +2148,19 @@ export default function App() {
       createdAt: requestedAt,
     });
     setSelectedBenefit(null);
-    setStory({
-      title: `申请：${currentBenefit.name}`,
-      text: "申请已经递交。老婆大人会根据表现决定是否恩准这次权益。",
-      tone: currentBenefit.levelRequired >= 9 ? "upgrade" : "normal",
-    });
+    showStory(
+      {
+        title: `申请：${currentBenefit.name}`,
+        text: "申请已经递交。老婆大人会根据表现决定是否恩准这次权益。",
+        tone: currentBenefit.levelRequired >= 9 ? "upgrade" : "normal",
+      },
+      {
+        notify: true,
+        target: "husband",
+        sourceId: `benefit-request-${currentBenefit.id}-${requestedAt}`,
+        createdAt: requestedAt,
+      },
+    );
   }
 
   function handleApproveBenefit(benefit: Benefit) {
@@ -1692,11 +2199,19 @@ export default function App() {
       sourceLogId: log.id,
       payload: { benefitId: benefit.id, cooldownUntil },
     });
-    setStory({
-      title: `恩准：${benefit.name}`,
-      text: `老婆大人准许本次「${benefit.name}」申请。${benefit.description}`,
-      tone: benefit.levelRequired >= 8 ? "upgrade" : "normal",
-    });
+    showStory(
+      {
+        title: `恩准：${benefit.name}`,
+        text: `老婆大人准许本次「${benefit.name}」申请。${benefit.description}`,
+        tone: benefit.levelRequired >= 8 ? "upgrade" : "normal",
+      },
+      {
+        notify: true,
+        target: "wife",
+        sourceId: `benefit-approved-${benefit.id}-${approvedAt}`,
+        createdAt: approvedAt,
+      },
+    );
   }
 
   function handleRejectBenefit(benefit: Benefit, reason?: string) {
@@ -1730,11 +2245,19 @@ export default function App() {
       sourceLogId: log.id,
       payload: { benefitId: benefit.id, reason: rejectedReason },
     });
-    setStory({
-      title: `暂缓：${benefit.name}`,
-      text: rejectedReason,
-      tone: "normal",
-    });
+    showStory(
+      {
+        title: `暂缓：${benefit.name}`,
+        text: rejectedReason,
+        tone: "normal",
+      },
+      {
+        notify: true,
+        target: "wife",
+        sourceId: `benefit-rejected-${benefit.id}-${rejectedAt}`,
+        createdAt: rejectedAt,
+      },
+    );
   }
 
   function handleAdjustExperience(amount: number) {
@@ -1758,8 +2281,13 @@ export default function App() {
           ),
         );
       }
-      if (result.stories.length) {
-        setStory(result.stories[result.stories.length - 1]);
+      if (result.stories.length && result.progress.level <= progress.level) {
+        showStory(result.stories[result.stories.length - 1], {
+          notify: true,
+          target: "wife",
+          sourceId: `adjust-exp-${createdAt}`,
+          createdAt,
+        });
       }
       const experienceLog = addLedger({
         type: "experience",
@@ -1787,6 +2315,13 @@ export default function App() {
           fromLevel: progress.level,
           toLevel: result.progress.level,
           createdAt: levelCreatedAt,
+        });
+        appendWifeRoleUpgradeDecree({
+          fromLevel: progress.level,
+          toLevel: result.progress.level,
+          createdAt: levelCreatedAt,
+          sourceLogId: levelLog.id,
+          reason: "经验奖励触发等级变化",
         });
         appendDecree({
           type: "level_changed",
@@ -1918,6 +2453,15 @@ export default function App() {
         fromLevel: previousLevel,
         toLevel: safeLevel,
       });
+      if (safeLevel > previousLevel) {
+        appendWifeRoleUpgradeDecree({
+          fromLevel: previousLevel,
+          toLevel: safeLevel,
+          createdAt: log.createdAt,
+          sourceLogId: log.id,
+          reason,
+        });
+      }
       appendDecree({
         type: "level_changed",
         title: safeLevel > previousLevel ? "职务晋升" : "职务降级",
@@ -1940,16 +2484,20 @@ export default function App() {
         toStatus: "normal",
       });
     }
-    setStory({
-      title: "职务裁定",
-      text: `老婆大人已${reason}，当前职务定为「${roles[safeLevel].title}」。`,
-      tone:
-        safeLevel > progress.level
-          ? "upgrade"
-          : safeLevel < progress.level
-            ? "down"
-            : "normal",
-    });
+    if (safeLevel <= previousLevel) {
+      showStory(
+        {
+          title: "职务裁定",
+          text: `老婆大人已${reason}，当前职务定为「${roles[safeLevel].title}」。`,
+          tone: safeLevel < previousLevel ? "down" : "normal",
+        },
+        {
+          notify: true,
+          target: "wife",
+          sourceId: `set-level-${safeLevel}-${Date.now()}`,
+        },
+      );
+    }
   }
 
   function handlePunishStatus() {
@@ -2006,11 +2554,18 @@ export default function App() {
         toLevel: MIN_LEVEL,
       });
     }
-    setStory({
-      title: "最终裁定",
-      text: "老婆大人执行卖身奴隶状态：冻结权益与零花钱，职务降至流落街头。",
-      tone: "punish",
-    });
+    showStory(
+      {
+        title: "最终裁定",
+        text: "老婆大人执行卖身奴隶状态：冻结权益与零花钱，职务降至流落街头。",
+        tone: "punish",
+      },
+      {
+        notify: true,
+        target: "wife",
+        sourceId: `punish-${Date.now()}`,
+      },
+    );
     setSlaveStateCinematic({
       id: `slave-enter-${Date.now()}`,
       mode: "enter",
@@ -2082,11 +2637,18 @@ export default function App() {
         toLevel: restoredLevel,
       });
     }
-    setStory({
-      title: "赎回成功",
-      text: `老婆大人已赎回骆老哥，卖身奴隶状态解除，恢复「${roles[restoredLevel].title}」职务、原有经验与零花钱。`,
-      tone: "upgrade",
-    });
+    showStory(
+      {
+        title: "赎回成功",
+        text: `老婆大人已赎回骆老哥，卖身奴隶状态解除，恢复「${roles[restoredLevel].title}」职务、原有经验与零花钱。`,
+        tone: "upgrade",
+      },
+      {
+        notify: true,
+        target: "wife",
+        sourceId: `restore-${Date.now()}`,
+      },
+    );
     setSlaveStateCinematic({
       id: `slave-restore-${Date.now()}`,
       mode: "restore",
@@ -2131,6 +2693,7 @@ export default function App() {
   function handleMonthlyAllowancePrimary() {
     const record = currentMonthlyAllowance;
     if (!record || !monthlyAllowanceModalMode) return;
+    markMonthlyAllowanceNotificationViewed(monthlyAllowanceModalMode, record);
     if (monthlyAllowanceModalMode === "wife-pending") {
       beginMonthlyAllowancePayment(record);
       return;
@@ -2207,6 +2770,10 @@ export default function App() {
         const nextState = {
           ...serverState,
           decrees: mergeDecrees(serverState.decrees, localAcknowledged),
+          notifications: mergeNotifications(
+            serverState.notifications,
+            notifications,
+          ),
           monthlyAllowances,
         };
         await saveTaskSystem(nextState);
@@ -2220,9 +2787,173 @@ export default function App() {
     }
   }
 
+  async function handleAcknowledgeWifeRoleUpgrade() {
+    if (!activeWifeUpgradeDecree || decreeSaving) return;
+    const upgradeDecree = activeWifeUpgradeDecree;
+    const illustrationTransition =
+      wifeHomeIllustrationTransitionForLevelChange(
+        clampLevel(Number(upgradeDecree.payload.fromLevel)),
+        clampLevel(Number(upgradeDecree.payload.toLevel)),
+      );
+    setDecreeSaving(true);
+    setDecreeError(undefined);
+    const acknowledgedAt = new Date().toISOString();
+    const localAcknowledged = decrees.map((decree) =>
+      decree.id === upgradeDecree.id
+        ? { ...decree, readAt: decree.readAt ?? acknowledgedAt, acknowledgedAt }
+        : decree,
+    );
+    try {
+      const savedState = await enqueueSave(async () => {
+        const serverState = await loadTaskSystemFresh();
+        const nextState = {
+          ...serverState,
+          decrees: mergeDecrees(serverState.decrees, localAcknowledged),
+          notifications: mergeNotifications(
+            serverState.notifications,
+            notifications,
+          ),
+          monthlyAllowances,
+        };
+        await saveTaskSystem(nextState);
+        return nextState;
+      });
+      applyRemoteState(savedState);
+      if (illustrationTransition) {
+        setWifeIllustrationTransition({
+          id: `wife-illustration-${upgradeDecree.id}`,
+          ...illustrationTransition,
+        });
+      }
+    } catch {
+      setDecreeError("确认保存失败，请检查连接后重试。");
+    } finally {
+      setDecreeSaving(false);
+    }
+  }
+
+  function acknowledgeNotificationItem(item: NotificationQueueItem | null) {
+    if (!item) return;
+    const viewedAt = new Date().toISOString();
+    if (item.kind === "decree") {
+      const acknowledgedIds = new Set(decreeAcknowledgeIds(item.decree));
+      setDecrees((current) =>
+        current.map((decree) =>
+          acknowledgedIds.has(decree.id)
+            ? {
+                ...decree,
+                readAt: decree.readAt ?? viewedAt,
+                acknowledgedAt: viewedAt,
+              }
+            : decree,
+        ),
+      );
+      setDecreeAutoPaused(false);
+      return;
+    }
+    setNotifications((current) =>
+      markNotificationViewed(current, item.notification.id, viewedAt),
+    );
+  }
+
+  function skipNotificationItem(item: NotificationQueueItem | null) {
+    if (!item) {
+      setActiveNotificationViewer(null);
+      return;
+    }
+    const skippedAt = new Date().toISOString();
+    if (item.kind === "notification") {
+      setNotifications((current) =>
+        markNotificationSkipped(current, item.notification.id, skippedAt),
+      );
+    }
+    setActiveNotificationViewer(null);
+  }
+
+  function handleAcknowledgeNotificationReplay() {
+    const item = activeNotificationItem;
+    acknowledgeNotificationItem(item);
+    if (!item || item.remainingCount === 0) {
+      setActiveNotificationViewer(null);
+    }
+  }
+
+  function handleSkipNotificationReplay() {
+    skipNotificationItem(activeNotificationItem);
+  }
+
+  function handleSkipActiveDecree() {
+    if (!activeDecree) return;
+    setDecreeAutoPaused(true);
+    setDecrees((current) =>
+      current.map((decree) =>
+        decree.id === activeDecree.id
+          ? { ...decree, readAt: decree.readAt ?? new Date().toISOString() }
+          : decree,
+      ),
+    );
+  }
+
+  function handleStoryAcknowledge() {
+    if (story?.notificationId) {
+      setNotifications((current) =>
+        markNotificationViewed(current, story.notificationId!),
+      );
+    }
+    setStory(null);
+  }
+
+  function handleStorySkip() {
+    if (story?.notificationId) {
+      setNotifications((current) =>
+        markNotificationSkipped(current, story.notificationId!),
+      );
+    }
+    setStory(null);
+  }
+
+  function handleSkipMonthlyAllowanceModal() {
+    const record = currentMonthlyAllowance;
+    const mode = monthlyAllowanceModalMode;
+    if (!record || !mode) {
+      setMonthlyAllowanceModalMode(null);
+      return;
+    }
+    const id = notificationId(
+      "monthly_allowance",
+      mode.startsWith("wife") ? "wife" : "husband",
+      monthlyAllowanceNotificationSourceId(mode, record),
+    );
+    setSkippedMonthlyNotificationIds((current) => new Set(current).add(id));
+    setNotifications((current) => markNotificationSkipped(current, id));
+    setMonthlyAllowanceModalMode(null);
+  }
+
+  function markMonthlyAllowanceNotificationViewed(
+    mode: MonthlyAllowanceModalMode,
+    record: MonthlyAllowanceRecord,
+  ) {
+    const notification = monthlyAllowanceNotification(mode, record);
+    if (!notification) return;
+    setNotifications((current) =>
+      markNotificationViewed(current, notification.id),
+    );
+  }
+
   function handleEnterRole(role: "husband" | "wife") {
     if (navigationLockedRef.current) return;
     setWifeTaskCompleteIllustrationActive(false);
+    if (canResumeOpenRouteWithoutLoading(role, false)) {
+      navigationLockedRef.current = true;
+      runPixelTransition(() => {
+        commitLoadedRoute(role, true);
+        setShowSlaveRuling(
+          role === "wife" && isPunishmentCycleComplete(punishment),
+        );
+        preloadRouteAssets(role).catch(() => undefined);
+      });
+      return;
+    }
     navigationLockedRef.current = true;
     runPixelTransition(() => runLoadingAttempt(role, true, "current"));
   }
@@ -2231,6 +2962,7 @@ export default function App() {
     runPixelTransition(() => {
       loadingAttemptRef.current += 1;
       navigationLockedRef.current = false;
+      clearOpenRoute();
       setWifeTaskCompleteIllustrationActive(false);
       window.history.pushState(null, "", "/");
       setLoadingTarget(null);
@@ -2245,6 +2977,11 @@ export default function App() {
   function handleOpenChat(viewer: ChatSender) {
     setChatMessages((current) => markChatMessagesRead(current, viewer));
     setActiveChatViewer(viewer);
+  }
+
+  function handleOpenNotifications(viewer: ChatSender) {
+    setActiveNotificationViewer(viewer);
+    if (viewer === "husband") setDecreeAutoPaused(true);
   }
 
   function handleSendChat(text: string) {
@@ -2305,15 +3042,80 @@ export default function App() {
   ) : null;
   const decreeModal = (
     <DecreeModal
-      decree={activeDecree}
+      decree={activeHusbandUpgradeDecree ? null : activeDecree}
       remainingCount={Math.max(0, pendingDecrees.length - 1)}
       saving={decreeSaving}
       error={decreeError}
       onAcknowledge={handleAcknowledgeDecree}
+      onSkip={handleSkipActiveDecree}
     />
   );
+  const husbandRoleUpgradeDecreeCinematic = activeHusbandUpgradeDecree ? (
+    <RoleUpgradeCinematic
+      id={activeHusbandUpgradeDecree.id}
+      audience="husband"
+      fromLevel={clampLevel(
+        Number(activeHusbandUpgradeDecree.payload.fromLevel),
+      )}
+      toLevel={clampLevel(Number(activeHusbandUpgradeDecree.payload.toLevel))}
+      fromRoleName={
+        roles[
+          clampLevel(Number(activeHusbandUpgradeDecree.payload.fromLevel))
+        ].title
+      }
+      toRoleName={
+        roles[clampLevel(Number(activeHusbandUpgradeDecree.payload.toLevel))]
+          .title
+      }
+      fromRoleImage={
+        roles[
+          clampLevel(Number(activeHusbandUpgradeDecree.payload.fromLevel))
+        ].roleImage
+      }
+      toRoleImage={
+        roles[clampLevel(Number(activeHusbandUpgradeDecree.payload.toLevel))]
+          .roleImage
+      }
+      isOpen
+      onComplete={() => {
+        void handleAcknowledgeDecree();
+      }}
+      error={decreeError}
+    />
+  ) : null;
+  const wifeRoleUpgradeCinematic = activeWifeUpgradeDecree ? (
+    <RoleUpgradeCinematic
+      id={activeWifeUpgradeDecree.id}
+      audience="wife"
+      fromLevel={clampLevel(Number(activeWifeUpgradeDecree.payload.fromLevel))}
+      toLevel={clampLevel(Number(activeWifeUpgradeDecree.payload.toLevel))}
+      fromRoleName={
+        roles[clampLevel(Number(activeWifeUpgradeDecree.payload.fromLevel))].title
+      }
+      toRoleName={
+        roles[clampLevel(Number(activeWifeUpgradeDecree.payload.toLevel))].title
+      }
+      fromRoleImage={
+        roles[clampLevel(Number(activeWifeUpgradeDecree.payload.fromLevel))]
+          .roleImage
+      }
+      toRoleImage={
+        roles[clampLevel(Number(activeWifeUpgradeDecree.payload.toLevel))]
+          .roleImage
+      }
+      isOpen
+      onComplete={handleAcknowledgeWifeRoleUpgrade}
+      confirmDisabled={decreeSaving}
+      confirmLabel={
+        decreeSaving
+          ? "\u6b63\u5728\u786e\u8ba4..."
+          : "\u77e5\u9053\u4e86"
+      }
+      error={decreeError}
+    />
+  ) : null;
   const monthlyAllowanceModal =
-    monthlyAllowanceModalMode && currentMonthlyAllowance ? (
+    monthlyAllowanceModalMode && currentMonthlyAllowance && !activeWifeUpgradeDecree ? (
       <MonthlyAllowanceModal
         mode={monthlyAllowanceModalMode}
         record={currentMonthlyAllowance}
@@ -2327,11 +3129,29 @@ export default function App() {
             ? dismissMonthlyAllowanceModal
             : undefined
         }
+        onSkip={
+          monthlyAllowanceNotification(
+            monthlyAllowanceModalMode,
+            currentMonthlyAllowance,
+          )
+            ? handleSkipMonthlyAllowanceModal
+            : undefined
+        }
       />
     ) : null;
+  const notificationReplayModal = (
+    <NotificationReplayModal
+      item={activeWifeUpgradeDecree ? null : activeNotificationItem}
+      saving={decreeSaving}
+      error={decreeError}
+      onAcknowledge={handleAcknowledgeNotificationReplay}
+      onSkip={handleSkipNotificationReplay}
+    />
+  );
   const cinematicOverlays = (
     <>
-      {roleUpgradeCinematic ? (
+      {husbandRoleUpgradeDecreeCinematic}
+      {roleUpgradeCinematic && !activeHusbandUpgradeDecree ? (
         <RoleUpgradeCinematic
           {...roleUpgradeCinematic}
           isOpen
@@ -2400,6 +3220,7 @@ export default function App() {
           onRejectBenefit={handleRejectBenefit}
           onAdjustExperience={handleAdjustExperience}
           onAdjustWallet={handleAdjustWallet}
+          onTipHusband={beginWifeTipPayment}
           monthlyAllowanceBaseAmount={
             nextAllowanceBaseSalary + nextAllowanceTaskStats.taskBonus
           }
@@ -2420,22 +3241,38 @@ export default function App() {
           onRestoreNormal={handleRestoreNormal}
           onReturnToLogin={handleReturnToLogin}
           chatUnreadCount={wifeChatUnreadCount}
+          hasNotificationUnread={hasWifeNotificationUnread}
+          illustrationTransition={wifeIllustrationTransition}
           onOpenChat={() => handleOpenChat("wife")}
+          onOpenNotifications={() => handleOpenNotifications("wife")}
+          onIllustrationTransitionDone={(id) =>
+            setWifeIllustrationTransition((current) =>
+              current?.id === id ? null : current,
+            )
+          }
+        />
+        <TipAmountModal
+          open={tipAmountModalOpen}
+          onConfirm={confirmWifeTipAmount}
+          onDismiss={dismissTipAmountModal}
         />
         <StoryModal
-          story={showSlaveRuling ? null : story}
+          story={showSlaveRuling || activeWifeUpgradeDecree ? null : story}
           confirmLabel="下旨"
-          onClose={() => setStory(null)}
+          onClose={handleStoryAcknowledge}
+          onSkip={story?.notificationId ? handleStorySkip : undefined}
         />
         {monthlyAllowanceModal}
+        {notificationReplayModal}
         <SlaveRulingModal
-          open={showSlaveRuling}
+          open={showSlaveRuling && !activeWifeUpgradeDecree}
           onRestore={handleRestoreNormal}
           onContinueLabor={handleContinueSlaveLabor}
         />
         {loadingOverlay}
         {chatOverlay}
         {pixelTransition}
+        {wifeRoleUpgradeCinematic}
         {cinematicOverlays}
       </main>
     );
@@ -2510,10 +3347,12 @@ export default function App() {
 
         <StoryModal
           story={activeDecree ? null : story}
-          onClose={() => setStory(null)}
+          onClose={handleStoryAcknowledge}
+          onSkip={story?.notificationId ? handleStorySkip : undefined}
         />
         {monthlyAllowanceModal}
         {decreeModal}
+        {notificationReplayModal}
         {loadingOverlay}
         {pixelTransition}
         {cinematicOverlays}
@@ -2563,7 +3402,9 @@ export default function App() {
           onReturnToLogin={handleReturnToLogin}
           onSelectView={handleSelectView}
           chatUnreadCount={husbandChatUnreadCount}
+          hasNotificationUnread={hasHusbandNotificationUnread}
           onOpenChat={() => handleOpenChat("husband")}
+          onOpenNotifications={() => handleOpenNotifications("husband")}
         />
 
         <TaskPage
@@ -2578,10 +3419,12 @@ export default function App() {
 
       <StoryModal
         story={activeDecree ? null : story}
-        onClose={() => setStory(null)}
+        onClose={handleStoryAcknowledge}
+        onSkip={story?.notificationId ? handleStorySkip : undefined}
       />
       {monthlyAllowanceModal}
       {decreeModal}
+      {notificationReplayModal}
       {loadingOverlay}
       {chatOverlay}
       {pixelTransition}

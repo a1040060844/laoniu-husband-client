@@ -3,11 +3,13 @@ import { RoleNavigator } from "./RoleNavigator";
 import { publicAsset } from "../lib/assets";
 import type { Role, ViewKey } from "../types/domain";
 import { ChatMessageButton } from "./ChatMessagePanel";
+import { MusicToggleButton, NotificationButton } from "./NotificationCenter";
 import { OrnateSwipeHint } from "./OrnateSwipeHint";
 import { VerticalMagicSwipeHint } from "./VerticalMagicSwipeHint";
 import { AnimatedContent } from "./effects/AnimatedContent";
 import { ClickSpark } from "./effects/ClickSpark";
 import { CountUp } from "./effects/CountUp";
+import { useState } from "react";
 
 interface RolePageProps {
   role: Role;
@@ -20,12 +22,14 @@ interface RolePageProps {
   nextAllowanceAmount: number;
   nextAllowanceMonth: string;
   chatUnreadCount: number;
+  hasNotificationUnread: boolean;
   onPreviewPrev: () => void;
   onPreviewNext: () => void;
   onOpenAllowanceDetail: () => void;
   onReturnToLogin: () => void;
   onSelectView: (view: ViewKey) => void;
   onOpenChat: () => void;
+  onOpenNotifications: () => void;
 }
 
 export function RolePage({
@@ -38,12 +42,14 @@ export function RolePage({
   nextAllowanceAmount,
   nextAllowanceMonth,
   chatUnreadCount,
+  hasNotificationUnread,
   onPreviewPrev,
   onPreviewNext,
   onOpenAllowanceDetail,
   onReturnToLogin,
   onSelectView,
   onOpenChat,
+  onOpenNotifications,
 }: RolePageProps) {
   const isPreviewing = previewRole.level !== role.level;
   const isLockedPreview = previewRole.level > role.level;
@@ -51,6 +57,7 @@ export function RolePage({
     previewRole.expRequired > 0 &&
     previewRole.expCurrent / previewRole.expRequired >= 0.8;
   const directionClass = `role-page--dir-${previewDirection}`;
+  const [isBackgroundMusicEnabled, setIsBackgroundMusicEnabled] = useState(false);
 
   return (
     <section
@@ -93,6 +100,22 @@ export function RolePage({
               />
             </button>
           </ClickSpark>
+          <div className="role-login-controls" aria-label="husband quick controls">
+            <NotificationButton
+              className="role-login-notification-entry"
+              viewer="husband"
+              hasUnread={hasNotificationUnread}
+              compact
+              onClick={onOpenNotifications}
+            />
+            <MusicToggleButton
+              className="role-login-music-entry"
+              enabled={isBackgroundMusicEnabled}
+              onToggle={() =>
+                setIsBackgroundMusicEnabled((current) => !current)
+              }
+            />
+          </div>
           <h1>{previewRole.title}</h1>
         </div>
         <i />

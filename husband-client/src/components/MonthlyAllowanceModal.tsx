@@ -18,6 +18,7 @@ interface MonthlyAllowanceModalProps {
   onSecondary?: () => void;
   onTertiary?: () => void;
   onDismiss?: () => void;
+  onSkip?: () => void;
 }
 
 function detailRows(record: MonthlyAllowanceRecord) {
@@ -108,11 +109,13 @@ export function MonthlyAllowanceModal({
   mode,
   record,
   onDismiss,
+  onSkip,
   onPrimary,
   onSecondary,
   onTertiary,
 }: MonthlyAllowanceModalProps) {
   const copy = modalCopy(mode, record);
+  const closeHandler = onSkip ?? onDismiss;
 
   return (
     <div className="decree-backdrop monthly-allowance-backdrop" role="presentation">
@@ -122,12 +125,12 @@ export function MonthlyAllowanceModal({
         aria-modal="true"
         aria-labelledby="monthly-allowance-title"
       >
-        {onDismiss ? (
+        {closeHandler ? (
           <button
             className="monthly-allowance-modal__close"
             type="button"
             aria-label="关闭"
-            onClick={onDismiss}
+            onClick={closeHandler}
           >
             ×
           </button>

@@ -1,3 +1,4 @@
+import { X } from "lucide-react";
 import type { DecreeEvent } from "../types/domain";
 import { ClickSpark } from "./effects/ClickSpark";
 import "./DecreeModal.css";
@@ -8,6 +9,7 @@ interface DecreeModalProps {
   saving: boolean;
   error?: string;
   onAcknowledge: () => void;
+  onSkip?: () => void;
 }
 
 function decreeButtonLabel(decree: DecreeEvent) {
@@ -28,6 +30,7 @@ export function DecreeModal({
   saving,
   error,
   onAcknowledge,
+  onSkip,
 }: DecreeModalProps) {
   if (!decree) return null;
 
@@ -39,6 +42,16 @@ export function DecreeModal({
         aria-modal="true"
         aria-labelledby="decree-modal-title"
       >
+        {onSkip ? (
+          <button
+            className="decree-modal__close"
+            type="button"
+            aria-label="略过"
+            onClick={onSkip}
+          >
+            <X size={20} />
+          </button>
+        ) : null}
         <header className="decree-modal__header">
           <p>圣旨到</p>
           <span>老妞大人裁定</span>

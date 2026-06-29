@@ -15,6 +15,7 @@ import type {
   BenefitRequest,
   MonthlyAllowanceRecord,
   MonthlyAllowanceStatus,
+  NotificationEvent,
   Punishment,
   PunishmentStatus,
   Task,
@@ -39,6 +40,7 @@ export interface TaskSystemState {
   walletLedger: WalletLedgerEntry[];
   decrees: DecreeEvent[];
   monthlyAllowances: MonthlyAllowanceRecord[];
+  notifications: NotificationEvent[];
 }
 
 export const PROGRESS_STORAGE_KEY = "laoniu-husband-progress-v1";
@@ -50,6 +52,7 @@ export const WALLET_LEDGER_STORAGE_KEY = "laoniu-husband-wallet-ledger-v1";
 export const DECREES_STORAGE_KEY = "laoniu-husband-decrees-v1";
 export const MONTHLY_ALLOWANCES_STORAGE_KEY =
   "laoniu-husband-monthly-allowances-v1";
+export const NOTIFICATIONS_STORAGE_KEY = "laoniu-notifications-v1";
 export const DEFAULT_PUNISHMENT_DURATION_DAYS = 7;
 export const DEFAULT_REQUIRED_RECOVERY_EXP = 100;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -582,6 +585,7 @@ function normalizeDecree(raw: unknown): DecreeEvent | null {
     value.tone === "punish"
       ? value.tone
       : "normal";
+  const target = value.target === "wife" ? "wife" : "husband";
 
   return {
     id: value.id,
@@ -590,7 +594,7 @@ function normalizeDecree(raw: unknown): DecreeEvent | null {
     text: value.text,
     tone,
     createdAt: value.createdAt,
-    target: "husband",
+    target,
     readAt: typeof value.readAt === "string" ? value.readAt : undefined,
     acknowledgedAt:
       typeof value.acknowledgedAt === "string" ? value.acknowledgedAt : undefined,
@@ -608,6 +612,57 @@ export function hydrateDecrees(raw: unknown): DecreeEvent[] {
   return raw
     .map(normalizeDecree)
     .filter((decree): decree is DecreeEvent => Boolean(decree));
+}
+
+function normalizeNotification(raw: unknown): NotificationEvent | null {
+  if (!raw || typeof raw !== "object") return null;
+  const value = raw as Record<string, unknown>;
+  if (
+    typeof value.id !== "string" ||
+    (value.target !== "husband" && value.target !== "wife") ||
+    (value.source !== "decree" &&
+      value.source !== "story" &&
+      value.source !== "monthly_allowance") ||
+    typeof value.sourceId !== "string" ||
+    typeof value.title !== "string" ||
+    typeof value.text !== "string" ||
+    typeof value.createdAt !== "string" ||
+    Number.isNaN(Date.parse(value.createdAt))
+  ) {
+    return null;
+  }
+  const tone =
+    value.tone === "upgrade" ||
+    value.tone === "down" ||
+    value.tone === "punish"
+      ? value.tone
+      : "normal";
+
+  return {
+    id: value.id,
+    target: value.target,
+    source: value.source,
+    sourceId: value.sourceId,
+    title: value.title,
+    text: value.text,
+    tone,
+    createdAt: value.createdAt,
+    viewedAt: typeof value.viewedAt === "string" ? value.viewedAt : undefined,
+    skippedAt: typeof value.skippedAt === "string" ? value.skippedAt : undefined,
+    payload:
+      value.payload && typeof value.payload === "object" && !Array.isArray(value.payload)
+        ? (value.payload as Record<string, unknown>)
+        : undefined,
+  };
+}
+
+export function hydrateNotifications(raw: unknown): NotificationEvent[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map(normalizeNotification)
+    .filter((notification): notification is NotificationEvent =>
+      Boolean(notification),
+    );
 }
 
 export function mergeDecrees(
@@ -839,6 +894,7 @@ function stateFromUnknown(raw: unknown): TaskSystemState {
       monthlyAllowances: hydrateMonthlyAllowances(
         readJson(MONTHLY_ALLOWANCES_STORAGE_KEY),
       ),
+      notifications: hydrateNotifications(readJson(NOTIFICATIONS_STORAGE_KEY)),
     };
   }
 
@@ -857,6 +913,7 @@ function stateFromUnknown(raw: unknown): TaskSystemState {
     walletLedger,
     decrees,
     monthlyAllowances,
+    notifications,
     totalExp,
     wallet,
     ...extras
@@ -905,6 +962,7 @@ function stateFromUnknown(raw: unknown): TaskSystemState {
     walletLedger: hydrateWalletLedger(walletLedger),
     decrees: hydrateDecrees(decrees),
     monthlyAllowances: hydrateMonthlyAllowances(monthlyAllowances),
+    notifications: hydrateNotifications(notifications),
   };
 }
 
@@ -930,6 +988,10 @@ export function persistLocalTaskSystem(state: TaskSystemState) {
     MONTHLY_ALLOWANCES_STORAGE_KEY,
     JSON.stringify(state.monthlyAllowances),
   );
+  localStorage.setItem(
+    NOTIFICATIONS_STORAGE_KEY,
+    JSON.stringify(state.notifications),
+  );
 }
 
 function serializeTaskSystem(state: TaskSystemState) {
@@ -945,6 +1007,7 @@ function serializeTaskSystem(state: TaskSystemState) {
     walletLedger: state.walletLedger,
     decrees: state.decrees,
     monthlyAllowances: state.monthlyAllowances,
+    notifications: state.notifications,
   };
 }
 
