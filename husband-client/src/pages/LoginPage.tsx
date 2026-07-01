@@ -11,6 +11,15 @@ import {
 import "./LoginPage.css";
 import { ClickSpark } from "../components/effects/ClickSpark";
 import { CountUp } from "../components/effects/CountUp";
+import {
+  getAudioEnabled,
+  isAudioUnlocked,
+  setAudioEnabled,
+  subscribeAudioEnabled,
+  unlockAudio,
+} from "../lib/audioManager";
+import { publicAsset } from "../lib/assets";
+import { playSoundEffect } from "../lib/soundEffects";
 
 import bgRoom from "../assets/login/bg-room.png";
 import cardHusband from "../assets/login/card-husband.png";
@@ -104,6 +113,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const LOGIN_BG_WIDTH = 941;
 const LOGIN_BG_HEIGHT = 1672;
 const TREE_PLAQUE_CENTER = { x: 206, y: 1144 };
+const loginMusicToggleImage = publicAsset("/assets/ui/login-music-toggle.png");
 
 function getLoveDayCount(now = new Date()) {
   const todayUtc = Date.UTC(
@@ -576,6 +586,7 @@ export function LoginPage({ isEntering = false, onEnterRole }: LoginPageProps) {
   const [loveDayCount, setLoveDayCount] = useState(() => getLoveDayCount());
   const [lovePlaquePosition, setLovePlaquePosition] =
     useState<Position | null>(null);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(() => getAudioEnabled());
   const isBusy = flow !== "idle" || isEntering;
 
   useLayoutEffect(() => {
@@ -611,6 +622,19 @@ export function LoginPage({ isEntering = false, onEnterRole }: LoginPageProps) {
     }, 60 * 60 * 1000);
 
     return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const syncEnabled = () => setIsAudioEnabled(getAudioEnabled());
+    syncEnabled();
+    const unsubscribe = subscribeAudioEnabled(setIsAudioEnabled);
+    window.addEventListener("pageshow", syncEnabled);
+    window.addEventListener("focus", syncEnabled);
+    return () => {
+      unsubscribe();
+      window.removeEventListener("pageshow", syncEnabled);
+      window.removeEventListener("focus", syncEnabled);
+    };
   }, []);
 
   useEffect(() => {
@@ -799,6 +823,7 @@ export function LoginPage({ isEntering = false, onEnterRole }: LoginPageProps) {
   const handleDragStart = useCallback(
     (id: SpriteId) => {
       if (flowRef.current !== "idle") return;
+      playSoundEffect("ui-tap");
       setDraggingId(id);
       setSpriteAction(id, "drag");
       if (id === "husband") hideBubble("husband");
@@ -809,6 +834,7 @@ export function LoginPage({ isEntering = false, onEnterRole }: LoginPageProps) {
 
   const handleDragEnd = useCallback(
     (id: SpriteId) => {
+      playSoundEffect("ui-close");
       setDraggingId(null);
       setSpriteAction(id, "idle");
     },
@@ -818,6 +844,7 @@ export function LoginPage({ isEntering = false, onEnterRole }: LoginPageProps) {
   const handleSpriteClick = useCallback(
     (id: SpriteId) => {
       if (flowRef.current !== "idle") return;
+      playSoundEffect("ui-tap");
       if (id === "catBlue") {
         setSpriteAction(
           id,
@@ -836,6 +863,7 @@ export function LoginPage({ isEntering = false, onEnterRole }: LoginPageProps) {
 
   const handleReset = useCallback(() => {
     if (isEntering) return;
+    playSoundEffect("ui-back");
     clearLoginTimeouts();
     selectionRef.current = null;
     flowRef.current = "idle";
@@ -849,6 +877,19 @@ export function LoginPage({ isEntering = false, onEnterRole }: LoginPageProps) {
     setPlaybackKey((current) => current + 1);
     playLoginIntro();
   }, [clearLoginTimeouts, isEntering, playLoginIntro]);
+
+  const handleMusicToggle = useCallback(() => {
+    if (isAudioEnabled && !isAudioUnlocked()) {
+      unlockAudio();
+      playSoundEffect("audio-toggle", { force: true });
+      return;
+    }
+
+    unlockAudio();
+    const nextEnabled = !isAudioEnabled;
+    setAudioEnabled(nextEnabled);
+    playSoundEffect("audio-toggle", { force: true });
+  }, [isAudioEnabled]);
 
   const completeSelection = useCallback(() => {
     const selection = selectionRef.current;
@@ -893,6 +934,7 @@ export function LoginPage({ isEntering = false, onEnterRole }: LoginPageProps) {
 
   function beginSelect(role: RoleRoute) {
     if (flowRef.current !== "idle" || isEntering) return;
+    playSoundEffect("login-enter");
     clearLoginTimeouts();
     const selectingWife = role === "wife";
     selectionRef.current = { role, target: selectingWife ? "wife" : "husband" };
@@ -977,6 +1019,20 @@ export function LoginPage({ isEntering = false, onEnterRole }: LoginPageProps) {
         >
           <img src={resetButton} alt="复位" draggable={false} />
         </button>
+
+        <ClickSpark>
+          <button
+            className={`login-music-toggle${isAudioEnabled ? " is-active" : ""}`}
+            type="button"
+            aria-label={
+              isAudioEnabled ? "\u5173\u95ed\u97f3\u4e50" : "\u6253\u5f00\u97f3\u4e50"
+            }
+            aria-pressed={isAudioEnabled}
+            onClick={handleMusicToggle}
+          >
+            <img src={loginMusicToggleImage} alt="" draggable={false} />
+          </button>
+        </ClickSpark>
 
         {(["husband", "wife", "catBlue", "catWhite"] as const).map((id) => (
           <DraggableSprite

@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { createPortal } from "react-dom";
+import { playSoundEffect } from "../lib/soundEffects";
 import type { Benefit, BenefitStatus } from "../types/domain";
 import { ClickSpark } from "./effects/ClickSpark";
 
@@ -134,6 +135,13 @@ export function BenefitModal({
   const Icon = iconMap[benefit.icon as keyof typeof iconMap] ?? Gift;
   const usageSummary =
     usage ?? getUsageFallback(benefit, computedStatus, statusText);
+  const closeModal = () => {
+    playSoundEffect("ui-close");
+    onClose();
+  };
+  const useBenefit = () => {
+    onUse(benefit);
+  };
 
   return createPortal(
     <div
@@ -150,7 +158,7 @@ export function BenefitModal({
         <button
           className="icon-close benefit-modal__close"
           type="button"
-          onClick={onClose}
+          onClick={closeModal}
           aria-label="关闭"
         >
           <X size={18} strokeWidth={1.6} />
@@ -212,7 +220,7 @@ export function BenefitModal({
               className="primary-button benefit-modal__primary"
               type="button"
               disabled={computedStatus !== "available"}
-              onClick={() => onUse(benefit)}
+              onClick={useBenefit}
             >
               {buttonText}
             </button>
@@ -220,7 +228,7 @@ export function BenefitModal({
           <button
             className="benefit-modal__secondary"
             type="button"
-            onClick={onClose}
+            onClick={closeModal}
           >
             关闭光幕
           </button>

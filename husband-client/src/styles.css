@@ -420,6 +420,10 @@ button {
   height: 65%;
 }
 
+.benefit-page--level-04 .cinema-image {
+  top: calc(13% + 40px);
+}
+
 .role-page--level-06 .cinema-image {
   top: 13%;
   left: -6%;
@@ -505,6 +509,10 @@ button {
   position: relative;
   display: block;
   width: 100%;
+  --role-quick-control-left: max(
+    calc(env(safe-area-inset-left, 0px) + 18px),
+    calc(50% - 177px)
+  );
   align-items: center;
 }
 
@@ -516,15 +524,16 @@ button {
 }
 
 .role-return-login-button {
-  position: absolute;
-  top: 50%;
-  left: -18px;
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) - 62px);
+  left: var(--role-quick-control-left);
+  z-index: 30;
   width: clamp(92px, 24vw, 114px);
   padding: 0;
   border: 0;
   background: transparent;
   box-shadow: none;
-  transform: translateY(-50%);
+  transform: none;
 }
 
 .role-return-login-button img {
@@ -537,13 +546,14 @@ button {
 }
 
 .role-login-controls {
-  position: absolute;
-  top: calc(50% + 34px);
-  left: -8px;
-  z-index: 8;
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) - 26px);
+  left: var(--role-quick-control-left);
+  z-index: 31;
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
 }
 
 .hero-title i {
@@ -1126,14 +1136,22 @@ button {
 }
 
 .notification-button--compact {
-  width: 42px;
-  height: 42px;
-  min-width: 42px;
-  min-height: 42px;
+  display: inline-flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 72px;
+  height: 30px;
+  min-width: 72px;
+  min-height: 30px;
+  padding: 0 7px;
   border-color: rgba(231, 199, 141, 0.42);
+  border-radius: 8px;
   background:
-    radial-gradient(circle at 50% 34%, rgba(255, 233, 178, 0.23), transparent 48%),
-    linear-gradient(180deg, rgba(30, 22, 14, 0.8), rgba(8, 6, 4, 0.9));
+    linear-gradient(90deg, transparent, rgba(255, 233, 178, 0.14), transparent),
+    radial-gradient(circle at 18px 50%, rgba(255, 233, 178, 0.28), transparent 19px),
+    linear-gradient(180deg, rgba(30, 22, 14, 0.78), rgba(8, 6, 4, 0.9));
   box-shadow:
     inset 0 0 13px rgba(255, 229, 174, 0.12),
     0 0 12px rgba(214, 176, 108, 0.2),
@@ -1141,26 +1159,48 @@ button {
 }
 
 .notification-button--compact > span {
-  position: absolute;
-  width: 1px;
-  height: 1px;
+  position: static;
+  width: auto;
+  height: auto;
   padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
+  margin: 0;
+  overflow: visible;
+  clip: auto;
   white-space: nowrap;
-  border: 0;
+  color: rgba(248, 223, 172, 0.88);
+  font-family: var(--serif);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  line-height: 1;
+  text-shadow:
+    0 1px 8px rgba(0, 0, 0, 0.8),
+    0 0 8px rgba(231, 199, 141, 0.2);
+}
+
+.role-login-notification-entry.notification-button--compact > span,
+.wife-login-notification-entry.notification-button--compact > span {
+  font-size: 0;
+  letter-spacing: 0;
+}
+
+.role-login-notification-entry.notification-button--compact > span::after,
+.wife-login-notification-entry.notification-button--compact > span::after {
+  content: "\901a\77e5";
+  font-size: 11px;
+  letter-spacing: 1px;
 }
 
 .notification-button--compact .notification-button__icon {
-  width: 23px;
-  height: 23px;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
   margin-top: 0;
 }
 
 .notification-button--compact b {
-  top: 1px;
-  right: 2px;
+  top: -2px;
+  right: -2px;
   width: 9px;
   height: 9px;
 }
@@ -1181,12 +1221,10 @@ button {
 }
 
 .role-chat-entry {
-  position: absolute;
-  top: max(196px, calc(env(safe-area-inset-top) + 184px));
-  left: 18px;
-  z-index: 3;
-  width: 84px;
-  min-height: 84px;
+  position: relative;
+  z-index: 1;
+  width: 78px;
+  min-height: 78px;
 }
 
 .role-notification-entry {
@@ -1712,9 +1750,17 @@ button {
   will-change: transform;
 }
 
+.benefit-cloud-track--drift {
+  animation: benefit-cloud-drift 9600ms ease-in-out infinite alternate;
+  will-change: transform;
+}
+
 .benefit-cloud-viewport:hover .benefit-cloud-track--marquee,
 .benefit-cloud-viewport:active .benefit-cloud-track--marquee,
-.benefit-cloud-viewport:focus-within .benefit-cloud-track--marquee {
+.benefit-cloud-viewport:focus-within .benefit-cloud-track--marquee,
+.benefit-cloud-viewport:hover .benefit-cloud-track--drift,
+.benefit-cloud-viewport:active .benefit-cloud-track--drift,
+.benefit-cloud-viewport:focus-within .benefit-cloud-track--drift {
   animation-play-state: paused;
 }
 
@@ -2007,14 +2053,46 @@ button {
   font-family: var(--serif);
 }
 
-.task-header img {
+.character-avatar {
+  --avatar-offset-y: 9%;
+  --avatar-position: center 24%;
+  --avatar-scale: 1.68;
+  display: inline-grid;
+  place-items: center;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.character-avatar__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: var(--avatar-position);
+  transform: translateY(var(--avatar-offset-y)) scale(var(--avatar-scale));
+  transform-origin: center 24%;
+  user-select: none;
+  pointer-events: none;
+}
+
+.character-avatar--wife {
+  --avatar-offset-y: 8%;
+  --avatar-position: 54% 26%;
+  --avatar-scale: 1.55;
+}
+
+.character-avatar--slave {
+  --avatar-offset-y: 7%;
+  --avatar-position: center 26%;
+  --avatar-scale: 1.45;
+}
+
+.task-header__avatar {
   width: 88px;
   height: 88px;
   flex: 0 0 88px;
   border: 1px solid var(--gold-line);
   border-radius: 50%;
-  object-fit: cover;
-  object-position: center 27%;
   box-shadow: 0 12px 35px rgba(0, 0, 0, 0.55);
 }
 
@@ -2924,6 +3002,20 @@ button {
   }
 }
 
+@keyframes benefit-cloud-drift {
+  0% {
+    transform: translateX(-8px);
+  }
+
+  50% {
+    transform: translateX(8px);
+  }
+
+  100% {
+    transform: translateX(-3px);
+  }
+}
+
 @keyframes modal-backdrop-enter {
   from {
     opacity: 0;
@@ -3655,11 +3747,12 @@ button {
 .wife-login-controls {
   position: absolute;
   top: calc(env(safe-area-inset-top, 0px) + 50px);
-  left: calc(env(safe-area-inset-left, 0px) + 8px);
+  left: calc(env(safe-area-inset-left, 0px) + 10px);
   z-index: 21;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 
 .wife-title p,
@@ -3887,11 +3980,16 @@ button {
 
 .wife-chat-entry {
   position: absolute;
-  top: calc(env(safe-area-inset-top, 0px) + 104px);
+  top: calc(env(safe-area-inset-top, 0px) + 114px);
   left: calc(env(safe-area-inset-left, 0px) + 18px);
   z-index: 7;
   width: 84px;
   min-height: 84px;
+}
+
+.wife-chat-entry b {
+  top: 11px;
+  right: 11px;
 }
 
 .wife-notification-entry {
@@ -4146,13 +4244,16 @@ button {
   position: absolute;
   top: 13px;
   right: 14px;
+  --avatar-offset-y: 9%;
+  --avatar-position: center 24%;
+  --avatar-scale: 1.72;
   display: grid;
   place-items: center;
-  width: 82px;
-  height: 170px;
+  width: 86px;
+  height: 86px;
   padding: 3px;
   border: 1px solid rgba(248, 223, 172, 0.66);
-  border-radius: 34px;
+  border-radius: 50%;
   color: var(--gold-strong);
   background:
     radial-gradient(circle, rgba(248, 223, 172, 0.16), transparent 72%),
@@ -4163,12 +4264,10 @@ button {
   overflow: hidden;
 }
 
-.wife-rank-seal img {
+.wife-rank-seal .character-avatar__image {
   width: 100%;
   height: 100%;
   border-radius: inherit;
-  object-fit: cover;
-  object-position: center 12%;
   filter: saturate(0.98) contrast(1.08) brightness(0.9);
 }
 
@@ -6570,12 +6669,16 @@ button {
 }
 
 .chat-message-avatar {
+  --avatar-offset-y: 9%;
+  --avatar-position: center 24%;
+  --avatar-scale: 1.72;
   display: grid;
   width: 38px;
   height: 38px;
   place-items: center;
   border: 1px solid rgba(231, 199, 141, 0.46);
   border-radius: 999px;
+  overflow: hidden;
   color: rgba(248, 223, 172, 0.9);
   background:
     radial-gradient(circle at 50% 22%, rgba(248, 223, 172, 0.18), transparent 56%),
@@ -7959,13 +8062,12 @@ button {
   }
 
   .role-chat-entry {
-    top: max(190px, calc(env(safe-area-inset-top) + 178px));
-    width: 78px;
-    min-height: 78px;
+    width: 72px;
+    min-height: 72px;
   }
 
   .wife-chat-entry {
-    top: calc(env(safe-area-inset-top, 0px) + 98px);
+    top: calc(env(safe-area-inset-top, 0px) + 108px);
     width: 78px;
     min-height: 78px;
   }

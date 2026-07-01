@@ -3,6 +3,9 @@ dist/
 laoniu-miniprogram/remote-assets/
 
 app-data/
+tmp/
+音乐.zip
+*.zip
 *.log
 *.tsbuildinfo
 husband-client/.env.local

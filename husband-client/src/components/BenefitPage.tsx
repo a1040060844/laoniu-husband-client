@@ -7,6 +7,8 @@ import { OrnateSwipeHint } from "./OrnateSwipeHint";
 import { RoleNavigator } from "./RoleNavigator";
 import type { Benefit, BenefitStatus, Role, ViewKey } from "../types/domain";
 import { AnimatedContent } from "./effects/AnimatedContent";
+import { benefitForLevel } from "../data/benefits";
+import { playSoundEffect } from "../lib/soundEffects";
 
 interface BenefitPageProps {
   role: Role;
@@ -141,8 +143,10 @@ export function BenefitPage({
   const isLockedPreview = role.level > currentLevel;
   const directionClass = `benefit-page--dir-${previewDirection}`;
   const visibleBenefits = showAllBenefits
-    ? benefits
-    : benefits.filter((benefit) => isVisibleForRole(role, benefit));
+    ? benefits.map((benefit) => benefitForLevel(benefit, role.level))
+    : benefits
+        .filter((benefit) => isVisibleForRole(role, benefit))
+        .map((benefit) => benefitForLevel(benefit, role.level));
   const cloudWidth =
     visibleBenefits.length <= 5
       ? 390
@@ -151,10 +155,8 @@ export function BenefitPage({
   const marqueeDuration = Math.max(18, visibleBenefits.length * 3.8);
   const cloudViewportClassName = "benefit-cloud-viewport";
   const visibleSelectedBenefit =
-    !forceFrozen &&
-    selectedBenefit &&
-    visibleBenefits.some((benefit) => benefit.id === selectedBenefit.id)
-      ? selectedBenefit
+    !forceFrozen && selectedBenefit
+      ? visibleBenefits.find((benefit) => benefit.id === selectedBenefit.id) ?? null
       : null;
   const selectedStatus = visibleSelectedBenefit
     ? getStatus(currentLevel, visibleSelectedBenefit, forceFrozen)
@@ -170,6 +172,7 @@ export function BenefitPage({
   }, []);
 
   function handleOpenBenefit(benefit: Benefit) {
+    playSoundEffect("benefit-bubble-open");
     if (openTimerRef.current) {
       window.clearTimeout(openTimerRef.current);
     }
@@ -246,7 +249,9 @@ export function BenefitPage({
       >
         <div
           className={`benefit-cloud-track${
-            shouldLoopBubbles ? " benefit-cloud-track--marquee" : ""
+            shouldLoopBubbles
+              ? " benefit-cloud-track--marquee"
+              : " benefit-cloud-track--drift"
           }`}
           style={
             {

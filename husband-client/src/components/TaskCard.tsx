@@ -8,7 +8,12 @@ import {
   Play,
   Send,
 } from "lucide-react";
+import { playSoundEffect } from "../lib/soundEffects";
 import { taskRewardChips } from "../lib/taskRewards";
+import {
+  isTaskCompleteStatus,
+  isTaskSubmittableStatus,
+} from "../lib/taskStatus";
 import type { Task } from "../types/domain";
 import { ClickSpark } from "./effects/ClickSpark";
 
@@ -54,18 +59,34 @@ export function TaskCard({ task, onStart, onSubmit }: TaskCardProps) {
   const repeatCount = task.repeatCount ?? task.timeConfig?.repeatCount ?? 1;
   const completedCount =
     task.completedCount ?? task.timeConfig?.completedCount ?? 0;
+  const isCompleted = isTaskCompleteStatus(task.status);
   const primary =
     task.status === "todo"
       ? { label: "开始执行", action: () => onStart(task.id), disabled: false }
-      : task.status === "doing"
+      : isTaskSubmittableStatus(task.status)
         ? { label: "提交完成", action: () => onSubmit(task), disabled: false }
         : task.status === "submitted"
           ? { label: "等待老妞确认", action: () => undefined, disabled: true }
+          : isCompleted
+            ? {
+                label: "已归档完成",
+                action: () => undefined,
+                disabled: true,
+              }
           : {
               label: "查看提交记录",
               action: () => onSubmit(task),
               disabled: false,
             };
+
+  function handlePrimaryAction() {
+    if (primary.disabled) {
+      playSoundEffect("ui-disabled");
+      return;
+    }
+    if (task.status !== "todo") playSoundEffect("task-card-open");
+    primary.action();
+  }
 
   return (
     <article
@@ -114,7 +135,7 @@ export function TaskCard({ task, onStart, onSubmit }: TaskCardProps) {
           className="task-action"
           type="button"
           disabled={primary.disabled}
-          onClick={primary.action}
+          onClick={handlePrimaryAction}
         >
           {task.status === "doing" ? <Send size={15} /> : null}
           {primary.label}

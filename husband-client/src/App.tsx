@@ -41,7 +41,12 @@ import {
   type TaskRewardFlightEvent,
 } from "./components/effects/TaskRewardFlight";
 import { roles } from "./data/roles";
-import { wifeHomeIllustrationTransitionForLevelChange } from "./data/wifeIllustrations";
+import { benefitForLevel } from "./data/benefits";
+import {
+  wifeHomeIllustrationTransitionForLevelChange,
+  wifeIllustrationForLevel,
+  wifeTaskCompleteIllustration,
+} from "./data/wifeIllustrations";
 import {
   MIN_LEVEL,
   clampLevel,
@@ -70,6 +75,16 @@ import {
   preloadRouteAssets,
   type AppRoute,
 } from "./lib/preloadAssets";
+import { playSoundEffect } from "./lib/soundEffects";
+import {
+  playRoleBgm,
+  playLoginBgm,
+  playSlaveBgm,
+  playWifeBgm,
+  playWifeTaskCompleteBgm,
+  stopBgm,
+  unlockAudio,
+} from "./lib/audioManager";
 import {
   createChatMessage,
   loadChatMessages,
@@ -77,6 +92,7 @@ import {
   saveChatMessages,
   unreadChatCount,
 } from "./lib/chatMessages";
+import { taskStatusAfterApproval } from "./lib/taskStatus";
 import {
   aggregatePendingExperienceDecrees,
   decreeAcknowledgeIds,
@@ -306,6 +322,8 @@ function formatDateTime(value?: string) {
 }
 
 function benefitCooldownMs(benefit: Benefit) {
+  if (benefit.frequency.includes("3月")) return 90 * 24 * 60 * 60 * 1000;
+  if (benefit.frequency.includes("2月")) return 60 * 24 * 60 * 60 * 1000;
   if (benefit.frequency.includes("2周")) return 14 * 24 * 60 * 60 * 1000;
   if (benefit.frequency.includes("周")) return 7 * 24 * 60 * 60 * 1000;
   if (benefit.frequency.includes("季")) return 90 * 24 * 60 * 60 * 1000;
@@ -547,7 +565,23 @@ export default function App() {
   const [skippedMonthlyNotificationIds, setSkippedMonthlyNotificationIds] =
     useState<Set<string>>(() => new Set());
 
+  useEffect(() => {
+    const handleFirstAudioGesture = () => {
+      unlockAudio();
+    };
+    const options: AddEventListenerOptions = { capture: true, once: true };
+    window.addEventListener("pointerdown", handleFirstAudioGesture, options);
+    window.addEventListener("touchstart", handleFirstAudioGesture, options);
+    window.addEventListener("keydown", handleFirstAudioGesture, options);
+    return () => {
+      window.removeEventListener("pointerdown", handleFirstAudioGesture, true);
+      window.removeEventListener("touchstart", handleFirstAudioGesture, true);
+      window.removeEventListener("keydown", handleFirstAudioGesture, true);
+    };
+  }, []);
+
   const runPixelTransition = useCallback((action: () => void) => {
+    playSoundEffect("pixel-transition-cover");
     pixelTransitionActionRef.current = action;
     setPixelTransitionKey((current) => current + 1);
   }, []);
@@ -572,6 +606,7 @@ export default function App() {
   );
 
   const handlePixelCovered = useCallback(() => {
+    playSoundEffect("pixel-transition-reveal");
     const action = pixelTransitionActionRef.current;
     pixelTransitionActionRef.current = null;
     action?.();
@@ -579,6 +614,63 @@ export default function App() {
 
   const currentRole = roleWithProgress(roles[progress.level], progress);
   const previewRole = roleWithProgress(roles[previewLevel], progress);
+  const wifeChatIllustration = wifeTaskCompleteIllustrationActive
+    ? wifeTaskCompleteIllustration
+    : wifeIllustrationForLevel(progress.level);
+  const chatAvatars = {
+    husband:
+      punishment.status === "slave"
+        ? publicAsset("/assets/slave/slave-page-latest.png")
+        : currentRole.roleImage,
+    wife: publicAsset(
+      wifeChatIllustration?.homePath ?? "/assets/wife/wife-home-throne.png",
+    ),
+  };
+
+  useEffect(() => {
+    if (isLoading) {
+      stopBgm();
+      return;
+    }
+
+    if (route === "login") {
+      playLoginBgm();
+      return;
+    }
+
+    if (punishment.status === "slave") {
+      playSlaveBgm();
+      return;
+    }
+
+    if (route === "wife") {
+      if (wifeTaskCompleteIllustrationActive) {
+        playWifeTaskCompleteBgm();
+        return;
+      }
+      playWifeBgm(progress.level);
+      return;
+    }
+
+    if (
+      route === "husband" &&
+      (activePage === HUSBAND_PAGES.ROLE ||
+        activePage === HUSBAND_PAGES.BENEFIT)
+    ) {
+      playRoleBgm(progress.level);
+      return;
+    }
+
+    stopBgm();
+  }, [
+    activePage,
+    isLoading,
+    progress.level,
+    punishment.status,
+    route,
+    wifeTaskCompleteIllustrationActive,
+  ]);
+
   const currentAllowanceMonth = monthKeyForDate();
   const nextAllowanceMonth = nextMonthKey();
   const roleForAllowanceMonth = useCallback(
@@ -632,6 +724,10 @@ export default function App() {
   const sortedBenefits = useMemo(() => {
     return [...benefits].sort((a, b) => a.levelRequired - b.levelRequired);
   }, [benefits]);
+  const currentLevelBenefits = useMemo(
+    () => sortedBenefits.map((benefit) => benefitForLevel(benefit, progress.level)),
+    [progress.level, sortedBenefits],
+  );
 
   const pendingDecrees = useMemo(
     () =>
@@ -1806,6 +1902,7 @@ export default function App() {
   }, [route]);
 
   function handleSelectView(view: ViewKey) {
+    playSoundEffect("ui-swipe-up");
     const pageMap: Record<ViewKey, number> = {
       benefits: HUSBAND_PAGES.BENEFIT,
       role: HUSBAND_PAGES.ROLE,
@@ -1815,16 +1912,19 @@ export default function App() {
   }
 
   function handlePreviewPrev() {
+    playSoundEffect("role-preview-prev");
     setPreviewDirection("prev");
     setPreviewLevel((level) => Math.max(0, level - 1));
   }
 
   function handlePreviewNext() {
+    playSoundEffect("role-preview-next");
     setPreviewDirection("next");
     setPreviewLevel((level) => Math.min(roles.length - 1, level + 1));
   }
 
   function handleStartTask(id: string) {
+    playSoundEffect("task-start");
     setTasks((current) =>
       current.map((task) =>
         task.id === id ? { ...task, status: "doing" } : task,
@@ -1833,6 +1933,7 @@ export default function App() {
   }
 
   function handleSubmitTask(id: string, submitNote: string) {
+    playSoundEffect("task-submit");
     const submittedAt = new Date().toISOString();
     const target = tasks.find((task) => task.id === id);
     setTasks((current) =>
@@ -1874,6 +1975,7 @@ export default function App() {
   }
 
   function handleCreateTask(task: Task) {
+    playSoundEffect("wife-command-button");
     const createdAt = task.createdAt ?? new Date().toISOString();
     const nextTask = { ...task, createdAt };
     setTasks((current) => [nextTask, ...current]);
@@ -1910,6 +2012,7 @@ export default function App() {
   }
 
   function handleApproveTask(id: string, decision?: TaskReviewDecision) {
+    playSoundEffect("task-approved");
     const confirmedAt = new Date().toISOString();
     const target = tasks.find((task) => task.id === id);
     const isSlave = punishment.status === "slave";
@@ -1919,10 +2022,11 @@ export default function App() {
     const nextCompleted = target
       ? Math.min(repeatTarget, (target.completedCount ?? target.timeConfig?.completedCount ?? 0) + 1)
       : 1;
+    const approvedStatus = taskStatusAfterApproval(nextCompleted, repeatTarget);
     setTasks((current) =>
       current.map((task) =>
         task.id === id
-          ? nextCompleted < repeatTarget
+          ? approvedStatus === "doing"
             ? {
                 ...task,
                 status: "doing",
@@ -1942,7 +2046,7 @@ export default function App() {
                       .filter((reward) => reward.type === "allowance")
                       .reduce((sum, reward) => sum + Math.max(0, Math.trunc(reward.value ?? 0)), 0)
                   : task.rewardMoney,
-                status: "confirmed",
+                status: approvedStatus,
                 completedCount: nextCompleted,
                 confirmedAt,
                 resultText: isSlave
@@ -1994,6 +2098,7 @@ export default function App() {
     }
   }
   function handleRejectTask(id: string, reason?: string) {
+    playSoundEffect("task-rejected");
     const rejectedAt = new Date().toISOString();
     const target = tasks.find((task) => task.id === id);
     const rejectReason = reason?.trim() || "老婆大人裁定未通过，需要重新表现。";
@@ -2043,9 +2148,16 @@ export default function App() {
   }
 
   function handleUseBenefit(benefit: Benefit) {
-    if (punishment.status === "slave") return;
-    const currentBenefit = benefits.find((item) => item.id === benefit.id) ?? benefit;
+    if (punishment.status === "slave") {
+      playSoundEffect("benefit-frozen");
+      return;
+    }
+    const currentBenefit = benefitForLevel(
+      benefits.find((item) => item.id === benefit.id) ?? benefit,
+      progress.level,
+    );
     if (progress.level < currentBenefit.levelRequired) {
+      playSoundEffect("locked");
       setSelectedBenefit(null);
       setStory({
         title: "权益未解锁",
@@ -2055,6 +2167,7 @@ export default function App() {
       return;
     }
     if (currentBenefit.pendingRequest) {
+      playSoundEffect("ui-disabled");
       setSelectedBenefit(null);
       setStory({
         title: "权益待审批",
@@ -2067,6 +2180,7 @@ export default function App() {
       currentBenefit.cooldownUntil &&
       Date.parse(currentBenefit.cooldownUntil) > Date.now()
     ) {
+      playSoundEffect("benefit-frozen");
       setSelectedBenefit(null);
       setStory({
         title: "权益未冷却",
@@ -2076,6 +2190,7 @@ export default function App() {
       return;
     }
     if (currentBenefit.status === "cooldown" && !currentBenefit.cooldownUntil) {
+      playSoundEffect("benefit-frozen");
       setSelectedBenefit(null);
       setStory({
         title: "权益未冷却",
@@ -2085,6 +2200,7 @@ export default function App() {
       return;
     }
     if ((currentBenefit.availableBonusCount ?? 0) > 0) {
+      playSoundEffect("benefit-apply");
       const usedAt = new Date().toISOString();
       setBenefits((current) =>
         current.map((item) =>
@@ -2122,6 +2238,7 @@ export default function App() {
       });
       return;
     }
+    playSoundEffect("benefit-apply");
     const requestedAt = new Date().toISOString();
     const pendingRequest = {
       id: `benefit-request-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
@@ -2164,13 +2281,15 @@ export default function App() {
   }
 
   function handleApproveBenefit(benefit: Benefit) {
+    playSoundEffect("task-approved");
+    const displayBenefit = benefitForLevel(benefit, progress.level);
     const approvedAt = new Date().toISOString();
     const cooldownUntil = new Date(
-      Date.now() + benefitCooldownMs(benefit),
+      Date.now() + benefitCooldownMs(displayBenefit),
     ).toISOString();
     setBenefits((current) =>
       current.map((item) =>
-        item.id === benefit.id
+        item.id === displayBenefit.id
           ? {
               ...item,
               lastApprovedAt: approvedAt,
@@ -2184,42 +2303,44 @@ export default function App() {
     );
     const log = addLog({
       type: "benefit_approved",
-      title: benefit.name,
+      title: displayBenefit.name,
       description: `已批准，冷却至 ${formatDateTime(cooldownUntil)}。`,
-      benefitId: benefit.id,
-      benefitName: benefit.name,
+      benefitId: displayBenefit.id,
+      benefitName: displayBenefit.name,
       createdAt: approvedAt,
     });
     appendDecree({
       type: "benefit_approved",
-      title: `恩准：${benefit.name}`,
-      text: `老妞大人准许本次「${benefit.name}」申请。${benefit.description}`,
-      tone: benefit.levelRequired >= 8 ? "upgrade" : "normal",
+      title: `恩准：${displayBenefit.name}`,
+      text: `老妞大人准许本次「${displayBenefit.name}」申请。${displayBenefit.description}`,
+      tone: displayBenefit.levelRequired >= 8 ? "upgrade" : "normal",
       createdAt: approvedAt,
       sourceLogId: log.id,
-      payload: { benefitId: benefit.id, cooldownUntil },
+      payload: { benefitId: displayBenefit.id, cooldownUntil },
     });
     showStory(
       {
-        title: `恩准：${benefit.name}`,
-        text: `老婆大人准许本次「${benefit.name}」申请。${benefit.description}`,
-        tone: benefit.levelRequired >= 8 ? "upgrade" : "normal",
+        title: `恩准：${displayBenefit.name}`,
+        text: `老婆大人准许本次「${displayBenefit.name}」申请。${displayBenefit.description}`,
+        tone: displayBenefit.levelRequired >= 8 ? "upgrade" : "normal",
       },
       {
         notify: true,
         target: "wife",
-        sourceId: `benefit-approved-${benefit.id}-${approvedAt}`,
+        sourceId: `benefit-approved-${displayBenefit.id}-${approvedAt}`,
         createdAt: approvedAt,
       },
     );
   }
 
   function handleRejectBenefit(benefit: Benefit, reason?: string) {
+    playSoundEffect("benefit-rejected");
+    const displayBenefit = benefitForLevel(benefit, progress.level);
     const rejectedAt = new Date().toISOString();
     const rejectedReason = reason?.trim() || "老婆大人暂不批准本次权益申请。";
     setBenefits((current) =>
       current.map((item) =>
-        item.id === benefit.id
+        item.id === displayBenefit.id
           ? {
               ...item,
               pendingRequest: undefined,
@@ -2230,37 +2351,38 @@ export default function App() {
     );
     const log = addLog({
       type: "benefit_rejected",
-      title: benefit.name,
+      title: displayBenefit.name,
       description: rejectedReason,
-      benefitId: benefit.id,
-      benefitName: benefit.name,
+      benefitId: displayBenefit.id,
+      benefitName: displayBenefit.name,
       createdAt: rejectedAt,
     });
     appendDecree({
       type: "benefit_rejected",
-      title: `暂缓：${benefit.name}`,
+      title: `暂缓：${displayBenefit.name}`,
       text: rejectedReason,
       tone: "down",
       createdAt: rejectedAt,
       sourceLogId: log.id,
-      payload: { benefitId: benefit.id, reason: rejectedReason },
+      payload: { benefitId: displayBenefit.id, reason: rejectedReason },
     });
     showStory(
       {
-        title: `暂缓：${benefit.name}`,
+        title: `暂缓：${displayBenefit.name}`,
         text: rejectedReason,
         tone: "normal",
       },
       {
         notify: true,
         target: "wife",
-        sourceId: `benefit-rejected-${benefit.id}-${rejectedAt}`,
+        sourceId: `benefit-rejected-${displayBenefit.id}-${rejectedAt}`,
         createdAt: rejectedAt,
       },
     );
   }
 
   function handleAdjustExperience(amount: number) {
+    playSoundEffect(amount >= 0 ? "task-reward-exp" : "wife-level-down-command");
     const createdAt = new Date().toISOString();
     if (amount > 0) {
       const result = grantExperience(
@@ -2404,6 +2526,7 @@ export default function App() {
   }
 
   function handleOpenNextAllowanceDetail() {
+    playSoundEffect("money-reward");
     const roleTitle = nextMonthlyAllowance?.roleTitle ?? nextAllowanceRole.title;
     const completedTaskCount =
       nextMonthlyAllowance?.completedTaskCount ??
@@ -2421,6 +2544,13 @@ export default function App() {
   function handleSetLevel(level: number, reason: string) {
     const safeLevel = clampLevel(level);
     const previousLevel = progress.level;
+    playSoundEffect(
+      safeLevel > previousLevel
+        ? "wife-level-up-command"
+        : safeLevel < previousLevel
+          ? "wife-level-down-command"
+          : "wife-command-button",
+    );
     const previousPunishmentStatus = punishment.status;
     setPunishment(createNormalPunishment());
     setProgress((current) => progressWithLevelRule(current, safeLevel));
@@ -2502,6 +2632,7 @@ export default function App() {
 
   function handlePunishStatus() {
     if (punishment.status === "slave") return;
+    playSoundEffect("slave-enter");
     const previousPunishmentStatus = punishment.status;
     setPunishment(
       createSlavePunishment({
@@ -2575,6 +2706,7 @@ export default function App() {
 
   function handleRestoreNormal() {
     if (punishment.status !== "slave") return;
+    playSoundEffect("slave-release");
     const restoredLevel = clampLevel(punishment.restoreLevel ?? progress.level);
     const restoredExp = Math.min(
       punishment.restoreExp ?? progress.exp,
@@ -2659,6 +2791,7 @@ export default function App() {
 
   function handleContinueSlaveLabor() {
     if (punishment.status !== "slave") return;
+    playSoundEffect("slave-ruling");
     setPunishment(createNextSlavePunishment(punishment));
     const continuedLog = addLog({
       type: "punishment_status_changed",
@@ -2680,6 +2813,7 @@ export default function App() {
   }
 
   function dismissMonthlyAllowanceModal() {
+    playSoundEffect("ui-close");
     const record = currentMonthlyAllowance;
     if (record && monthlyAllowanceModalMode === "wife-pending") {
       allowanceSessionLocksRef.current.add(`pending:${record.id}`);
@@ -2691,6 +2825,7 @@ export default function App() {
   }
 
   function handleMonthlyAllowancePrimary() {
+    playSoundEffect("wife-command-button");
     const record = currentMonthlyAllowance;
     if (!record || !monthlyAllowanceModalMode) return;
     markMonthlyAllowanceNotificationViewed(monthlyAllowanceModalMode, record);
@@ -2727,6 +2862,7 @@ export default function App() {
   }
 
   function handleMonthlyAllowanceSecondary() {
+    playSoundEffect("ui-switch");
     const record = currentMonthlyAllowance;
     if (!record || !monthlyAllowanceModalMode) return;
     if (monthlyAllowanceModalMode === "wife-pending") {
@@ -2747,6 +2883,7 @@ export default function App() {
   }
 
   function handleMonthlyAllowanceTertiary() {
+    playSoundEffect("ui-back");
     const record = currentMonthlyAllowance;
     if (record && monthlyAllowanceModalMode === "wife-dispute") {
       cancelMonthlyAllowance(record);
@@ -2871,6 +3008,7 @@ export default function App() {
   }
 
   function handleAcknowledgeNotificationReplay() {
+    playSoundEffect("ui-close");
     const item = activeNotificationItem;
     acknowledgeNotificationItem(item);
     if (!item || item.remainingCount === 0) {
@@ -2879,11 +3017,13 @@ export default function App() {
   }
 
   function handleSkipNotificationReplay() {
+    playSoundEffect("ui-close");
     skipNotificationItem(activeNotificationItem);
   }
 
   function handleSkipActiveDecree() {
     if (!activeDecree) return;
+    playSoundEffect("ui-close");
     setDecreeAutoPaused(true);
     setDecrees((current) =>
       current.map((decree) =>
@@ -2895,6 +3035,7 @@ export default function App() {
   }
 
   function handleStoryAcknowledge() {
+    playSoundEffect("ui-close");
     if (story?.notificationId) {
       setNotifications((current) =>
         markNotificationViewed(current, story.notificationId!),
@@ -2904,6 +3045,7 @@ export default function App() {
   }
 
   function handleStorySkip() {
+    playSoundEffect("ui-close");
     if (story?.notificationId) {
       setNotifications((current) =>
         markNotificationSkipped(current, story.notificationId!),
@@ -2913,6 +3055,7 @@ export default function App() {
   }
 
   function handleSkipMonthlyAllowanceModal() {
+    playSoundEffect("ui-close");
     const record = currentMonthlyAllowance;
     const mode = monthlyAllowanceModalMode;
     if (!record || !mode) {
@@ -2942,7 +3085,8 @@ export default function App() {
 
   function handleEnterRole(role: "husband" | "wife") {
     if (navigationLockedRef.current) return;
-    setWifeTaskCompleteIllustrationActive(false);
+    unlockAudio();
+    playSoundEffect("login-enter");
     if (canResumeOpenRouteWithoutLoading(role, false)) {
       navigationLockedRef.current = true;
       runPixelTransition(() => {
@@ -2959,11 +3103,11 @@ export default function App() {
   }
 
   function handleReturnToLogin() {
+    playSoundEffect("ui-back");
     runPixelTransition(() => {
       loadingAttemptRef.current += 1;
       navigationLockedRef.current = false;
       clearOpenRoute();
-      setWifeTaskCompleteIllustrationActive(false);
       window.history.pushState(null, "", "/");
       setLoadingTarget(null);
       setLoadingPhase("loading");
@@ -2975,17 +3119,22 @@ export default function App() {
   }
 
   function handleOpenChat(viewer: ChatSender) {
+    playSoundEffect("chat-open");
     setChatMessages((current) => markChatMessagesRead(current, viewer));
     setActiveChatViewer(viewer);
   }
 
   function handleOpenNotifications(viewer: ChatSender) {
+    playSoundEffect("notification-open");
     setActiveNotificationViewer(viewer);
     if (viewer === "husband") setDecreeAutoPaused(true);
   }
 
   function handleSendChat(text: string) {
     if (!activeChatViewer) return;
+    playSoundEffect(
+      activeChatViewer === "wife" ? "chat-send-wife" : "chat-send-husband",
+    );
     setChatMessages((current) => [
       ...current,
       createChatMessage(activeChatViewer, text),
@@ -2998,6 +3147,7 @@ export default function App() {
       !loadingTarget ||
       loadingTarget === "login"
     ) return;
+    playSoundEffect("ui-tap");
     runLoadingAttempt(
       loadingTarget,
       loadingPushHistoryRef.current,
@@ -3012,6 +3162,7 @@ export default function App() {
       !loadingTarget ||
       loadingTarget === "login"
     ) return;
+    playSoundEffect("loading-complete");
     const target = loadingTarget;
     const pushHistory = loadingPushHistoryRef.current;
     runPixelTransition(() => {
@@ -3172,6 +3323,7 @@ export default function App() {
     <ChatMessagePanel
       isOpen={Boolean(activeChatViewer)}
       viewer={activeChatViewer ?? "husband"}
+      avatars={chatAvatars}
       messages={chatMessages}
       onClose={() => setActiveChatViewer(null)}
       onSend={handleSendChat}
@@ -3211,7 +3363,7 @@ export default function App() {
           activeAnomalies={activeAnomalies}
           taskCompleteIllustrationActive={wifeTaskCompleteIllustrationActive}
           punishment={punishment}
-          benefits={sortedBenefits}
+          benefits={currentLevelBenefits}
           roles={roles}
           onCreateTask={handleCreateTask}
           onApproveTask={handleApproveTask}

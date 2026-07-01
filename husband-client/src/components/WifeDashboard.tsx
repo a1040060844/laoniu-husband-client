@@ -53,11 +53,22 @@ import {
 import type { ActiveAnomaly } from "../lib/anomalyRules";
 import { resolveTaskSchedule, taskTypeForTimeConfig } from "../lib/taskSchedule";
 import {
+  playSoundEffect,
+} from "../lib/soundEffects";
+import {
+  getAudioEnabled,
+  isAudioUnlocked,
+  setAudioEnabled,
+  subscribeAudioEnabled,
+  unlockAudio,
+} from "../lib/audioManager";
+import {
   taskRewardChips,
   taskRewardExp,
   taskRewardMoney,
   taskRewardText,
 } from "../lib/taskRewards";
+import { isTaskCompleteStatus } from "../lib/taskStatus";
 import type {
   Benefit,
   EventLog,
@@ -73,6 +84,7 @@ import type {
   WalletLedgerEntry,
 } from "../types/domain";
 import { ChatMessageButton } from "./ChatMessagePanel";
+import { CharacterAvatar } from "./CharacterAvatar";
 import { MusicToggleButton, NotificationButton } from "./NotificationCenter";
 import { OrnateSwipeHint } from "./OrnateSwipeHint";
 import { SwipeBackHint } from "./SwipeBackHint";
@@ -428,7 +440,9 @@ export function WifeDashboard({
   const [targetWalletTotal, setTargetWalletTotal] = useState(
     currentMonthlyAllowanceTotal,
   );
-  const [isBackgroundMusicEnabled, setIsBackgroundMusicEnabled] = useState(false);
+  const [isBackgroundMusicEnabled, setIsBackgroundMusicEnabled] = useState(() =>
+    getAudioEnabled(),
+  );
   const [armedPunish, setArmedPunish] = useState(false);
   const [growthFeedback, setGrowthFeedback] = useState<GrowthFeedback | null>(null);
   const [activeIllustrationTransition, setActiveIllustrationTransition] =
@@ -439,6 +453,7 @@ export function WifeDashboard({
   const wheelLocked = useRef(false);
   const growthFeedbackTimer = useRef<number | null>(null);
   const lastIllustrationTransitionId = useRef<string | null>(null);
+  const previousWifeHomeImage = useRef(wifeHomeImage);
   const previousGrowthState = useRef({
     exp: progress.exp,
     level: role.level,
@@ -787,6 +802,19 @@ export function WifeDashboard({
   }
 
   useEffect(() => {
+    const syncEnabled = () => setIsBackgroundMusicEnabled(getAudioEnabled());
+    syncEnabled();
+    const unsubscribe = subscribeAudioEnabled(setIsBackgroundMusicEnabled);
+    window.addEventListener("pageshow", syncEnabled);
+    window.addEventListener("focus", syncEnabled);
+    return () => {
+      unsubscribe();
+      window.removeEventListener("pageshow", syncEnabled);
+      window.removeEventListener("focus", syncEnabled);
+    };
+  }, []);
+
+  useEffect(() => {
     function pageFromHash(): WifePage {
       const targetId = window.location.hash.slice(1);
       if (targetId === "wife-growth") return "growth";
@@ -849,12 +877,39 @@ export function WifeDashboard({
       return;
     }
     lastIllustrationTransitionId.current = illustrationTransition.id;
+    previousWifeHomeImage.current = publicAsset(illustrationTransition.toHomePath);
+    if (illustrationTransition.fromHomePath !== illustrationTransition.toHomePath) {
+      setActiveIllustrationTransition({
+        ...illustrationTransition,
+        fromHomePath: publicAsset(illustrationTransition.fromHomePath),
+        toHomePath: publicAsset(illustrationTransition.toHomePath),
+        waitForMainPage: activePage !== "main",
+      });
+    }
+    setWifePage("main");
+  }, [activePage, illustrationTransition]);
+
+  useEffect(() => {
+    const previousImage = previousWifeHomeImage.current;
+    if (previousImage === wifeHomeImage) return;
+
+    previousWifeHomeImage.current = wifeHomeImage;
+    if (
+      activeIllustrationTransition &&
+      activeIllustrationTransition.fromHomePath === previousImage &&
+      activeIllustrationTransition.toHomePath === wifeHomeImage
+    ) {
+      return;
+    }
+
     setActiveIllustrationTransition({
-      ...illustrationTransition,
+      id: `wife-illustration-src-${Date.now()}`,
+      fromHomePath: previousImage,
+      toHomePath: wifeHomeImage,
       waitForMainPage: activePage !== "main",
     });
     setWifePage("main");
-  }, [activePage, illustrationTransition]);
+  }, [activeIllustrationTransition, activePage, wifeHomeImage]);
 
   useEffect(() => {
     if (draft.moduleId === "custom") return;
@@ -885,6 +940,7 @@ export function WifeDashboard({
   ]);
 
   function setWifePage(page: WifePage) {
+    playSoundEffect("ui-swipe-up");
     setSubPage(null);
     setActivePage(page);
     const nextHash =
@@ -900,6 +956,7 @@ export function WifeDashboard({
   }
 
   function openSubPage(page: WifeSubPage) {
+    playSoundEffect("ui-switch");
     setActivePage("today");
     setSubPage(page);
     const nextHash = WIFE_SUB_PAGE_HASH[page];
@@ -910,6 +967,7 @@ export function WifeDashboard({
   }
 
   function closeSubPage() {
+    playSoundEffect("ui-back");
     setSubPage(null);
     setActivePage("today");
     if (window.location.hash !== "#wife-today") {
@@ -1049,6 +1107,7 @@ export function WifeDashboard({
   }
 
   function selectModule(moduleId: TaskModuleId) {
+    playSoundEffect("ui-switch");
     const module = findTaskModule(moduleId);
     const target = module.id === "cleaning" ? (module.targets?.[0] ?? "") : "";
     const action = module.id === "cleaning" ? (module.actions?.[0] ?? "") : "";
@@ -1128,16 +1187,19 @@ export function WifeDashboard({
   }
 
   function openLevelSheet() {
+    playSoundEffect("ui-open");
     setTargetLevel(progress.level);
     setSheet("level");
   }
 
   function openWalletSheet() {
+    playSoundEffect("ui-open");
     setTargetWalletTotal(currentMonthlyAllowanceTotal);
     setSheet("wallet");
   }
 
   function adjustTargetWallet(amount: number) {
+    playSoundEffect(amount >= 0 ? "task-reward-money" : "ui-switch");
     setTargetWalletTotal((current) => Math.max(0, current + amount));
   }
 
@@ -1153,6 +1215,7 @@ export function WifeDashboard({
   }
 
   function confirmTargetWallet() {
+    playSoundEffect("money-reward");
     const amount = targetWalletAdjustment - monthlyAllowanceAdjustment;
     if (amount !== 0) {
       onAdjustWallet(amount);
@@ -1167,6 +1230,7 @@ export function WifeDashboard({
 
   function confirmPunishStatus() {
     if (!armedPunish) {
+      playSoundEffect("locked");
       setArmedPunish(true);
       return;
     }
@@ -1227,12 +1291,13 @@ export function WifeDashboard({
                   {displayRole.title}
                 </h2>
               </div>
-              <div
+              <CharacterAvatar
                 className="wife-rank-seal"
+                kind={isSlave ? "slave" : "husband"}
+                src={displayRole.roleImage}
+                alt=""
                 aria-label={`当前状态插画：${displayRole.title}`}
-              >
-                <img src={displayRole.roleImage} alt="" />
-              </div>
+              />
             </div>
 
             <div className="wife-growth-exp">
@@ -1487,7 +1552,7 @@ export function WifeDashboard({
             >
               <img
                 className="wife-portrait wife-portrait--home wife-illustration-transition__old"
-                src={publicAsset(activeIllustrationTransition.fromHomePath)}
+                src={activeIllustrationTransition.fromHomePath}
                 alt=""
               />
               <span
@@ -1522,9 +1587,18 @@ export function WifeDashboard({
             <MusicToggleButton
               className="wife-login-music-entry"
               enabled={isBackgroundMusicEnabled}
-              onToggle={() =>
-                setIsBackgroundMusicEnabled((current) => !current)
-              }
+              onToggle={() => {
+                if (isBackgroundMusicEnabled && !isAudioUnlocked()) {
+                  unlockAudio();
+                  playSoundEffect("audio-toggle", { force: true });
+                  return;
+                }
+
+                unlockAudio();
+                const nextEnabled = !isBackgroundMusicEnabled;
+                setAudioEnabled(nextEnabled);
+                playSoundEffect("audio-toggle", { force: true });
+              }}
             />
           </div>
 
@@ -1818,7 +1892,7 @@ export function WifeDashboard({
                 </AnimatedContent>
                 <AnimatedContent as="article" delay={55} duration={300}>
                   <strong>
-                    {tasks.filter((task) => task.status === "confirmed").length}
+                    {tasks.filter((task) => isTaskCompleteStatus(task.status)).length}
                   </strong>
                   <span>已确认</span>
                 </AnimatedContent>

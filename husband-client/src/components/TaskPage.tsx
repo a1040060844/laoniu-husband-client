@@ -11,7 +11,9 @@ import { StatCard } from "./StatCard";
 import { TaskCard } from "./TaskCard";
 import type { GameProgress } from "../game/progression";
 import { publicAsset } from "../lib/assets";
+import { playSoundEffect } from "../lib/soundEffects";
 import { taskRewardExp, taskRewardMoney } from "../lib/taskRewards";
+import { isTaskCompleteStatus } from "../lib/taskStatus";
 import type {
   Role,
   Task,
@@ -23,6 +25,7 @@ import { AnimatedContent } from "./effects/AnimatedContent";
 import { AnimatedList } from "./effects/AnimatedList";
 import { ClickSpark } from "./effects/ClickSpark";
 import { CountUp } from "./effects/CountUp";
+import { CharacterAvatar } from "./CharacterAvatar";
 import { OrnateSwipeHint } from "./OrnateSwipeHint";
 
 type FilterKey = "all" | "todo" | "doing" | "submitted" | "completed";
@@ -112,7 +115,7 @@ export function TaskPage({
   const month = useMemo(() => {
     const currentMonthTasks = tasks.filter(
       (task) =>
-        (task.status === "completed" || task.status === "confirmed") &&
+        isTaskCompleteStatus(task.status) &&
         isCurrentMonth(task.rewardedAt ?? task.confirmedAt),
     );
     return {
@@ -169,7 +172,12 @@ export function TaskPage({
             <h1>{role.title}</h1>
             <span>老哥任务簿 · 今日待执行</span>
           </div>
-          <img src={role.roleImage} alt={`${role.title}小头像`} />
+          <CharacterAvatar
+            className="task-header__avatar"
+            kind={levelLabel === "FINAL" ? "slave" : "husband"}
+            src={role.roleImage}
+            alt={`${role.title}小头像`}
+          />
         </AnimatedContent>
 
         <AnimatedContent
@@ -210,14 +218,20 @@ export function TaskPage({
           <button
             type="button"
             className={source === "wife" ? "active" : ""}
-            onClick={() => setSource("wife")}
+            onClick={() => {
+              playSoundEffect("ui-switch");
+              setSource("wife");
+            }}
           >
             老婆发布
           </button>
           <button
             type="button"
             className={source === "daily" ? "active" : ""}
-            onClick={() => setSource("daily")}
+            onClick={() => {
+              playSoundEffect("ui-switch");
+              setSource("daily");
+            }}
           >
             每日任务
           </button>
@@ -229,7 +243,10 @@ export function TaskPage({
               key={item.key}
               type="button"
               className={filter === item.key ? "active" : ""}
-              onClick={() => setFilter(item.key)}
+              onClick={() => {
+                playSoundEffect("ui-switch");
+                setFilter(item.key);
+              }}
             >
               {item.label}
             </button>
@@ -304,7 +321,10 @@ export function TaskPage({
             <button
               className="icon-close"
               type="button"
-              onClick={() => setSubmittingTask(null)}
+              onClick={() => {
+                playSoundEffect("ui-close");
+                setSubmittingTask(null);
+              }}
               aria-label="关闭"
             >
               ×

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "audit:login-sprites": "node scripts/audit-login-sprites.mjs",
+    "prepare:audio": "node scripts/prepare-audio.mjs",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "test": "node --experimental-strip-types --test tests/*.test.ts",

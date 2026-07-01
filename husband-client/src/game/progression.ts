@@ -3,7 +3,7 @@ import type { Role, StoryEvent, Task, TaskReward } from "../types/domain";
 export const MIN_LEVEL = 0;
 export const MAX_LEVEL = 11;
 
-const LEVEL_EXP_REQUIRED = 100;
+const LEVEL_EXP_STEP = 500;
 
 export interface GameProgress {
   level: number;
@@ -36,8 +36,9 @@ function finiteNumber(value: unknown, fallback: number) {
   return Number.isFinite(number) ? number : fallback;
 }
 
-export function expRequiredForLevel(_level: number) {
-  return LEVEL_EXP_REQUIRED;
+export function expRequiredForLevel(level: number) {
+  const safeLevel = clampLevel(level);
+  return Math.max(1, safeLevel) * LEVEL_EXP_STEP;
 }
 
 export function progressWithLevelRule(

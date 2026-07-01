@@ -6,6 +6,7 @@ import {
   type TouchEvent,
   type WheelEvent,
 } from "react";
+import { playSoundEffect } from "../lib/soundEffects";
 
 export const HUSBAND_PAGES = {
   BENEFIT: 0,
@@ -60,6 +61,7 @@ export function HusbandVerticalPager({
   function setPage(page: number) {
     const next = clampPage(page, minPage, maxPage);
     if (next === currentPage) return;
+    playSoundEffect("ui-swipe-up");
     if (onPageChange) {
       onPageChange(next);
       return;

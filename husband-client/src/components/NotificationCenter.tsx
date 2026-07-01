@@ -86,7 +86,7 @@ export function MusicToggleButton({
         aria-pressed={enabled}
         onClick={onToggle}
       >
-        <span>BGM</span>
+        <span>{enabled ? "\u97f3\u4e50" : "\u9759\u97f3"}</span>
         {enabled ? (
           <Music2 className="notification-button__icon" aria-hidden="true" size={27} />
         ) : (

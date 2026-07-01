@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   clampLevel,
+  expRequiredForLevel,
   grantExperience,
   hydrateProgress,
   progressWithLevelRule,
@@ -15,6 +16,11 @@ import {
   taskTypeForTimeConfig,
 } from "../src/lib/taskSchedule.ts";
 import {
+  isTaskCompleteStatus,
+  isTaskSubmittableStatus,
+  taskStatusAfterApproval,
+} from "../src/lib/taskStatus.ts";
+import {
   eventLogRecordLabel,
   walletLedgerRecordLabel,
 } from "../src/lib/recordLabels.ts";
@@ -24,6 +30,7 @@ import {
   decreeAcknowledgeIds,
   pendingWifeRoleUpgradeDecrees,
 } from "../src/lib/decreeQueue.ts";
+import { benefitForLevel, benefits } from "../src/data/benefits.ts";
 import {
   createMonthlyAllowanceRecord,
   mergeMonthlyAllowanceRecords,
@@ -50,7 +57,7 @@ const roles: Role[] = Array.from({ length: 12 }, (_, level) => ({
   title: `等级${level}`,
   salary: 0,
   expCurrent: 0,
-  expRequired: 100,
+  expRequired: expRequiredForLevel(level),
   biography: "测试",
   roleImage: "",
   benefitImage: "",
@@ -121,6 +128,13 @@ test("hydrateProgress rejects invalid persisted numbers", () => {
       rewardedTaskIds: ["valid"],
     },
   );
+});
+
+test("level experience requirements start at 500 and grow by 500", () => {
+  assert.equal(expRequiredForLevel(0), 500);
+  assert.equal(expRequiredForLevel(1), 500);
+  assert.equal(expRequiredForLevel(2), 1000);
+  assert.equal(expRequiredForLevel(3), 1500);
 });
 
 test("pending wife experience changes are merged into one husband popup", () => {
@@ -234,6 +248,23 @@ test("wife home illustration transition only appears across illustration ranges"
   assert.equal(wifeHomeIllustrationTransitionForLevelChange(3, 4), null);
   assert.equal(wifeHomeIllustrationTransitionForLevelChange(5, 4), null);
   assert.equal(wifeHomeIllustrationTransitionForLevelChange(2, 3), null);
+});
+
+test("benefit copy and frequency follow the current role level", () => {
+  const takeout = benefits.find((benefit) => benefit.id === "takeout")!;
+  const feast = benefits.find((benefit) => benefit.id === "feast")!;
+  const cos = benefits.find((benefit) => benefit.id === "cos")!;
+  const lovePlus = benefits.find((benefit) => benefit.id === "love-plus")!;
+
+  assert.equal(benefitForLevel(takeout, 9).frequency, "2周1次");
+  assert.equal(benefitForLevel(takeout, 10).frequency, "周1次");
+  assert.equal(benefitForLevel(feast, 3).frequency, "月1次");
+  assert.equal(benefitForLevel(feast, 4).frequency, "2周1次");
+  assert.equal(benefitForLevel(feast, 10).frequency, "周1次");
+  assert.equal(benefitForLevel(cos, 8).name, "cos一下");
+  assert.equal(benefitForLevel(cos, 9).name, "cos时刻");
+  assert.match(benefitForLevel(lovePlus, 10).description, /不能和恩爱奖励叠加使用/);
+  assert.match(benefitForLevel(lovePlus, 11).description, /可以和恩爱奖励叠加使用/);
 });
 
 test("notification queue orders unread notices by creation time", () => {
@@ -362,15 +393,15 @@ test("notification queue only includes the selected target side", () => {
 test("experience resets to zero when a grant upgrades the role", () => {
   const current: GameProgress = {
     level: 1,
-    exp: 90,
-    totalExp: 90,
+    exp: 490,
+    totalExp: 490,
     wallet: 0,
     rewardedTaskIds: [],
   };
-  const result = grantExperience(current, 250, roles, "测试升级");
+  const result = grantExperience(current, 20, roles, "测试升级");
   assert.equal(result.progress.level, 2);
   assert.equal(result.progress.exp, 0);
-  assert.equal(result.progress.totalExp, 340);
+  assert.equal(result.progress.totalExp, 510);
   assert.equal(result.stories.length, 1);
 });
 
@@ -396,6 +427,16 @@ test("task rewards are settled only once per task cycle", () => {
   assert.equal(first.progress.wallet, 0);
   assert.deepEqual(second.progress, first.progress);
   assert.deepEqual(second.stories, []);
+});
+
+test("approved final task archives as completed and cannot be resubmitted", () => {
+  assert.equal(taskStatusAfterApproval(1, 1), "completed");
+  assert.equal(taskStatusAfterApproval(1, 2), "doing");
+  assert.equal(isTaskCompleteStatus("completed"), true);
+  assert.equal(isTaskCompleteStatus("confirmed"), true);
+  assert.equal(isTaskSubmittableStatus("completed"), false);
+  assert.equal(isTaskSubmittableStatus("confirmed"), false);
+  assert.equal(isTaskSubmittableStatus("doing"), true);
 });
 
 test("monthly allowance records settle the previous calendar month", () => {
@@ -567,7 +608,7 @@ test("level rule resets current experience only when level increases", () => {
 
   assert.equal(progressWithLevelRule(current, 4).exp, 0);
   assert.equal(progressWithLevelRule(current, 3).exp, 80);
-  assert.equal(progressWithLevelRule({ ...current, exp: 180 }, 2).exp, 100);
+  assert.equal(progressWithLevelRule({ ...current, exp: 1200 }, 2).exp, 1000);
 });
 
 test("one-off deadline choices produce their real deadlines without cycles", () => {

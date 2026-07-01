@@ -9,7 +9,15 @@ import { VerticalMagicSwipeHint } from "./VerticalMagicSwipeHint";
 import { AnimatedContent } from "./effects/AnimatedContent";
 import { ClickSpark } from "./effects/ClickSpark";
 import { CountUp } from "./effects/CountUp";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import {
+  getAudioEnabled,
+  isAudioUnlocked,
+  setAudioEnabled,
+  subscribeAudioEnabled,
+  unlockAudio,
+} from "../lib/audioManager";
+import { playSoundEffect } from "../lib/soundEffects";
 
 interface RolePageProps {
   role: Role;
@@ -57,7 +65,22 @@ export function RolePage({
     previewRole.expRequired > 0 &&
     previewRole.expCurrent / previewRole.expRequired >= 0.8;
   const directionClass = `role-page--dir-${previewDirection}`;
-  const [isBackgroundMusicEnabled, setIsBackgroundMusicEnabled] = useState(false);
+  const [isBackgroundMusicEnabled, setIsBackgroundMusicEnabled] = useState(() =>
+    getAudioEnabled(),
+  );
+
+  useEffect(() => {
+    const syncEnabled = () => setIsBackgroundMusicEnabled(getAudioEnabled());
+    syncEnabled();
+    const unsubscribe = subscribeAudioEnabled(setIsBackgroundMusicEnabled);
+    window.addEventListener("pageshow", syncEnabled);
+    window.addEventListener("focus", syncEnabled);
+    return () => {
+      unsubscribe();
+      window.removeEventListener("pageshow", syncEnabled);
+      window.removeEventListener("focus", syncEnabled);
+    };
+  }, []);
 
   return (
     <section
@@ -111,9 +134,24 @@ export function RolePage({
             <MusicToggleButton
               className="role-login-music-entry"
               enabled={isBackgroundMusicEnabled}
-              onToggle={() =>
-                setIsBackgroundMusicEnabled((current) => !current)
-              }
+              onToggle={() => {
+                if (isBackgroundMusicEnabled && !isAudioUnlocked()) {
+                  unlockAudio();
+                  playSoundEffect("audio-toggle", { force: true });
+                  return;
+                }
+
+                unlockAudio();
+                const nextEnabled = !isBackgroundMusicEnabled;
+                setAudioEnabled(nextEnabled);
+                playSoundEffect("audio-toggle", { force: true });
+              }}
+            />
+            <ChatMessageButton
+              className="role-chat-entry"
+              viewer="husband"
+              unreadCount={chatUnreadCount}
+              onClick={onOpenChat}
             />
           </div>
           <h1>{previewRole.title}</h1>
@@ -131,13 +169,6 @@ export function RolePage({
         <strong>{"\u00A5"} <CountUp value={nextAllowanceAmount} /></strong>
         <em>{nextAllowanceMonth}</em>
       </button>
-
-      <ChatMessageButton
-        className="role-chat-entry"
-        viewer="husband"
-        unreadCount={chatUnreadCount}
-        onClick={onOpenChat}
-      />
 
       <VerticalMagicSwipeHint
         className="role-benefit-magic-hint"

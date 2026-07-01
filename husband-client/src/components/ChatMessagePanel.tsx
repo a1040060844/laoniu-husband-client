@@ -8,6 +8,8 @@ import {
 } from "react";
 import type { ChatMessage, ChatSender } from "../types/domain";
 import { publicAsset } from "../lib/assets";
+import { playSoundEffect } from "../lib/soundEffects";
+import { CharacterAvatar } from "./CharacterAvatar";
 import { ClickSpark } from "./effects/ClickSpark";
 
 interface ChatMessageButtonProps {
@@ -20,6 +22,7 @@ interface ChatMessageButtonProps {
 interface ChatMessagePanelProps {
   isOpen: boolean;
   viewer: ChatSender;
+  avatars: Record<ChatSender, string>;
   messages: ChatMessage[];
   onClose: () => void;
   onSend: (text: string) => void;
@@ -28,11 +31,6 @@ interface ChatMessagePanelProps {
 const senderLabel: Record<ChatSender, string> = {
   husband: "老哥",
   wife: "老妞大人",
-};
-
-const senderAvatar: Record<ChatSender, string> = {
-  husband: "哥",
-  wife: "妞",
 };
 
 const chatActionIcon: Record<ChatSender, string> = {
@@ -87,6 +85,7 @@ export function ChatMessageButton({
 }
 
 export function ChatMessagePanel({
+  avatars,
   isOpen,
   viewer,
   messages,
@@ -151,6 +150,11 @@ export function ChatMessagePanel({
     setDraft("");
   }
 
+  function closePanel() {
+    playSoundEffect("ui-close");
+    onClose();
+  }
+
   return (
     <div
       className={`chat-message-drawer${isOpen ? " chat-message-drawer--open" : ""}`}
@@ -166,7 +170,7 @@ export function ChatMessagePanel({
         type="button"
         aria-label="关闭聊天留言"
         tabIndex={isOpen ? 0 : -1}
-        onClick={onClose}
+        onClick={closePanel}
       />
       <section
         className="chat-message-sheet"
@@ -188,7 +192,7 @@ export function ChatMessagePanel({
               className="chat-message-sheet__close"
               type="button"
               aria-label="关闭"
-              onClick={onClose}
+              onClick={closePanel}
             >
               <X size={25} />
             </button>
@@ -199,14 +203,19 @@ export function ChatMessagePanel({
           {orderedMessages.length ? (
             orderedMessages.map((message) => {
               const isMine = message.sender === viewer;
+              const avatarSender = isMine ? viewer : peer;
               return (
                 <article
                   className={`chat-message-item${isMine ? " chat-message-item--mine" : ""}`}
                   key={message.id}
                 >
-                  <div className="chat-message-avatar" aria-hidden="true">
-                    {isMine ? senderAvatar[viewer] : senderAvatar[peer]}
-                  </div>
+                  <CharacterAvatar
+                    className="chat-message-avatar"
+                    kind={avatarSender}
+                    src={avatars[avatarSender]}
+                    alt=""
+                    aria-hidden="true"
+                  />
                   <div className="chat-message-item__body">
                     <div className="chat-message-meta">
                       <span>{isMine ? senderLabel[viewer] : senderLabel[peer]}</span>

@@ -184,6 +184,12 @@ export interface Benefit {
   name: string;
   frequency: string;
   description: string;
+  displayVariants?: {
+    minLevel: number;
+    name?: string;
+    frequency?: string;
+    description?: string;
+  }[];
   status: BenefitStatus;
   cooldownText?: string;
   lastRequestedAt?: string;
