@@ -145,6 +145,7 @@ interface WifeDashboardProps {
   chatUnreadCount: number;
   hasNotificationUnread: boolean;
   illustrationTransition?: WifeIllustrationTransitionEvent | null;
+  illustrationTransitionBlocked?: boolean;
   onOpenChat: () => void;
   onOpenNotifications: () => void;
   onIllustrationTransitionDone?: (id: string) => void;
@@ -402,6 +403,7 @@ export function WifeDashboard({
   chatUnreadCount,
   hasNotificationUnread,
   illustrationTransition,
+  illustrationTransitionBlocked = false,
   onOpenChat,
   onOpenNotifications,
   onIllustrationTransitionDone,
@@ -426,6 +428,20 @@ export function WifeDashboard({
   const wifeTodayBackground = publicAsset(
     wifeIllustration?.todayPath ?? "/assets/wife/wife-today-bg.png",
   );
+  const wifeTodayOffsetY =
+    !taskCompleteIllustrationActive && wifeLevelIllustration?.todayOffsetY
+      ? wifeLevelIllustration.todayOffsetY
+      : 0;
+  const wifeSubpageOffsetY =
+    !taskCompleteIllustrationActive && wifeLevelIllustration?.subpageOffsetY
+      ? wifeLevelIllustration.subpageOffsetY
+      : wifeTodayOffsetY;
+  const wifeTodayPortraitStyle = {
+    "--wife-today-portrait-offset-y": `${wifeTodayOffsetY}px`,
+  } as CSSProperties;
+  const wifeSubpagePortraitStyle = {
+    "--wife-subpage-portrait-offset-y": `${wifeSubpageOffsetY}px`,
+  } as CSSProperties;
   const walletBaseAmount = Math.max(0, Math.trunc(monthlyAllowanceBaseAmount));
   const currentMonthlyAllowanceTotal = Math.max(
     0,
@@ -434,6 +450,8 @@ export function WifeDashboard({
   const [sheet, setSheet] = useState<WifeSheet>(null);
   const [activePage, setActivePage] = useState<WifePage>("main");
   const [subPage, setSubPage] = useState<WifeSubPage | null>(null);
+  const isIllustrationTransitionBlocked =
+    illustrationTransitionBlocked || Boolean(sheet);
   const [todayEnterKey, setTodayEnterKey] = useState(0);
   const [draft, setDraft] = useState<TaskDraft>(initialDraft);
   const [targetLevel, setTargetLevel] = useState(progress.level);
@@ -873,6 +891,7 @@ export function WifeDashboard({
 
   useEffect(() => {
     if (!illustrationTransition) return;
+    if (isIllustrationTransitionBlocked) return;
     if (lastIllustrationTransitionId.current === illustrationTransition.id) {
       return;
     }
@@ -887,9 +906,10 @@ export function WifeDashboard({
       });
     }
     setWifePage("main");
-  }, [activePage, illustrationTransition]);
+  }, [activePage, illustrationTransition, isIllustrationTransitionBlocked]);
 
   useEffect(() => {
+    if (isIllustrationTransitionBlocked) return;
     const previousImage = previousWifeHomeImage.current;
     if (previousImage === wifeHomeImage) return;
 
@@ -909,7 +929,12 @@ export function WifeDashboard({
       waitForMainPage: activePage !== "main",
     });
     setWifePage("main");
-  }, [activeIllustrationTransition, activePage, wifeHomeImage]);
+  }, [
+    activeIllustrationTransition,
+    activePage,
+    isIllustrationTransitionBlocked,
+    wifeHomeImage,
+  ]);
 
   useEffect(() => {
     if (draft.moduleId === "custom") return;
@@ -1452,7 +1477,7 @@ export function WifeDashboard({
               >
                 <Gift size={28} />
                 <span>
-                  <strong>打赏想</strong>
+                  <strong>打赏</strong>
                   <em>跳转支付宝</em>
                 </span>
               </button>
@@ -1723,6 +1748,7 @@ export function WifeDashboard({
           <img
             className="wife-today__portrait"
             src={wifeTodayBackground}
+            style={wifeTodayPortraitStyle}
             alt=""
           />
           <div className="wife-today__shade" />
@@ -1830,6 +1856,7 @@ export function WifeDashboard({
           <img
             className="wife-subpage__portrait"
             src={wifeTodayBackground}
+            style={wifeSubpagePortraitStyle}
             alt=""
           />
           <div className="wife-subpage__shade" />

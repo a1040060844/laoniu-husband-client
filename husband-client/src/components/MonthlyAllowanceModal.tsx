@@ -14,6 +14,7 @@ export type MonthlyAllowanceModalMode =
 interface MonthlyAllowanceModalProps {
   mode: MonthlyAllowanceModalMode;
   record: MonthlyAllowanceRecord;
+  husbandRoleTitle?: string;
   onPrimary: () => void;
   onSecondary?: () => void;
   onTertiary?: () => void;
@@ -32,7 +33,11 @@ function detailRows(record: MonthlyAllowanceRecord) {
   ];
 }
 
-function modalCopy(mode: MonthlyAllowanceModalMode, record: MonthlyAllowanceRecord) {
+function modalCopy(
+  mode: MonthlyAllowanceModalMode,
+  record: MonthlyAllowanceRecord,
+  husbandRoleTitle = record.roleTitle,
+) {
   if (mode === "wife-paused") {
     return {
       actions: ["知道了"],
@@ -99,7 +104,7 @@ function modalCopy(mode: MonthlyAllowanceModalMode, record: MonthlyAllowanceReco
   return {
     actions: ["去赏赐", "先退下"],
     kicker: "每月赏赐",
-    text: `又过了一个月了。你的老哥仆人 · ${record.roleTitle} 正向老妞大人讨要本月零花钱。`,
+    text: `又过了一个月了。你的老哥仆人 · ${husbandRoleTitle} 正向老妞大人讨要本月零花钱。`,
     title: "本月零花钱裁定",
     tone: "upgrade",
   } as const;
@@ -108,13 +113,14 @@ function modalCopy(mode: MonthlyAllowanceModalMode, record: MonthlyAllowanceReco
 export function MonthlyAllowanceModal({
   mode,
   record,
+  husbandRoleTitle,
   onDismiss,
   onSkip,
   onPrimary,
   onSecondary,
   onTertiary,
 }: MonthlyAllowanceModalProps) {
-  const copy = modalCopy(mode, record);
+  const copy = modalCopy(mode, record, husbandRoleTitle);
   const closeHandler = onSkip ?? onDismiss;
 
   return (

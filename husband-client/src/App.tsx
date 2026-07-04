@@ -783,6 +783,28 @@ export default function App() {
   const hasHusbandNotificationUnread =
     hasUnreadNotifications(husbandNotificationQueue);
   const hasWifeNotificationUnread = hasUnreadNotifications(wifeNotificationQueue);
+  const hasVisibleWifeStoryModal =
+    route === "wife" && Boolean(story && !showSlaveRuling && !activeWifeUpgradeDecree);
+  const hasVisibleWifeMonthlyAllowanceModal =
+    route === "wife" &&
+    Boolean(monthlyAllowanceModalMode && currentMonthlyAllowance && !activeWifeUpgradeDecree);
+  const hasVisibleWifeNotificationModal =
+    route === "wife" && Boolean(activeNotificationItem && !activeWifeUpgradeDecree);
+  const wifeIllustrationTransitionBlocked =
+    route === "wife" &&
+    Boolean(
+      activeWifeUpgradeDecree ||
+        hasVisibleWifeStoryModal ||
+        hasVisibleWifeMonthlyAllowanceModal ||
+        hasVisibleWifeNotificationModal ||
+        (showSlaveRuling && !activeWifeUpgradeDecree) ||
+        tipAmountModalOpen ||
+        activeChatViewer ||
+        isLoading ||
+        roleUpgradeCinematic ||
+        taskRewardFlight ||
+        slaveStateCinematic,
+    );
 
   const applyRemoteState = useCallback((serverState: LoadedTaskSystem) => {
     const mergedDecrees = mergeDecrees(
@@ -3270,6 +3292,7 @@ export default function App() {
       <MonthlyAllowanceModal
         mode={monthlyAllowanceModalMode}
         record={currentMonthlyAllowance}
+        husbandRoleTitle={currentRole.title}
         onPrimary={handleMonthlyAllowancePrimary}
         onSecondary={handleMonthlyAllowanceSecondary}
         onTertiary={handleMonthlyAllowanceTertiary}
@@ -3395,6 +3418,7 @@ export default function App() {
           chatUnreadCount={wifeChatUnreadCount}
           hasNotificationUnread={hasWifeNotificationUnread}
           illustrationTransition={wifeIllustrationTransition}
+          illustrationTransitionBlocked={wifeIllustrationTransitionBlocked}
           onOpenChat={() => handleOpenChat("wife")}
           onOpenNotifications={() => handleOpenNotifications("wife")}
           onIllustrationTransitionDone={(id) =>

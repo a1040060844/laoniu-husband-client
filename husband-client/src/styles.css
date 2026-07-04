@@ -2054,9 +2054,10 @@ button {
 }
 
 .character-avatar {
-  --avatar-offset-y: 9%;
-  --avatar-position: center 24%;
-  --avatar-scale: 1.68;
+  --avatar-width: 250%;
+  --avatar-top: -44%;
+  --avatar-left: 50%;
+  position: relative;
   display: inline-grid;
   place-items: center;
   overflow: hidden;
@@ -2064,27 +2065,67 @@ button {
 }
 
 .character-avatar__image {
+  position: absolute;
+  top: var(--avatar-top);
+  left: var(--avatar-left);
   display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: var(--avatar-position);
-  transform: translateY(var(--avatar-offset-y)) scale(var(--avatar-scale));
-  transform-origin: center 24%;
+  width: var(--avatar-width);
+  height: auto;
+  max-width: none;
+  transform: translateX(-50%);
   user-select: none;
   pointer-events: none;
 }
 
 .character-avatar--wife {
-  --avatar-offset-y: 8%;
-  --avatar-position: 54% 26%;
-  --avatar-scale: 1.55;
+  --avatar-width: 420%;
+  --avatar-top: -185%;
+  --avatar-left: 51%;
 }
 
 .character-avatar--slave {
-  --avatar-offset-y: 7%;
-  --avatar-position: center 26%;
-  --avatar-scale: 1.45;
+  --avatar-width: 200%;
+  --avatar-top: -26%;
+}
+
+.character-avatar--role-00-street-vagrant {
+  --avatar-width: 230%;
+  --avatar-top: -54%;
+}
+
+.character-avatar--role-02 {
+  --avatar-width: 360%;
+  --avatar-top: -100%;
+}
+
+.character-avatar--role-06 {
+  --avatar-width: 250%;
+  --avatar-top: -40%;
+}
+
+.character-avatar--role-11 {
+  --avatar-width: 250%;
+  --avatar-top: -70%;
+}
+
+.character-avatar--wife-home-throne {
+  --avatar-width: 460%;
+  --avatar-top: -245%;
+}
+
+.character-avatar--wife-home-level-09-10 {
+  --avatar-width: 460%;
+  --avatar-top: -230%;
+}
+
+.character-avatar--wife-home-level-11 {
+  --avatar-width: 500%;
+  --avatar-top: -280%;
+}
+
+.character-avatar--wife-task-complete-home {
+  --avatar-width: 320%;
+  --avatar-top: -90%;
 }
 
 .task-header__avatar {
@@ -4244,9 +4285,6 @@ button {
   position: absolute;
   top: 13px;
   right: 14px;
-  --avatar-offset-y: 9%;
-  --avatar-position: center 24%;
-  --avatar-scale: 1.72;
   display: grid;
   place-items: center;
   width: 86px;
@@ -4265,8 +4303,6 @@ button {
 }
 
 .wife-rank-seal .character-avatar__image {
-  width: 100%;
-  height: 100%;
   border-radius: inherit;
   filter: saturate(0.98) contrast(1.08) brightness(0.9);
 }
@@ -5468,6 +5504,7 @@ button {
   object-position: 52% top;
   opacity: 1;
   filter: saturate(0.95) contrast(1.06) brightness(0.8);
+  transform: translateY(var(--wife-today-portrait-offset-y, 0px));
 }
 
 .wife-today__shade {
@@ -5852,6 +5889,7 @@ button {
   object-position: 52% top;
   opacity: 1;
   filter: saturate(0.95) contrast(1.06) brightness(0.8);
+  transform: translateY(var(--wife-subpage-portrait-offset-y, 0px));
 }
 
 .wife-subpage__shade {
@@ -6669,9 +6707,6 @@ button {
 }
 
 .chat-message-avatar {
-  --avatar-offset-y: 9%;
-  --avatar-position: center 24%;
-  --avatar-scale: 1.72;
   display: grid;
   width: 38px;
   height: 38px;

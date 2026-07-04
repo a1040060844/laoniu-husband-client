@@ -9,6 +9,16 @@ interface CharacterAvatarProps extends HTMLAttributes<HTMLSpanElement> {
   src: string;
 }
 
+function avatarSourceClass(src: string) {
+  const fileName = src
+    .split(/[?#]/)[0]
+    .split("/")
+    .pop()
+    ?.replace(/\.[a-z0-9]+$/i, "");
+  if (!fileName) return "";
+  return `character-avatar--${fileName.replace(/[^a-z0-9-]+/gi, "-").toLowerCase()}`;
+}
+
 export function CharacterAvatar({
   alt = "",
   className,
@@ -22,6 +32,7 @@ export function CharacterAvatar({
       className={[
         "character-avatar",
         `character-avatar--${kind}`,
+        avatarSourceClass(src),
         className,
       ]
         .filter(Boolean)

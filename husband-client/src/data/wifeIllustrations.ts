@@ -2,7 +2,9 @@ export interface WifeIllustrationSet {
   growthPath: string;
   growthOffsetY?: number;
   homePath?: string;
+  subpageOffsetY?: number;
   todayPath: string;
+  todayOffsetY?: number;
 }
 
 export interface WifeHomeIllustrationTransition {
@@ -19,7 +21,9 @@ export const wifeTaskCompleteIllustration: Required<WifeIllustrationSet> = {
   growthPath: "/assets/wife/wife-task-complete-growth.png",
   growthOffsetY: 0,
   homePath: "/assets/wife/wife-task-complete-home.png",
+  subpageOffsetY: 0,
   todayPath: "/assets/wife/wife-task-complete-today.png",
+  todayOffsetY: 0,
 };
 
 export const wifeLevelIllustrations: WifeLevelIllustration[] = [
@@ -56,10 +60,13 @@ export const wifeLevelIllustrations: WifeLevelIllustration[] = [
   },
   {
     growthPath: "/assets/wife/wife-growth-level-11.png",
+    growthOffsetY: 28,
     homePath: "/assets/wife/wife-home-level-11.png",
     maxLevel: 11,
     minLevel: 11,
+    subpageOffsetY: -150,
     todayPath: "/assets/wife/wife-today-level-11.png",
+    todayOffsetY: -150,
   },
 ];
 

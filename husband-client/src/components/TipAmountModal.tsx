@@ -40,7 +40,7 @@ export function TipAmountModal({
           <X size={20} />
         </button>
         <header className="decree-modal__header">
-          <p>打赏想</p>
+          <p>打赏</p>
           <span>支付宝回执</span>
         </header>
         <div className="decree-modal__rule" aria-hidden="true" />
