@@ -51,6 +51,19 @@ const fadingAudios = new Set<HTMLAudioElement>();
 const unavailableTracks = new Set<string>();
 const audioEnabledListeners = new Set<(enabled: boolean) => void>();
 
+function normalizedAudioPath(path: string) {
+  if (/^https?:\/\//.test(path) || path.startsWith("blob:")) return path;
+  return path.startsWith("/") ? publicAsset(path) : path;
+}
+
+function nearestRoleTrackKey(level: number) {
+  const safeLevel = Math.max(0, Math.trunc(level));
+  for (let current = safeLevel; current >= 0; current -= 1) {
+    if (trackPaths[`role-${current}`]) return `role-${current}`;
+  }
+  return "role-0";
+}
+
 function readAudioEnabled() {
   if (typeof window === "undefined") return true;
   try {
@@ -225,15 +238,19 @@ export function playBgm(trackKey: string, options: BgmOptions = {}) {
   requestBgm(trackKey, options.volume ?? BGM_VOLUME);
 }
 
+export function registerRoleBgm(level: number, path?: string) {
+  if (!path) return;
+  trackPaths[`role-${Math.max(0, Math.trunc(level))}`] = normalizedAudioPath(path);
+}
+
 export function playRoleBgm(level: number, options: BgmOptions = {}) {
-  const safeLevel = Math.min(11, Math.max(0, Math.trunc(level)));
-  playBgm(`role-${safeLevel}`, {
+  playBgm(nearestRoleTrackKey(level), {
     volume: options.volume ?? ROLE_PREVIEW_BGM_VOLUME,
   });
 }
 
 export function playWifeBgm(level: number, options: BgmOptions = {}) {
-  const safeLevel = Math.min(11, Math.max(0, Math.trunc(level)));
+  const safeLevel = Math.max(0, Math.trunc(level));
   const trackKey =
     safeLevel <= 2
       ? "wife-00-02"

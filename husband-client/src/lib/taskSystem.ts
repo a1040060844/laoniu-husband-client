@@ -1,23 +1,40 @@
 import { initialTasks } from "../data/tasks";
-import { benefits as initialBenefits } from "../data/benefits";
 import {
   hydrateProgress,
   initialProgress,
   type GameProgress,
 } from "../game/progression";
+import {
+  emptyAdminConfig,
+  getMaxLevel,
+  normalizeAdminConfig,
+  resolveBenefits,
+  resolveRoles,
+  type AdminConfigState,
+} from "./adminConfig";
+import {
+  CHAT_STORAGE_KEY,
+  hydrateChatMessages,
+  mergeChatMessages,
+} from "./chatMessages";
+import { mergeMonthlyAllowanceRecords } from "./monthlyAllowance";
+import { mergeNotifications } from "./notifications";
 import { refreshTaskCycles, resolveTaskSchedule } from "./taskSchedule";
 import type {
+  ChatMessage,
   DecreeEvent,
   DecreeType,
   EventLog,
   EventLogType,
   Benefit,
+  BenefitStatus,
   BenefitRequest,
   MonthlyAllowanceRecord,
   MonthlyAllowanceStatus,
   NotificationEvent,
   Punishment,
   PunishmentStatus,
+  Role,
   Task,
   TaskModuleId,
   TaskReward,
@@ -33,6 +50,7 @@ import type {
 
 export interface TaskSystemState {
   progress: GameProgress;
+  roles: Role[];
   tasks: Task[];
   logs: EventLog[];
   punishment: Punishment;
@@ -41,6 +59,8 @@ export interface TaskSystemState {
   decrees: DecreeEvent[];
   monthlyAllowances: MonthlyAllowanceRecord[];
   notifications: NotificationEvent[];
+  chatMessages: ChatMessage[];
+  adminConfig: AdminConfigState;
 }
 
 export const PROGRESS_STORAGE_KEY = "laoniu-husband-progress-v1";
@@ -53,6 +73,7 @@ export const DECREES_STORAGE_KEY = "laoniu-husband-decrees-v1";
 export const MONTHLY_ALLOWANCES_STORAGE_KEY =
   "laoniu-husband-monthly-allowances-v1";
 export const NOTIFICATIONS_STORAGE_KEY = "laoniu-notifications-v1";
+export const ADMIN_CONFIG_STORAGE_KEY = "laoniu-admin-config-v1";
 export const DEFAULT_PUNISHMENT_DURATION_DAYS = 7;
 export const DEFAULT_REQUIRED_RECOVERY_EXP = 100;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -482,9 +503,13 @@ function normalizeBenefit(raw: unknown, fallback: Benefit): Benefit {
   };
 }
 
-function hydrateBenefits(raw: unknown): Benefit[] {
-  if (!Array.isArray(raw)) return initialBenefits;
-  return initialBenefits.map((benefit) => {
+function hydrateBenefits(
+  raw: unknown,
+  adminConfig: AdminConfigState = emptyAdminConfig,
+): Benefit[] {
+  const definitions = resolveBenefits(adminConfig);
+  if (!Array.isArray(raw)) return definitions;
+  return definitions.map((benefit) => {
     const saved = raw.find(
       (item) =>
         item &&
@@ -685,6 +710,252 @@ export function mergeDecrees(
   );
 }
 
+function sameJson(first: unknown, second: unknown) {
+  return JSON.stringify(first) === JSON.stringify(second);
+}
+
+function chooseChangedPart<T>(
+  serverPart: T,
+  localPart: T,
+  basePart: T | undefined,
+) {
+  if (basePart === undefined) return localPart;
+  const localChanged = !sameJson(localPart, basePart);
+  const serverChanged = !sameJson(serverPart, basePart);
+  if (localChanged && !serverChanged) return localPart;
+  if (!localChanged && serverChanged) return serverPart;
+  if (localChanged && serverChanged) return localPart;
+  return serverPart;
+}
+
+function mergeProgressForSave(
+  serverProgress: GameProgress,
+  localProgress: GameProgress,
+  baseProgress?: GameProgress,
+): GameProgress {
+  if (!baseProgress) return localProgress;
+  const localChanged = !sameJson(localProgress, baseProgress);
+  const serverChanged = !sameJson(serverProgress, baseProgress);
+  const rewardedTaskIds = Array.from(
+    new Set([
+      ...serverProgress.rewardedTaskIds,
+      ...localProgress.rewardedTaskIds,
+    ]),
+  );
+  if (localChanged && !serverChanged) {
+    return { ...localProgress, rewardedTaskIds };
+  }
+  if (!localChanged && serverChanged) {
+    return { ...serverProgress, rewardedTaskIds };
+  }
+  if (localChanged && serverChanged) {
+    const serverLevelChanged = serverProgress.level !== baseProgress.level;
+    const localLevelChanged = localProgress.level !== baseProgress.level;
+    if (serverLevelChanged && !localLevelChanged) {
+      return { ...serverProgress, rewardedTaskIds };
+    }
+    return { ...localProgress, rewardedTaskIds };
+  }
+  return { ...serverProgress, rewardedTaskIds };
+}
+
+const taskStatusRank: Record<TaskStatus, number> = {
+  todo: 0,
+  doing: 1,
+  submitted: 2,
+  failed_pending: 2,
+  failed: 3,
+  expired: 3,
+  confirmed: 4,
+  completed: 5,
+};
+
+function safeTime(value?: string) {
+  if (!value) return 0;
+  const time = Date.parse(value);
+  return Number.isFinite(time) ? time : 0;
+}
+
+function taskLatestTime(task: Task) {
+  return Math.max(
+    safeTime(task.createdAt),
+    safeTime(task.submittedAt),
+    safeTime(task.confirmedAt),
+    safeTime(task.rewardedAt),
+    safeTime(task.expiredAt),
+  );
+}
+
+function preferTask(first: Task, second: Task) {
+  const firstCompleted = first.status === "confirmed" || first.status === "completed";
+  const secondCompleted = second.status === "confirmed" || second.status === "completed";
+  if (firstCompleted !== secondCompleted) return firstCompleted ? first : second;
+
+  const firstCompletedCount = first.completedCount ?? first.timeConfig?.completedCount ?? 0;
+  const secondCompletedCount = second.completedCount ?? second.timeConfig?.completedCount ?? 0;
+  if (firstCompletedCount !== secondCompletedCount) {
+    return firstCompletedCount > secondCompletedCount ? first : second;
+  }
+
+  const firstRank = taskStatusRank[first.status];
+  const secondRank = taskStatusRank[second.status];
+  if (firstRank !== secondRank) return firstRank > secondRank ? first : second;
+
+  return taskLatestTime(first) >= taskLatestTime(second) ? first : second;
+}
+
+function mergeTaskForSave(serverTask: Task, localTask: Task, baseTask?: Task) {
+  if (!baseTask) return preferTask(serverTask, localTask);
+  const localChanged = !sameJson(localTask, baseTask);
+  const serverChanged = !sameJson(serverTask, baseTask);
+  if (localChanged && !serverChanged) return localTask;
+  if (!localChanged && serverChanged) return serverTask;
+  if (!localChanged && !serverChanged) return serverTask;
+  return preferTask(serverTask, localTask);
+}
+
+function mergeTasksForSave(
+  serverTasks: Task[],
+  localTasks: Task[],
+  baseTasks: Task[] = [],
+) {
+  const baseById = new Map(baseTasks.map((task) => [task.id, task]));
+  const merged = new Map<string, Task>();
+  serverTasks.forEach((task) => merged.set(task.id, task));
+  localTasks.forEach((task) => {
+    const serverTask = merged.get(task.id);
+    merged.set(
+      task.id,
+      serverTask ? mergeTaskForSave(serverTask, task, baseById.get(task.id)) : task,
+    );
+  });
+  return [...merged.values()].sort((a, b) => taskLatestTime(b) - taskLatestTime(a));
+}
+
+const benefitStatusRank: Record<BenefitStatus, number> = {
+  locked: 0,
+  available: 1,
+  pending: 2,
+  cooldown: 3,
+  frozen: 4,
+};
+
+function benefitLatestTime(benefit: Benefit) {
+  return Math.max(
+    safeTime(benefit.lastRequestedAt),
+    safeTime(benefit.pendingRequest?.requestedAt),
+    safeTime(benefit.pendingRequest?.rejectedAt),
+    safeTime(benefit.lastApprovedAt),
+    safeTime(benefit.cooldownUntil),
+  );
+}
+
+function preferBenefit(first: Benefit, second: Benefit) {
+  const firstRank = benefitStatusRank[first.status];
+  const secondRank = benefitStatusRank[second.status];
+  if (firstRank !== secondRank) return firstRank > secondRank ? first : second;
+
+  const firstBonus = first.availableBonusCount ?? 0;
+  const secondBonus = second.availableBonusCount ?? 0;
+  if (firstBonus !== secondBonus) {
+    return firstBonus > secondBonus ? first : second;
+  }
+
+  return benefitLatestTime(first) >= benefitLatestTime(second) ? first : second;
+}
+
+function mergeBenefitForSave(
+  serverBenefit: Benefit,
+  localBenefit: Benefit,
+  baseBenefit?: Benefit,
+) {
+  if (!baseBenefit) return preferBenefit(serverBenefit, localBenefit);
+  const localChanged = !sameJson(localBenefit, baseBenefit);
+  const serverChanged = !sameJson(serverBenefit, baseBenefit);
+  if (localChanged && !serverChanged) return localBenefit;
+  if (!localChanged && serverChanged) return serverBenefit;
+  if (!localChanged && !serverChanged) return serverBenefit;
+  return preferBenefit(serverBenefit, localBenefit);
+}
+
+function mergeBenefitsForSave(
+  serverBenefits: Benefit[],
+  localBenefits: Benefit[],
+  baseBenefits: Benefit[] = [],
+) {
+  const baseById = new Map(baseBenefits.map((benefit) => [benefit.id, benefit]));
+  const merged = new Map<string, Benefit>();
+  serverBenefits.forEach((benefit) => merged.set(benefit.id, benefit));
+  localBenefits.forEach((benefit) => {
+    const serverBenefit = merged.get(benefit.id);
+    merged.set(
+      benefit.id,
+      serverBenefit
+        ? mergeBenefitForSave(serverBenefit, benefit, baseById.get(benefit.id))
+        : benefit,
+    );
+  });
+  return [...merged.values()].sort((a, b) => a.levelRequired - b.levelRequired);
+}
+
+function mergeAppendOnlyById<T extends { id: string; createdAt: string }>(
+  firstItems: T[],
+  secondItems: T[],
+) {
+  const merged = new Map<string, T>();
+  firstItems.forEach((item) => merged.set(item.id, item));
+  secondItems.forEach((item) => merged.set(item.id, item));
+  return [...merged.values()].sort(
+    (a, b) => safeTime(b.createdAt) - safeTime(a.createdAt),
+  );
+}
+
+export function mergeTaskSystemStateForSave(
+  serverState: TaskSystemState,
+  localState: TaskSystemState,
+  baseState?: TaskSystemState | null,
+): TaskSystemState {
+  return {
+    progress: mergeProgressForSave(
+      serverState.progress,
+      localState.progress,
+      baseState?.progress,
+    ),
+    roles: chooseChangedPart(serverState.roles, localState.roles, baseState?.roles),
+    tasks: mergeTasksForSave(serverState.tasks, localState.tasks, baseState?.tasks),
+    logs: mergeAppendOnlyById(serverState.logs, localState.logs),
+    punishment: chooseChangedPart(
+      serverState.punishment,
+      localState.punishment,
+      baseState?.punishment,
+    ),
+    benefits: mergeBenefitsForSave(
+      serverState.benefits,
+      localState.benefits,
+      baseState?.benefits,
+    ),
+    walletLedger: mergeAppendOnlyById(
+      serverState.walletLedger,
+      localState.walletLedger,
+    ),
+    decrees: mergeDecrees(serverState.decrees, localState.decrees),
+    monthlyAllowances: mergeMonthlyAllowanceRecords(
+      serverState.monthlyAllowances,
+      localState.monthlyAllowances,
+    ),
+    notifications: mergeNotifications(
+      serverState.notifications,
+      localState.notifications,
+    ),
+    chatMessages: mergeChatMessages(serverState.chatMessages, localState.chatMessages),
+    adminConfig: chooseChangedPart(
+      serverState.adminConfig,
+      localState.adminConfig,
+      baseState?.adminConfig,
+    ),
+  };
+}
+
 function normalizeMonthlyAllowanceRecord(
   raw: unknown,
 ): MonthlyAllowanceRecord | null {
@@ -881,20 +1152,28 @@ export function isPunishmentCycleComplete(
 function stateFromUnknown(raw: unknown): TaskSystemState {
   if (!raw || typeof raw !== "object") {
     lastStateExtras = {};
+    const adminConfig = normalizeAdminConfig(
+      readJson(ADMIN_CONFIG_STORAGE_KEY) ?? emptyAdminConfig,
+    );
+    const roles = resolveRoles(adminConfig);
     return {
       progress: hydrateProgress(
         readJson(PROGRESS_STORAGE_KEY) ?? initialProgress,
+        getMaxLevel(roles),
       ),
+      roles,
       tasks: refreshTaskCycles(hydrateTasks(readJson(TASKS_STORAGE_KEY))),
       logs: hydrateEventLogs(readJson(LOGS_STORAGE_KEY)),
       punishment: hydratePunishment(readJson(PUNISHMENT_STORAGE_KEY)),
-      benefits: hydrateBenefits(readJson(BENEFITS_STORAGE_KEY)),
+      benefits: hydrateBenefits(readJson(BENEFITS_STORAGE_KEY), adminConfig),
       walletLedger: hydrateWalletLedger(readJson(WALLET_LEDGER_STORAGE_KEY)),
       decrees: hydrateDecrees(readJson(DECREES_STORAGE_KEY)),
       monthlyAllowances: hydrateMonthlyAllowances(
         readJson(MONTHLY_ALLOWANCES_STORAGE_KEY),
       ),
       notifications: hydrateNotifications(readJson(NOTIFICATIONS_STORAGE_KEY)),
+      chatMessages: hydrateChatMessages(readJson(CHAT_STORAGE_KEY)),
+      adminConfig,
     };
   }
 
@@ -914,11 +1193,15 @@ function stateFromUnknown(raw: unknown): TaskSystemState {
     decrees,
     monthlyAllowances,
     notifications,
+    chatMessages,
+    adminConfig: rawAdminConfig,
     totalExp,
     wallet,
     ...extras
   } = value;
   lastStateExtras = extras;
+  const adminConfig = normalizeAdminConfig(rawAdminConfig);
+  const roles = resolveRoles(adminConfig);
   const progressSource =
     progress && typeof progress === "object"
       ? progress
@@ -930,7 +1213,7 @@ function stateFromUnknown(raw: unknown): TaskSystemState {
           rewardedTaskIds,
         };
 
-  const hydratedProgress = hydrateProgress(progressSource);
+  const hydratedProgress = hydrateProgress(progressSource, getMaxLevel(roles));
   const hydratedPunishment = hydratePunishment(
     punishment ?? punishmentStatus ?? slaveStatus,
   );
@@ -944,6 +1227,7 @@ function stateFromUnknown(raw: unknown): TaskSystemState {
             wallet: Math.max(0, hydratedProgress.wallet - duplicateSalary),
           }
         : hydratedProgress,
+    roles,
     tasks: refreshTaskCycles(hydrateTasks(tasks)),
     logs: hydrateEventLogs(logs),
     punishment:
@@ -958,11 +1242,13 @@ function stateFromUnknown(raw: unknown): TaskSystemState {
             ),
           }
         : hydratedPunishment,
-    benefits: hydrateBenefits(benefits),
+    benefits: hydrateBenefits(benefits, adminConfig),
     walletLedger: hydrateWalletLedger(walletLedger),
     decrees: hydrateDecrees(decrees),
     monthlyAllowances: hydrateMonthlyAllowances(monthlyAllowances),
     notifications: hydrateNotifications(notifications),
+    chatMessages: hydrateChatMessages(chatMessages),
+    adminConfig,
   };
 }
 
@@ -992,6 +1278,8 @@ export function persistLocalTaskSystem(state: TaskSystemState) {
     NOTIFICATIONS_STORAGE_KEY,
     JSON.stringify(state.notifications),
   );
+  localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(state.chatMessages));
+  localStorage.setItem(ADMIN_CONFIG_STORAGE_KEY, JSON.stringify(state.adminConfig));
 }
 
 function serializeTaskSystem(state: TaskSystemState) {
@@ -1001,6 +1289,7 @@ function serializeTaskSystem(state: TaskSystemState) {
     progress: state.progress,
     punishment: state.punishment,
     punishmentStatus: state.punishment.status,
+    adminConfig: state.adminConfig,
     tasks: state.tasks,
     logs: state.logs,
     benefits: state.benefits,
@@ -1008,6 +1297,7 @@ function serializeTaskSystem(state: TaskSystemState) {
     decrees: state.decrees,
     monthlyAllowances: state.monthlyAllowances,
     notifications: state.notifications,
+    chatMessages: state.chatMessages,
   };
 }
 

@@ -40,7 +40,7 @@ import {
   TaskRewardFlight,
   type TaskRewardFlightEvent,
 } from "./components/effects/TaskRewardFlight";
-import { roles } from "./data/roles";
+import { roles as defaultRoles } from "./data/roles";
 import { benefitForLevel } from "./data/benefits";
 import {
   wifeHomeIllustrationTransitionForLevelChange,
@@ -65,12 +65,18 @@ import {
   loadTaskSystem,
   loadTaskSystemFresh,
   mergeDecrees,
+  mergeTaskSystemStateForSave,
   persistLocalTaskSystem,
   readLocalTaskSystem,
   refreshTaskCycles,
   saveTaskSystem,
 } from "./lib/taskSystem";
 import { publicAsset } from "./lib/assets";
+import {
+  getMaxLevel,
+  getRoleByLevel,
+  type AdminConfigState,
+} from "./lib/adminConfig";
 import {
   preloadRouteAssets,
   type AppRoute,
@@ -82,17 +88,20 @@ import {
   playSlaveBgm,
   playWifeBgm,
   playWifeTaskCompleteBgm,
+  registerRoleBgm,
   stopBgm,
   unlockAudio,
 } from "./lib/audioManager";
 import {
   createChatMessage,
-  loadChatMessages,
   markChatMessagesRead,
-  saveChatMessages,
+  mergeChatMessages,
   unreadChatCount,
 } from "./lib/chatMessages";
-import { taskStatusAfterApproval } from "./lib/taskStatus";
+import {
+  isTaskSubmittableStatus,
+  taskStatusAfterApproval,
+} from "./lib/taskStatus";
 import {
   aggregatePendingExperienceDecrees,
   decreeAcknowledgeIds,
@@ -186,6 +195,26 @@ function isLoadingPreviewRoute(target: Exclude<AppRoute, "login">) {
     routeFromPathname(window.location.pathname) === target &&
     new URLSearchParams(window.location.search).get("loading-preview") === "1"
   );
+}
+
+function adminPreviewParam() {
+  return new URLSearchParams(window.location.search).get("admin-preview");
+}
+
+function isAdminPreviewRoute(route: RouteKey) {
+  const preview = adminPreviewParam();
+  if (route === "husband") {
+    return preview === "role" || preview === "benefits" || preview === "tasks";
+  }
+  return route === "wife" && preview === "home";
+}
+
+function husbandPageFromAdminPreview() {
+  const preview = adminPreviewParam();
+  if (preview === "benefits") return HUSBAND_PAGES.BENEFIT;
+  if (preview === "tasks") return HUSBAND_PAGES.TASK;
+  if (preview === "role") return HUSBAND_PAGES.ROLE;
+  return null;
 }
 
 function routeFromPathname(pathname: string): RouteKey {
@@ -478,16 +507,29 @@ export default function App() {
   const initialLoadingPreview = useRef(
     initialRoute !== "login" && isLoadingPreviewRoute(initialRoute),
   ).current;
+  const initialAdminPreview = useRef(
+    initialRoute !== "login" && isAdminPreviewRoute(initialRoute),
+  ).current;
+  const initialAdminPreviewPage = useRef(
+    initialRoute === "husband" ? husbandPageFromAdminPreview() : null,
+  ).current;
   const shouldShowInitialLoading = useRef(
     initialRoute !== "login" &&
+      !initialAdminPreview &&
       !canResumeOpenRouteWithoutLoading(initialRoute, initialLoadingPreview),
   ).current;
   const [route, setRoute] = useState<RouteKey>(initialRoute);
-  const [activePage, setActivePage] = useState<number>(HUSBAND_PAGES.ROLE);
+  const [activePage, setActivePage] = useState<number>(
+    initialAdminPreviewPage ?? HUSBAND_PAGES.ROLE,
+  );
   const [slaveActivePage, setSlaveActivePage] = useState<number>(
     SLAVE_PAGES.STATUS,
   );
   const [progress, setProgress] = useState(initialState.progress);
+  const [resolvedRoles, setResolvedRoles] = useState(initialState.roles);
+  const [adminConfig, setAdminConfig] = useState<AdminConfigState>(
+    initialState.adminConfig,
+  );
   const [previewLevel, setPreviewLevel] = useState(initialState.progress.level);
   const [previewDirection, setPreviewDirection] =
     useState<PreviewDirection>("none");
@@ -540,7 +582,9 @@ export default function App() {
   const decreesRef = useRef(initialState.decrees);
   const notificationsRef = useRef(initialState.notifications);
   const monthlyAllowancesRef = useRef(initialState.monthlyAllowances);
+  const chatMessagesRef = useRef(initialState.chatMessages);
   const lastRemoteFingerprintRef = useRef<string | null>(null);
+  const lastAppliedRemoteStateRef = useRef<LoadedTaskSystem | null>(null);
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
   const allowanceSessionLocksRef = useRef(new Set<string>());
   const allowanceCreditLocksRef = useRef(new Set<string>());
@@ -553,8 +597,8 @@ export default function App() {
     useState<TaskRewardFlightEvent | null>(null);
   const [slaveStateCinematic, setSlaveStateCinematic] =
     useState<SlaveStateCinematicEvent | null>(null);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() =>
-    loadChatMessages(),
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(
+    initialState.chatMessages,
   );
   const [activeChatViewer, setActiveChatViewer] = useState<ChatSender | null>(
     null,
@@ -564,6 +608,15 @@ export default function App() {
   const [decreeAutoPaused, setDecreeAutoPaused] = useState(false);
   const [skippedMonthlyNotificationIds, setSkippedMonthlyNotificationIds] =
     useState<Set<string>>(() => new Set());
+  const roles = resolvedRoles.length ? resolvedRoles : defaultRoles;
+  const maxLevel = getMaxLevel(roles);
+
+  useEffect(() => {
+    roles.forEach((role) => {
+      const bgm = "bgm" in role && typeof role.bgm === "string" ? role.bgm : undefined;
+      registerRoleBgm(role.level, bgm);
+    });
+  }, [roles]);
 
   useEffect(() => {
     const handleFirstAudioGesture = () => {
@@ -590,8 +643,8 @@ export default function App() {
     (fromLevel: number, toLevel: number) => {
       if (toLevel <= fromLevel) return;
       if (route === "wife") return;
-      const fromRole = roles[clampLevel(fromLevel)];
-      const toRole = roles[clampLevel(toLevel)];
+      const fromRole = getRoleByLevel(roles, clampLevel(fromLevel, maxLevel));
+      const toRole = getRoleByLevel(roles, clampLevel(toLevel, maxLevel));
       setRoleUpgradeCinematic({
         id: `role-upgrade-${Date.now()}-${fromLevel}-${toLevel}`,
         fromLevel,
@@ -612,8 +665,16 @@ export default function App() {
     action?.();
   }, []);
 
-  const currentRole = roleWithProgress(roles[progress.level], progress);
-  const previewRole = roleWithProgress(roles[previewLevel], progress);
+  const currentRole = roleWithProgress(
+    getRoleByLevel(roles, progress.level),
+    progress,
+    maxLevel,
+  );
+  const previewRole = roleWithProgress(
+    getRoleByLevel(roles, previewLevel),
+    progress,
+    maxLevel,
+  );
   const wifeChatIllustration = wifeTaskCompleteIllustrationActive
     ? wifeTaskCompleteIllustration
     : wifeIllustrationForLevel(progress.level);
@@ -819,11 +880,19 @@ export default function App() {
       serverState.notifications,
       notificationsRef.current,
     );
+    const mergedChatMessages = mergeChatMessages(
+      serverState.chatMessages,
+      chatMessagesRef.current,
+    );
     lastRemoteFingerprintRef.current = taskSystemFingerprint(serverState);
+    lastAppliedRemoteStateRef.current = serverState;
     decreesRef.current = mergedDecrees;
     notificationsRef.current = mergedNotifications;
     monthlyAllowancesRef.current = mergedMonthlyAllowances;
+    chatMessagesRef.current = mergedChatMessages;
     setProgress(serverState.progress);
+    setResolvedRoles(serverState.roles);
+    setAdminConfig(serverState.adminConfig);
     setTasks(serverState.tasks);
     setLogs(serverState.logs);
     setPunishment(serverState.punishment);
@@ -832,6 +901,7 @@ export default function App() {
     setDecrees(mergedDecrees);
     setNotifications(mergedNotifications);
     setMonthlyAllowances(mergedMonthlyAllowances);
+    setChatMessages(mergedChatMessages);
   }, []);
 
   const enqueueSave = useCallback(
@@ -1059,8 +1129,8 @@ export default function App() {
     sourceLogId?: string;
     reason: string;
   }) {
-    const safeFromLevel = clampLevel(fromLevel);
-    const safeToLevel = clampLevel(toLevel);
+    const safeFromLevel = clampLevel(fromLevel, maxLevel);
+    const safeToLevel = clampLevel(toLevel, maxLevel);
     if (safeToLevel <= safeFromLevel) return;
 
     const notificationKey =
@@ -1069,7 +1139,7 @@ export default function App() {
       id: decreeId(),
       type: "level_changed",
       title: "老哥职务变化",
-      text: `老哥已由「${roles[safeFromLevel].title}」晋升为「${roles[safeToLevel].title}」。`,
+      text: `老哥已由「${getRoleByLevel(roles, safeFromLevel).title}」晋升为「${getRoleByLevel(roles, safeToLevel).title}」。`,
       tone: "upgrade",
       createdAt,
       target: "wife",
@@ -1415,10 +1485,6 @@ export default function App() {
   }, [progress.level]);
 
   useEffect(() => {
-    saveChatMessages(chatMessages);
-  }, [chatMessages]);
-
-  useEffect(() => {
     setTasks((current) => refreshTaskCycles(current));
     const timer = window.setInterval(() => {
       setTasks((current) => refreshTaskCycles(current));
@@ -1442,10 +1508,11 @@ export default function App() {
   }, [applyRemoteState]);
 
   useEffect(() => {
-    if (route !== "husband") {
+    if (route === "login") {
       setHusbandSyncReady(false);
       return;
     }
+    if (route === "husband") setHusbandSyncReady(false);
 
     let cancelled = false;
     const syncFresh = async () => {
@@ -1455,7 +1522,7 @@ export default function App() {
       } catch {
         // Keep the last local state when the sync service is temporarily offline.
       } finally {
-        if (!cancelled) setHusbandSyncReady(true);
+        if (!cancelled && route === "husband") setHusbandSyncReady(true);
       }
     };
 
@@ -1497,8 +1564,13 @@ export default function App() {
   }, [monthlyAllowances]);
 
   useEffect(() => {
+    chatMessagesRef.current = chatMessages;
+  }, [chatMessages]);
+
+  useEffect(() => {
     const state = {
       progress,
+      roles,
       punishment,
       tasks,
       logs,
@@ -1507,6 +1579,8 @@ export default function App() {
       decrees,
       notifications,
       monthlyAllowances,
+      chatMessages,
+      adminConfig,
     };
     persistLocalTaskSystem(state);
 
@@ -1515,24 +1589,22 @@ export default function App() {
     const timeout = window.setTimeout(() => {
       void enqueueSave(async () => {
           const serverState = await loadTaskSystemFresh();
-          await saveTaskSystem({
-            ...state,
-            decrees: mergeDecrees(serverState.decrees, state.decrees),
-            notifications: mergeNotifications(
-              serverState.notifications,
-              state.notifications,
-            ),
-            monthlyAllowances: mergeMonthlyAllowanceRecords(
-              serverState.monthlyAllowances,
-              state.monthlyAllowances,
-            ),
-          });
+          const mergedState = mergeTaskSystemStateForSave(
+            serverState,
+            state,
+            lastAppliedRemoteStateRef.current,
+          );
+          await saveTaskSystem(mergedState);
+          lastAppliedRemoteStateRef.current = mergedState;
+          lastRemoteFingerprintRef.current = taskSystemFingerprint(mergedState);
         }).catch(() => undefined);
     }, 250);
 
     return () => window.clearTimeout(timeout);
   }, [
     benefits,
+    adminConfig,
+    chatMessages,
     decrees,
     enqueueSave,
     logs,
@@ -1540,6 +1612,7 @@ export default function App() {
     notifications,
     progress,
     punishment,
+    roles,
     tasks,
     walletLedger,
   ]);
@@ -1942,7 +2015,7 @@ export default function App() {
   function handlePreviewNext() {
     playSoundEffect("role-preview-next");
     setPreviewDirection("next");
-    setPreviewLevel((level) => Math.min(roles.length - 1, level + 1));
+    setPreviewLevel((level) => Math.min(maxLevel, level + 1));
   }
 
   function handleStartTask(id: string) {
@@ -1955,9 +2028,13 @@ export default function App() {
   }
 
   function handleSubmitTask(id: string, submitNote: string) {
-    playSoundEffect("task-submit");
     const submittedAt = new Date().toISOString();
     const target = tasks.find((task) => task.id === id);
+    if (!target || !isTaskSubmittableStatus(target.status)) {
+      playSoundEffect("ui-disabled");
+      return;
+    }
+    playSoundEffect("task-submit");
     setTasks((current) =>
       current.map((task) =>
         task.id === id
@@ -1980,6 +2057,17 @@ export default function App() {
         taskTitle: target.title,
         createdAt: submittedAt,
       });
+      appendNotification(
+        createNotification({
+          target: "wife",
+          source: "story",
+          sourceId: `task-submit-wife-${id}-${submittedAt}`,
+          title: "任务待确认",
+          text: `老哥提交了「${target.title}」，等待老妞大人裁定。`,
+          tone: "normal",
+          createdAt: submittedAt,
+        }),
+      );
     }
     showStory(
       {
@@ -2034,9 +2122,16 @@ export default function App() {
   }
 
   function handleApproveTask(id: string, decision?: TaskReviewDecision) {
-    playSoundEffect("task-approved");
     const confirmedAt = new Date().toISOString();
     const target = tasks.find((task) => task.id === id);
+    if (
+      !target ||
+      (target.status !== "submitted" && target.status !== "failed_pending")
+    ) {
+      playSoundEffect("ui-disabled");
+      return;
+    }
+    playSoundEffect("task-approved");
     const isSlave = punishment.status === "slave";
     const repeatTarget = target
       ? Math.max(1, target.repeatCount ?? target.timeConfig?.repeatCount ?? 1)
@@ -2120,9 +2215,16 @@ export default function App() {
     }
   }
   function handleRejectTask(id: string, reason?: string) {
-    playSoundEffect("task-rejected");
     const rejectedAt = new Date().toISOString();
     const target = tasks.find((task) => task.id === id);
+    if (
+      !target ||
+      (target.status !== "submitted" && target.status !== "failed_pending")
+    ) {
+      playSoundEffect("ui-disabled");
+      return;
+    }
+    playSoundEffect("task-rejected");
     const rejectReason = reason?.trim() || "老婆大人裁定未通过，需要重新表现。";
     setTasks((current) =>
       current.map((task) =>
@@ -2286,6 +2388,17 @@ export default function App() {
       benefitName: currentBenefit.name,
       createdAt: requestedAt,
     });
+    appendNotification(
+      createNotification({
+        target: "wife",
+        source: "story",
+        sourceId: `benefit-request-wife-${currentBenefit.id}-${requestedAt}`,
+        title: `权益待审批：${currentBenefit.name}`,
+        text: `老哥申请使用「${currentBenefit.name}」，等待老妞大人裁定。`,
+        tone: currentBenefit.levelRequired >= 9 ? "upgrade" : "normal",
+        createdAt: requestedAt,
+      }),
+    );
     setSelectedBenefit(null);
     showStory(
       {
@@ -2454,7 +2567,7 @@ export default function App() {
         const levelCreatedAt = new Date(Date.parse(createdAt) + 1).toISOString();
         const levelLog = addLog({
           type: "level_changed",
-          title: roles[result.progress.level].title,
+          title: getRoleByLevel(roles, result.progress.level).title,
           description: "经验奖励触发等级变化",
           fromLevel: progress.level,
           toLevel: result.progress.level,
@@ -2470,7 +2583,7 @@ export default function App() {
         appendDecree({
           type: "level_changed",
           title: "职务晋升",
-          text: `老妞大人已赐予新职务：「${roles[result.progress.level].title}」。`,
+          text: `老妞大人已赐予新职务：「${getRoleByLevel(roles, result.progress.level).title}」。`,
           tone: "upgrade",
           createdAt: levelCreatedAt,
           sourceLogId: levelLog.id,
@@ -2564,7 +2677,7 @@ export default function App() {
   }
 
   function handleSetLevel(level: number, reason: string) {
-    const safeLevel = clampLevel(level);
+    const safeLevel = clampLevel(level, maxLevel);
     const previousLevel = progress.level;
     playSoundEffect(
       safeLevel > previousLevel
@@ -2575,7 +2688,7 @@ export default function App() {
     );
     const previousPunishmentStatus = punishment.status;
     setPunishment(createNormalPunishment());
-    setProgress((current) => progressWithLevelRule(current, safeLevel));
+    setProgress((current) => progressWithLevelRule(current, safeLevel, maxLevel));
     if (safeLevel > previousLevel) {
       showRoleUpgradeCinematic(previousLevel, safeLevel);
       setBenefits((current) =>
@@ -2600,7 +2713,7 @@ export default function App() {
     if (safeLevel !== previousLevel) {
       const log = addLog({
         type: "level_changed",
-        title: roles[safeLevel].title,
+        title: getRoleByLevel(roles, safeLevel).title,
         description: reason,
         fromLevel: previousLevel,
         toLevel: safeLevel,
@@ -2619,8 +2732,8 @@ export default function App() {
         title: safeLevel > previousLevel ? "职务晋升" : "职务降级",
         text:
           safeLevel > previousLevel
-            ? `老妞大人已赐予新职务：「${roles[safeLevel].title}」。`
-            : `老妞大人收回原职，现降为「${roles[safeLevel].title}」。`,
+            ? `老妞大人已赐予新职务：「${getRoleByLevel(roles, safeLevel).title}」。`
+            : `老妞大人收回原职，现降为「${getRoleByLevel(roles, safeLevel).title}」。`,
         tone: safeLevel > previousLevel ? "upgrade" : "down",
         createdAt: log.createdAt,
         sourceLogId: log.id,
@@ -2640,7 +2753,7 @@ export default function App() {
       showStory(
         {
           title: "职务裁定",
-          text: `老婆大人已${reason}，当前职务定为「${roles[safeLevel].title}」。`,
+          text: `老婆大人已${reason}，当前职务定为「${getRoleByLevel(roles, safeLevel).title}」。`,
           tone: safeLevel < previousLevel ? "down" : "normal",
         },
         {
@@ -2701,7 +2814,7 @@ export default function App() {
     if (progress.level !== MIN_LEVEL) {
       addLog({
         type: "level_changed",
-        title: roles[MIN_LEVEL].title,
+        title: getRoleByLevel(roles, MIN_LEVEL).title,
         description: "最终裁定",
         fromLevel: progress.level,
         toLevel: MIN_LEVEL,
@@ -2729,10 +2842,13 @@ export default function App() {
   function handleRestoreNormal() {
     if (punishment.status !== "slave") return;
     playSoundEffect("slave-release");
-    const restoredLevel = clampLevel(punishment.restoreLevel ?? progress.level);
+    const restoredLevel = clampLevel(
+      punishment.restoreLevel ?? progress.level,
+      maxLevel,
+    );
     const restoredExp = Math.min(
       punishment.restoreExp ?? progress.exp,
-      expRequiredForLevel(restoredLevel),
+      expRequiredForLevel(restoredLevel, maxLevel),
     );
     const restoredWallet = Math.max(
       0,
@@ -2769,14 +2885,14 @@ export default function App() {
     const restoredLog = addLog({
       type: "punishment_status_changed",
       title: "赎回骆老哥",
-      description: `卖身奴隶状态解除，官复原职为「${roles[restoredLevel].title}」。`,
+      description: `卖身奴隶状态解除，官复原职为「${getRoleByLevel(roles, restoredLevel).title}」。`,
       fromStatus: "slave",
       toStatus: "normal",
     });
     appendDecree({
       type: "punishment_restored",
       title: "官复原职",
-      text: `老妞大人解除卖身奴隶状态，恢复「${roles[restoredLevel].title}」职务、原有经验与零花钱。`,
+      text: `老妞大人解除卖身奴隶状态，恢复「${getRoleByLevel(roles, restoredLevel).title}」职务、原有经验与零花钱。`,
       tone: "upgrade",
       createdAt: restoredLog.createdAt,
       sourceLogId: restoredLog.id,
@@ -2785,7 +2901,7 @@ export default function App() {
     if (restoredLevel !== progress.level) {
       addLog({
         type: "level_changed",
-        title: roles[restoredLevel].title,
+        title: getRoleByLevel(roles, restoredLevel).title,
         description: "赎回后官复原职",
         fromLevel: progress.level,
         toLevel: restoredLevel,
@@ -2794,7 +2910,7 @@ export default function App() {
     showStory(
       {
         title: "赎回成功",
-        text: `老婆大人已赎回骆老哥，卖身奴隶状态解除，恢复「${roles[restoredLevel].title}」职务、原有经验与零花钱。`,
+        text: `老婆大人已赎回骆老哥，卖身奴隶状态解除，恢复「${getRoleByLevel(roles, restoredLevel).title}」职务、原有经验与零花钱。`,
         tone: "upgrade",
       },
       {
@@ -2951,8 +3067,8 @@ export default function App() {
     const upgradeDecree = activeWifeUpgradeDecree;
     const illustrationTransition =
       wifeHomeIllustrationTransitionForLevelChange(
-        clampLevel(Number(upgradeDecree.payload.fromLevel)),
-        clampLevel(Number(upgradeDecree.payload.toLevel)),
+        clampLevel(Number(upgradeDecree.payload.fromLevel), maxLevel),
+        clampLevel(Number(upgradeDecree.payload.toLevel), maxLevel),
       );
     setDecreeSaving(true);
     setDecreeError(undefined);
@@ -3229,25 +3345,35 @@ export default function App() {
       audience="husband"
       fromLevel={clampLevel(
         Number(activeHusbandUpgradeDecree.payload.fromLevel),
+        maxLevel,
       )}
-      toLevel={clampLevel(Number(activeHusbandUpgradeDecree.payload.toLevel))}
+      toLevel={clampLevel(
+        Number(activeHusbandUpgradeDecree.payload.toLevel),
+        maxLevel,
+      )}
       fromRoleName={
-        roles[
-          clampLevel(Number(activeHusbandUpgradeDecree.payload.fromLevel))
-        ].title
+        getRoleByLevel(
+          roles,
+          clampLevel(Number(activeHusbandUpgradeDecree.payload.fromLevel), maxLevel),
+        ).title
       }
       toRoleName={
-        roles[clampLevel(Number(activeHusbandUpgradeDecree.payload.toLevel))]
-          .title
+        getRoleByLevel(
+          roles,
+          clampLevel(Number(activeHusbandUpgradeDecree.payload.toLevel), maxLevel),
+        ).title
       }
       fromRoleImage={
-        roles[
-          clampLevel(Number(activeHusbandUpgradeDecree.payload.fromLevel))
-        ].roleImage
+        getRoleByLevel(
+          roles,
+          clampLevel(Number(activeHusbandUpgradeDecree.payload.fromLevel), maxLevel),
+        ).roleImage
       }
       toRoleImage={
-        roles[clampLevel(Number(activeHusbandUpgradeDecree.payload.toLevel))]
-          .roleImage
+        getRoleByLevel(
+          roles,
+          clampLevel(Number(activeHusbandUpgradeDecree.payload.toLevel), maxLevel),
+        ).roleImage
       }
       isOpen
       onComplete={() => {
@@ -3260,21 +3386,31 @@ export default function App() {
     <RoleUpgradeCinematic
       id={activeWifeUpgradeDecree.id}
       audience="wife"
-      fromLevel={clampLevel(Number(activeWifeUpgradeDecree.payload.fromLevel))}
-      toLevel={clampLevel(Number(activeWifeUpgradeDecree.payload.toLevel))}
+      fromLevel={clampLevel(Number(activeWifeUpgradeDecree.payload.fromLevel), maxLevel)}
+      toLevel={clampLevel(Number(activeWifeUpgradeDecree.payload.toLevel), maxLevel)}
       fromRoleName={
-        roles[clampLevel(Number(activeWifeUpgradeDecree.payload.fromLevel))].title
+        getRoleByLevel(
+          roles,
+          clampLevel(Number(activeWifeUpgradeDecree.payload.fromLevel), maxLevel),
+        ).title
       }
       toRoleName={
-        roles[clampLevel(Number(activeWifeUpgradeDecree.payload.toLevel))].title
+        getRoleByLevel(
+          roles,
+          clampLevel(Number(activeWifeUpgradeDecree.payload.toLevel), maxLevel),
+        ).title
       }
       fromRoleImage={
-        roles[clampLevel(Number(activeWifeUpgradeDecree.payload.fromLevel))]
-          .roleImage
+        getRoleByLevel(
+          roles,
+          clampLevel(Number(activeWifeUpgradeDecree.payload.fromLevel), maxLevel),
+        ).roleImage
       }
       toRoleImage={
-        roles[clampLevel(Number(activeWifeUpgradeDecree.payload.toLevel))]
-          .roleImage
+        getRoleByLevel(
+          roles,
+          clampLevel(Number(activeWifeUpgradeDecree.payload.toLevel), maxLevel),
+        ).roleImage
       }
       isOpen
       onComplete={handleAcknowledgeWifeRoleUpgrade}
@@ -3408,7 +3544,7 @@ export default function App() {
           }
           onLevelDelta={(delta) =>
             handleSetLevel(
-              clampLevel(progress.level + delta),
+              clampLevel(progress.level + delta, maxLevel),
               delta > 0 ? "赐予新职务" : "收回当前职务",
             )
           }
@@ -3457,11 +3593,11 @@ export default function App() {
   if (punishment.status === "slave") {
     const slaveImage = publicAsset("/assets/slave/slave-page-latest.png");
     const slaveRole = {
-      ...roleWithProgress(roles[MIN_LEVEL], {
+      ...roleWithProgress(getRoleByLevel(roles, MIN_LEVEL), {
         ...progress,
         level: MIN_LEVEL,
         exp: 0,
-      }),
+      }, maxLevel),
       title: "卖身奴隶",
       biography: "表现太糟糕了，奴隶市场又新增了一个奴隶。",
       roleImage: slaveImage,
@@ -3551,7 +3687,7 @@ export default function App() {
           currentLevel={progress.level}
           benefits={sortedBenefits}
           canPrev={previewLevel > 0}
-          canNext={previewLevel < roles.length - 1}
+          canNext={previewLevel < maxLevel}
           selectedBenefit={selectedBenefit}
           onPreviewPrev={handlePreviewPrev}
           onPreviewNext={handlePreviewNext}
@@ -3567,8 +3703,8 @@ export default function App() {
           previewRole={previewRole}
           previewDirection={previewDirection}
           canPrev={previewLevel > 0}
-          canNext={previewLevel < roles.length - 1}
-          roleCount={roles.length}
+          canNext={previewLevel < maxLevel}
+          roleCount={maxLevel + 1}
           wallet={progress.wallet}
           nextAllowanceAmount={nextAllowanceTotal}
           nextAllowanceMonth={nextAllowanceMonth}

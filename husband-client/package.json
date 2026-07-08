@@ -10,6 +10,10 @@
     "build": "tsc -b && vite build",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "preview": "vite preview",
+    "server:build": "npm run build --prefix server",
+    "server:dev": "npm run dev --prefix server",
+    "server:start": "npm start --prefix server",
+    "start": "node server.mjs",
     "check": "npm test && npm run audit:login-sprites && tsc -b && vite build"
   },
   "dependencies": {

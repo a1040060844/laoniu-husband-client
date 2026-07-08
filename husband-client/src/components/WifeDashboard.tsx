@@ -43,6 +43,7 @@ import {
 } from "../data/wifeIllustrations";
 import { expRequiredForLevel, type GameProgress } from "../game/progression";
 import { publicAsset } from "../lib/assets";
+import { getMaxLevel, getRoleByLevel, getNextRole } from "../lib/adminConfig";
 import {
   getPunishmentRemainingDays,
 } from "../lib/taskSystem";
@@ -487,13 +488,14 @@ export function WifeDashboard({
         roleImage: publicAsset("/assets/slave/slave-page-latest.png"),
       }
     : role;
-  const requiredExp = expRequiredForLevel(progress.level);
+  const maxLevel = getMaxLevel(roles);
+  const requiredExp = expRequiredForLevel(progress.level, maxLevel);
   const expPercent = Math.min(
     100,
     Math.round((progress.exp / requiredExp) * 100),
   );
   const expToNext = Math.max(0, requiredExp - progress.exp);
-  const nextRole = roles[Math.min(roles.length - 1, role.level + 1)];
+  const nextRole = getNextRole(roles, role.level) ?? getRoleByLevel(roles, role.level);
   const remainingDays = getPunishmentRemainingDays(punishment);
   const recoveryPercent =
     punishment.requiredRecoveryExp > 0
@@ -803,8 +805,8 @@ export function WifeDashboard({
   }
 
   function formatRoleChangeLevel(level: number) {
-    const safeLevel = Math.min(Math.max(0, level), roles.length - 1);
-    const targetRole = roles[safeLevel];
+    const safeLevel = Math.min(Math.max(0, level), maxLevel);
+    const targetRole = getRoleByLevel(roles, safeLevel);
     return `Lv.${String(safeLevel).padStart(2, "0")} ${targetRole?.title ?? "未知职务"}`;
   }
 
@@ -1352,7 +1354,7 @@ export function WifeDashboard({
             <p className="wife-growth-next">
               {isSlave
                 ? "奴隶服役中，周期结束后由老妞大人重新裁定"
-                : role.level >= roles.length - 1
+                : role.level >= maxLevel
                   ? "已抵达最高职务，赏罚仍由老妞大人裁定"
                   : `距 Lv.${String(nextRole.level).padStart(2, "0")} ${nextRole.title} 还差 ${expToNext} 经验`}
             </p>
@@ -1679,7 +1681,7 @@ export function WifeDashboard({
             <p className="wife-next-line">
               {isSlave
                 ? "奴隶服役中，周期结束后由老妞大人重新裁定"
-                : role.level >= 11
+                : role.level >= maxLevel
                   ? "已抵达最高职务，赏罚仍由老妞大人裁定"
                   : `距 Lv.${String(role.level + 1).padStart(2, "0")} 下一职务还差 ${expToNext} 经验`}
             </p>
@@ -2715,7 +2717,7 @@ export function WifeDashboard({
                   <strong>
                     {"\u76EE\u6807"} Lv.
                     {String(targetLevel).padStart(2, "0")} {" "}
-                    {roles[targetLevel]?.title}
+                    {getRoleByLevel(roles, targetLevel)?.title}
                   </strong>
                 </div>
                 <div

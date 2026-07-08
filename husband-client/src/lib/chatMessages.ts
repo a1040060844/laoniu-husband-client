@@ -1,6 +1,6 @@
 import type { ChatMessage, ChatSender } from "../types/domain";
 
-const CHAT_STORAGE_KEY = "laoniu.chat-messages.v1";
+export const CHAT_STORAGE_KEY = "laoniu.chat-messages.v1";
 
 function chatId(sender: ChatSender) {
   return `chat-${sender}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
@@ -33,6 +33,45 @@ function normalizeMessage(value: unknown): ChatMessage | null {
   };
 }
 
+export function hydrateChatMessages(raw: unknown): ChatMessage[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map(normalizeMessage)
+    .filter((message): message is ChatMessage => Boolean(message))
+    .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
+}
+
+function mergeChatMessage(first: ChatMessage, second: ChatMessage) {
+  const readBy = Array.from(new Set([...first.readBy, ...second.readBy])).filter(
+    isChatSender,
+  );
+  const firstTime = Date.parse(first.createdAt);
+  const secondTime = Date.parse(second.createdAt);
+  const preferred =
+    Number.isFinite(secondTime) && secondTime >= (Number.isFinite(firstTime) ? firstTime : 0)
+      ? second
+      : first;
+  return {
+    ...preferred,
+    readBy,
+  };
+}
+
+export function mergeChatMessages(
+  firstMessages: ChatMessage[],
+  secondMessages: ChatMessage[],
+) {
+  const merged = new Map<string, ChatMessage>();
+  firstMessages.forEach((message) => merged.set(message.id, message));
+  secondMessages.forEach((message) => {
+    const existing = merged.get(message.id);
+    merged.set(message.id, existing ? mergeChatMessage(existing, message) : message);
+  });
+  return [...merged.values()].sort(
+    (a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt),
+  );
+}
+
 export function createChatMessage(sender: ChatSender, text: string): ChatMessage {
   return {
     id: chatId(sender),
@@ -48,11 +87,7 @@ export function loadChatMessages(): ChatMessage[] {
     const raw = window.localStorage.getItem(CHAT_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .map(normalizeMessage)
-      .filter((message): message is ChatMessage => Boolean(message))
-      .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
+    return hydrateChatMessages(parsed);
   } catch {
     return [];
   }

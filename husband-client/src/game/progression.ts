@@ -1,7 +1,8 @@
 import type { Role, StoryEvent, Task, TaskReward } from "../types/domain";
 
 export const MIN_LEVEL = 0;
-export const MAX_LEVEL = 11;
+export const DEFAULT_MAX_LEVEL = 11;
+export const MAX_LEVEL = DEFAULT_MAX_LEVEL;
 
 const LEVEL_EXP_STEP = 500;
 
@@ -26,9 +27,17 @@ export const initialProgress: GameProgress = {
   rewardedTaskIds: ["daily-water"],
 };
 
-export function clampLevel(level: number) {
+function maxRoleLevel(roles: Role[]) {
+  return roles.reduce((max, role) => Math.max(max, role.level), DEFAULT_MAX_LEVEL);
+}
+
+function roleAtLevel(roles: Role[], level: number) {
+  return roles.find((role) => role.level === level) ?? roles[0];
+}
+
+export function clampLevel(level: number, maxLevel = DEFAULT_MAX_LEVEL) {
   if (!Number.isFinite(level)) return MIN_LEVEL;
-  return Math.min(MAX_LEVEL, Math.max(MIN_LEVEL, Math.trunc(level)));
+  return Math.min(Math.max(MIN_LEVEL, maxLevel), Math.max(MIN_LEVEL, Math.trunc(level)));
 }
 
 function finiteNumber(value: unknown, fallback: number) {
@@ -36,37 +45,41 @@ function finiteNumber(value: unknown, fallback: number) {
   return Number.isFinite(number) ? number : fallback;
 }
 
-export function expRequiredForLevel(level: number) {
-  const safeLevel = clampLevel(level);
+export function expRequiredForLevel(level: number, maxLevel = DEFAULT_MAX_LEVEL) {
+  const safeLevel = clampLevel(level, maxLevel);
   return Math.max(1, safeLevel) * LEVEL_EXP_STEP;
 }
 
 export function progressWithLevelRule(
   current: GameProgress,
   nextLevel: number,
+  maxLevel = DEFAULT_MAX_LEVEL,
 ): GameProgress {
-  const fromLevel = clampLevel(current.level);
-  const level = clampLevel(nextLevel);
+  const fromLevel = clampLevel(current.level, maxLevel);
+  const level = clampLevel(nextLevel, maxLevel);
   return {
     ...current,
     level,
     exp:
       level > fromLevel
         ? 0
-        : Math.min(Math.max(0, current.exp), expRequiredForLevel(level)),
+        : Math.min(Math.max(0, current.exp), expRequiredForLevel(level, maxLevel)),
   };
 }
 
-export function salaryForLevel(level: number) {
-  const safeLevel = clampLevel(level);
+export function salaryForLevel(level: number, maxLevel = DEFAULT_MAX_LEVEL) {
+  const safeLevel = clampLevel(level, maxLevel);
   return safeLevel === 0 ? 100 : 280 + (safeLevel - 1) * 20;
 }
 
-export function hydrateProgress(raw: unknown): GameProgress {
+export function hydrateProgress(
+  raw: unknown,
+  maxLevel = DEFAULT_MAX_LEVEL,
+): GameProgress {
   if (!raw || typeof raw !== "object") return initialProgress;
   const value = raw as Partial<GameProgress>;
-  const level = clampLevel(finiteNumber(value.level, initialProgress.level));
-  const required = expRequiredForLevel(level);
+  const level = clampLevel(finiteNumber(value.level, initialProgress.level), maxLevel);
+  const required = expRequiredForLevel(level, maxLevel);
 
   return {
     level,
@@ -84,18 +97,22 @@ export function hydrateProgress(raw: unknown): GameProgress {
   };
 }
 
-export function roleWithProgress(role: Role, progress: GameProgress): Role {
-  const isMaxLevel = progress.level >= MAX_LEVEL;
+export function roleWithProgress(
+  role: Role,
+  progress: GameProgress,
+  maxLevel = DEFAULT_MAX_LEVEL,
+): Role {
+  const isMaxLevel = progress.level >= maxLevel;
   return {
     ...role,
-    salary: salaryForLevel(role.level),
+    salary: role.salary,
     expCurrent:
       role.level === progress.level
         ? isMaxLevel
-          ? expRequiredForLevel(role.level)
+          ? expRequiredForLevel(role.level, maxLevel)
           : progress.exp
         : 0,
-    expRequired: expRequiredForLevel(role.level),
+    expRequired: expRequiredForLevel(role.level, maxLevel),
   };
 }
 
@@ -110,19 +127,21 @@ export function grantExperience(
     return { progress: current, stories: [] };
   }
 
-  let level = clampLevel(current.level);
+  const maxLevel = maxRoleLevel(roles);
+  let level = clampLevel(current.level, maxLevel);
   let exp = Math.max(0, current.exp) + safeAmount;
   const stories: StoryEvent[] = [];
 
-  if (level < MAX_LEVEL && exp >= expRequiredForLevel(level)) {
-    const from = roles[level];
+  if (level < maxLevel && exp >= expRequiredForLevel(level, maxLevel)) {
+    const from = roleAtLevel(roles, level);
     const upgradedProgress = progressWithLevelRule(
       { ...current, level, exp },
       level + 1,
+      maxLevel,
     );
     level = upgradedProgress.level;
     exp = upgradedProgress.exp;
-    const to = roles[level];
+    const to = roleAtLevel(roles, level);
     stories.push({
       title: "职务晋升",
       text: `老妞大人对你点了点头：${reason}，从「${from.title}」升为「${to.title}」。`,
@@ -130,8 +149,8 @@ export function grantExperience(
     });
   }
 
-  if (level >= MAX_LEVEL) {
-    exp = Math.min(expRequiredForLevel(MAX_LEVEL), exp);
+  if (level >= maxLevel) {
+    exp = Math.min(expRequiredForLevel(maxLevel, maxLevel), exp);
   }
 
   return {
@@ -217,8 +236,9 @@ export function settleTaskReward(
     if (reward.type === "level_up") {
       const amount = Math.min(1, Math.max(1, Math.trunc(reward.value ?? 1)));
       const fromLevel = progress.level;
-      const level = clampLevel(progress.level + amount);
-      progress = progressWithLevelRule(progress, level);
+      const maxLevel = maxRoleLevel(roles);
+      const level = clampLevel(progress.level + amount, maxLevel);
+      progress = progressWithLevelRule(progress, level, maxLevel);
       if (level !== fromLevel) {
         stories.push({
           title: "老妞大人直接赐予晋升",

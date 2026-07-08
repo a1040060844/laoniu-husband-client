@@ -25,6 +25,7 @@ import {
   walletLedgerRecordLabel,
 } from "../src/lib/recordLabels.ts";
 import { calculateActiveAnomalies } from "../src/lib/anomalyRules.ts";
+import { mergeChatMessages } from "../src/lib/chatMessages.ts";
 import {
   aggregatePendingExperienceDecrees,
   decreeAcknowledgeIds,
@@ -46,6 +47,7 @@ import {
 import { wifeHomeIllustrationTransitionForLevelChange } from "../src/data/wifeIllustrations.ts";
 import type {
   DecreeEvent,
+  ChatMessage,
   NotificationEvent,
   Role,
   Task,
@@ -88,6 +90,17 @@ function decree(overrides: Partial<DecreeEvent>): DecreeEvent {
     createdAt: new Date(0).toISOString(),
     target: "husband",
     payload: {},
+    ...overrides,
+  };
+}
+
+function chat(overrides: Partial<ChatMessage>): ChatMessage {
+  return {
+    id: "chat-1",
+    sender: "husband",
+    text: "hello",
+    createdAt: "2026-06-26T00:00:00.000Z",
+    readBy: ["husband"],
     ...overrides,
   };
 }
@@ -437,6 +450,38 @@ test("approved final task archives as completed and cannot be resubmitted", () =
   assert.equal(isTaskSubmittableStatus("completed"), false);
   assert.equal(isTaskSubmittableStatus("confirmed"), false);
   assert.equal(isTaskSubmittableStatus("doing"), true);
+});
+
+test("chat merge syncs messages and read receipts from both clients", () => {
+  const merged = mergeChatMessages(
+    [
+      chat({
+        id: "shared",
+        sender: "husband",
+        readBy: ["husband"],
+      }),
+    ],
+    [
+      chat({
+        id: "shared",
+        sender: "husband",
+        readBy: ["wife"],
+      }),
+      chat({
+        id: "wife-reply",
+        sender: "wife",
+        text: "reply",
+        readBy: ["wife"],
+        createdAt: "2026-06-26T00:01:00.000Z",
+      }),
+    ],
+  );
+
+  assert.deepEqual(
+    merged.find((message) => message.id === "shared")?.readBy.sort(),
+    ["husband", "wife"],
+  );
+  assert.equal(merged.some((message) => message.id === "wife-reply"), true);
 });
 
 test("monthly allowance records settle the previous calendar month", () => {

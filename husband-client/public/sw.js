@@ -1,4 +1,4 @@
-const CACHE_NAME = "laoniu-pwa-static-v29-exp-shine-entry-fix";
+const CACHE_NAME = "laoniu-pwa-static-v30-app-title";
 const APP_SCOPE = new URL(self.registration.scope).pathname;
 const CORE_ASSETS = [
   APP_SCOPE,
