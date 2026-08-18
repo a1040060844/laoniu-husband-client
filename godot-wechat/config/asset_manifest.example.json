@@ -2,102 +2,109 @@
   "version": 1,
   "base_url": "https://www.laoniulaoge.cn/assets",
   "login": {
-    "background": {
-      "path": "login/bg-room.png",
-      "format": "png",
-      "version": 1
-    },
-    "husband": {
-      "path": "login/husband.png",
-      "format": "png",
-      "version": 1
-    },
-    "wife": {
-      "path": "login/wife.png",
-      "format": "png",
-      "version": 1
-    },
-    "cat-blue": {
-      "path": "login/cat-blue.png",
-      "format": "png",
-      "version": 1
-    },
-    "cat-white": {
-      "path": "login/cat-white.png",
-      "format": "png",
-      "version": 1
-    },
-    "card-husband": {
-      "path": "login/card-husband.png",
-      "format": "png",
-      "version": 1
-    },
-    "card-wife": {
-      "path": "login/card-wife.png",
-      "format": "png",
-      "version": 1
-    },
-    "title": {
-      "path": "login/title.png",
-      "format": "png",
-      "version": 1
-    },
-    "subtitle": {
-      "path": "login/subtitle.png",
-      "format": "png",
-      "version": 1
-    },
-    "music-toggle": {
-      "path": "ui/login-music-toggle.png",
-      "format": "png",
-      "version": 1
+    "background": { "path": "login/bg-room.png", "format": "png", "version": 1 },
+    "husband": { "path": "login/husband.png", "format": "png", "version": 1 },
+    "wife": { "path": "login/wife.png", "format": "png", "version": 1 },
+    "cat-blue": { "path": "login/cat-blue.png", "format": "png", "version": 1 },
+    "cat-white": { "path": "login/cat-white.png", "format": "png", "version": 1 },
+    "card-husband": { "path": "login/card-husband.png", "format": "png", "version": 1 },
+    "card-wife": { "path": "login/card-wife.png", "format": "png", "version": 1 },
+    "title": { "path": "login/title.png", "format": "png", "version": 1 },
+    "subtitle": { "path": "login/subtitle.png", "format": "png", "version": 1 },
+    "music-toggle": { "path": "ui/login-music-toggle.png", "format": "png", "version": 1 },
+    "animations": {
+      "husband": {
+        "idle": {
+          "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/husband/blink",
+          "version": 1,
+          "target_visual_height": 188,
+          "loop": true,
+          "playback_rate": 2
+        },
+        "drag": {
+          "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/husband/drag",
+          "version": 1,
+          "target_visual_height": 188,
+          "loop": true
+        },
+        "select": {
+          "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/husband/select",
+          "version": 1,
+          "target_visual_height": 188,
+          "loop": false,
+          "playback_rate": 2
+        }
+      },
+      "wife": {
+        "idle": {
+          "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/wife/blink",
+          "version": 1,
+          "target_visual_height": 188,
+          "loop": true,
+          "playback_rate": 2
+        },
+        "drag": {
+          "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/wife/drag",
+          "version": 1,
+          "target_visual_height": 179,
+          "loop": true
+        },
+        "select": {
+          "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/wife/select",
+          "version": 1,
+          "target_visual_height": 188,
+          "loop": false,
+          "playback_rate": 2
+        }
+      },
+      "cat-blue": {
+        "idle": {
+          "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/cat-blue/blink",
+          "version": 1,
+          "display_width": 82,
+          "loop": true,
+          "playback_rate": 2
+        },
+        "drag": {
+          "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/cat-blue/drag",
+          "version": 1,
+          "display_width": 82,
+          "loop": true
+        }
+      },
+      "cat-white": {
+        "idle": {
+          "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/cat-white/idle",
+          "version": 1,
+          "display_width": 72,
+          "loop": true
+        },
+        "drag": {
+          "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/cat-white/drag",
+          "version": 1,
+          "display_width": 72,
+          "loop": true
+        }
+      }
     }
   },
   "roles": {
     "0": {
-      "illustration": {
-        "path": "",
-        "format": "webp",
-        "version": 1
-      }
+      "illustration": { "path": "", "format": "webp", "version": 1 }
     }
   },
   "benefits": {
     "0": {
-      "illustration": {
-        "path": "",
-        "format": "webp",
-        "version": 1
-      }
+      "illustration": { "path": "", "format": "webp", "version": 1 }
     }
   },
   "wife": {
-    "home": {
-      "path": "",
-      "format": "webp",
-      "version": 1
-    },
-    "growth": {
-      "path": "",
-      "format": "webp",
-      "version": 1
-    },
-    "today": {
-      "path": "",
-      "format": "webp",
-      "version": 1
-    }
+    "home": { "path": "", "format": "webp", "version": 1 },
+    "growth": { "path": "", "format": "webp", "version": 1 },
+    "today": { "path": "", "format": "webp", "version": 1 }
   },
   "audio": {
-    "bgm-login": {
-      "path": "audio/bgm/bgm-login.mp3",
-      "format": "mp3",
-      "version": 1
-    },
-    "ui-swipe-up": {
-      "path": "",
-      "format": "mp3",
-      "version": 1
-    }
+    "bgm-login": { "path": "audio/bgm/bgm-login.mp3", "format": "mp3", "version": 1 },
+    "ui-swipe-up": { "path": "", "format": "mp3", "version": 1 }
   }
 }
