@@ -10,6 +10,9 @@ run/main_scene="res://scenes/main.tscn"
 [autoload]
 ApiClient="*res://src/api_client.gd"
 GameState="*res://src/game_state.gd"
+AssetManifest="*res://src/asset_manifest.gd"
+CloudAssetManager="*res://src/cloud_asset_manager.gd"
+AudioManager="*res://src/audio_manager.gd"
 
 [display]
 window/size/viewport_width=390
@@ -26,3 +29,6 @@ renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/default_filters/use_nearest_mipmap_filter=false
 textures/canvas_textures/default_texture_filter=0
+
+[laoniu]
+assets/manifest_url="https://www.laoniulaoge.cn/game-assets/manifest.json"
