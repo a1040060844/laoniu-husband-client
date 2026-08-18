@@ -8,6 +8,7 @@ const SWIPE_THRESHOLD: float = 60.0
 var login_view: Control
 var husband_view: Control
 var page_container: Control
+var diagnostic_canvas: CanvasLayer
 var sync_label: Label
 var current_page: int = PAGE_ROLE
 var touch_start_y: float = 0.0
@@ -46,14 +47,20 @@ func _build_ui() -> void:
     login_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
     add_child(login_view)
 
+    diagnostic_canvas = CanvasLayer.new()
+    diagnostic_canvas.layer = 120
+    add_child(diagnostic_canvas)
+
     sync_label = Label.new()
     sync_label.text = "正在连接服务器…"
     sync_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     sync_label.add_theme_font_size_override("font_size", 11)
-    sync_label.add_theme_color_override("font_color", Color("8e8069"))
+    sync_label.add_theme_color_override("font_color", Color("d5c19b"))
+    sync_label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.9))
+    sync_label.add_theme_constant_override("shadow_offset_x", 1)
+    sync_label.add_theme_constant_override("shadow_offset_y", 1)
     sync_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    sync_label.z_index = 200
-    add_child(sync_label)
+    diagnostic_canvas.add_child(sync_label)
 
 func _make_page(page_name: String) -> Control:
     var page: Control = Control.new()
@@ -85,8 +92,8 @@ func _layout() -> void:
         page_container.position = Vector2(0.0, -viewport_size.y * float(current_page))
 
     if is_instance_valid(sync_label):
-        sync_label.position = Vector2(16.0, viewport_size.y - 24.0)
-        sync_label.size = Vector2(viewport_size.x - 32.0, 18.0)
+        sync_label.position = Vector2(16.0, viewport_size.y - 26.0)
+        sync_label.size = Vector2(viewport_size.x - 32.0, 20.0)
 
 func _enter_husband() -> void:
     if is_instance_valid(login_view):
@@ -96,7 +103,7 @@ func _enter_husband() -> void:
     current_page = PAGE_ROLE
     _snap_to_page(false)
 
-func _unhandled_input(event: InputEvent) -> void:
+func _input(event: InputEvent) -> void:
     if not is_instance_valid(husband_view) or not husband_view.visible:
         return
 
@@ -124,6 +131,10 @@ func _unhandled_input(event: InputEvent) -> void:
 func _finish_swipe(delta_y: float) -> void:
     if absf(delta_y) < SWIPE_THRESHOLD:
         return
+
+    if current_page == PAGE_TASK and delta_y > 0.0 and touch_start_y > 140.0:
+        return
+
     if delta_y < 0.0:
         _set_page(current_page + 1)
     else:
@@ -151,7 +162,9 @@ func _snap_to_page(animated: bool) -> void:
 func _on_sync_status_changed(message: String) -> void:
     if is_instance_valid(sync_label):
         sync_label.text = message
+        sync_label.add_theme_color_override("font_color", Color("d5c19b"))
 
 func _on_sync_failed(message: String) -> void:
     if is_instance_valid(sync_label):
         sync_label.text = "同步失败：%s" % message
+        sync_label.add_theme_color_override("font_color", Color("ffb3a4"))
