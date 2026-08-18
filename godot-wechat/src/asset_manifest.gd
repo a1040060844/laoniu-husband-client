@@ -28,7 +28,7 @@ func load_manifest() -> void:
 
     var request: HTTPRequest = HTTPRequest.new()
     add_child(request)
-    var error: Error = request.request(
+    var error: int = request.request(
         manifest_url,
         ["Accept: application/json"],
         HTTPClient.METHOD_GET
@@ -112,7 +112,9 @@ func _nested_entry(parts: Array[String]) -> Dictionary:
         if not current_dict.has(part):
             return {}
         current = current_dict[part]
-    return current if current is Dictionary else {}
+    if current is Dictionary:
+        return current
+    return {}
 
 func _finish_with_local_fallback(reason: String) -> void:
     var fallback: Dictionary = _read_local_manifest()
@@ -130,4 +132,6 @@ func _read_local_manifest() -> Dictionary:
     if file == null:
         return {}
     var parsed: Variant = JSON.parse_string(file.get_as_text())
-    return parsed if parsed is Dictionary else {}
+    if parsed is Dictionary:
+        return parsed
+    return {}
