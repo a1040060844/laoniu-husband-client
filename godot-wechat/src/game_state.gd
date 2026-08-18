@@ -5,8 +5,8 @@ signal sync_status_changed(message: String)
 signal sync_failed(message: String)
 
 var state: Dictionary = {}
-var revision := ""
-var is_syncing := false
+var revision: String = ""
+var is_syncing: bool = false
 
 func _ready() -> void:
     ApiClient.state_loaded.connect(_on_state_loaded)
@@ -30,8 +30,8 @@ func save_remote(next_state: Dictionary) -> void:
     ApiClient.save_state(state, revision)
 
 func get_progress() -> Dictionary:
-    var raw = state.get("progress", state)
-    return raw if raw is Dictionary else {}
+    var raw: Variant = state.get("progress", state)
+    return raw as Dictionary if raw is Dictionary else {}
 
 func _on_state_loaded(next_state: Dictionary, next_revision: String) -> void:
     state = next_state.duplicate(true)
