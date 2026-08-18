@@ -3,6 +3,7 @@ extends Node
 const LoginSpritePlayerScript = preload("res://src/login_sprite_player.gd")
 const CHARACTER_IDS := ["husband", "wife", "cat-blue", "cat-white"]
 const SPEECH_ROOT := "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login/speech"
+const RESET_URL := "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login/reset-button.png"
 const CAT_BLUE_WEIGHTED := [
     "blink", "blink", "blink", "blink",
     "lick", "lick", "lick", "lick", "lick",
@@ -27,6 +28,7 @@ var _players: Dictionary = {}
 var _static_nodes: Dictionary = {}
 var _bubble_nodes: Dictionary = {}
 var _bubble_texture_cache: Dictionary = {}
+var _reset_button: TextureButton
 var _last_drag_id := ""
 var _mounted := false
 var _selection_busy := false
@@ -50,6 +52,7 @@ func _mount_when_ready() -> void:
 
     _static_nodes = LoginVisualOverlay._sprite_nodes
     _create_bubble_nodes()
+    _create_reset_button()
     if AssetBootstrap.ready:
         _setup_players()
     else:
@@ -93,6 +96,21 @@ func _create_bubble_nodes() -> void:
         LoginVisualOverlay._root.add_child(bubble)
         _bubble_nodes[target] = bubble
 
+func _create_reset_button() -> void:
+    _reset_button = TextureButton.new()
+    _reset_button.ignore_texture_size = true
+    _reset_button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+    _reset_button.z_index = 125
+    _reset_button.pressed.connect(_reset_login)
+    LoginVisualOverlay._root.add_child(_reset_button)
+    _load_reset_texture()
+
+func _load_reset_texture() -> void:
+    var entry := {"url": RESET_URL, "format": "png", "version": 1}
+    var texture := await CloudAssetManager.load_texture("login-reset-button", entry)
+    if texture != null and _reset_button != null:
+        _reset_button.texture_normal = texture
+
 func _process(delta: float) -> void:
     if not _mounted or LoginVisualOverlay._root == null:
         return
@@ -108,9 +126,18 @@ func _process(delta: float) -> void:
         player.z_index = 10 + int(round(float(anchor_pct.y) * 100.0))
 
     _layout_bubbles(viewport_size)
+    _layout_reset_button(viewport_size)
     _sync_drag_action()
     if LoginVisualOverlay._drag_id.is_empty() and not _selection_busy:
         _run_weighted_idle_actions()
+
+func _layout_reset_button(viewport_size: Vector2) -> void:
+    if _reset_button == null:
+        return
+    var button_size := clamp(viewport_size.x * 0.102, 42.0, 57.0)
+    var base_position := Vector2(viewport_size.x - 46.0 - button_size, 164.0)
+    _reset_button.position = base_position + Vector2(0.0, sin((_elapsed - 0.65) * TAU / 3.4) * 6.0)
+    _reset_button.size = Vector2(button_size, button_size)
 
 func _layout_bubbles(viewport_size: Vector2) -> void:
     for target in _bubble_nodes:
@@ -203,8 +230,7 @@ func _on_action_finished(character_id: String, action: String) -> void:
 
     if _selection_busy and character_id == "husband" and action == "select":
         await get_tree().create_timer(0.5).timeout
-        _hide_all_bubbles()
-        LoginVisualOverlay._enter_husband()
+        _complete_husband_selection()
         return
 
     if action != "select" or not _selection_busy:
@@ -219,6 +245,8 @@ func _begin_select_husband() -> void:
     _selection_busy = true
     LoginVisualOverlay._husband_card.disabled = true
     LoginVisualOverlay._wife_card.disabled = true
+    if _reset_button != null:
+        _reset_button.disabled = true
     LoginVisualOverlay._drag_id = ""
     _hide_all_bubbles()
 
@@ -227,8 +255,41 @@ func _begin_select_husband() -> void:
     if _players.has("wife") and _players["wife"].has_action("response"):
         _players["wife"].play_action("response")
 
+    _selection_fallback()
     await get_tree().create_timer(0.1).timeout
     _show_bubble("husband", "thought-wife-food-1.png", false)
+
+func _selection_fallback() -> void:
+    await get_tree().create_timer(7.0).timeout
+    if _selection_busy and LoginVisualOverlay._root != null and LoginVisualOverlay._root.visible:
+        _complete_husband_selection()
+
+func _complete_husband_selection() -> void:
+    if not _selection_busy:
+        return
+    _selection_busy = false
+    _hide_all_bubbles()
+    LoginVisualOverlay._enter_husband()
+
+func _reset_login() -> void:
+    if _selection_busy:
+        return
+    LoginVisualOverlay._drag_id = ""
+    _last_drag_id = ""
+    LoginVisualOverlay._sprite_anchor_pct["husband"] = Vector2(0.38, 0.65)
+    LoginVisualOverlay._sprite_anchor_pct["wife"] = Vector2(0.59, 0.65)
+    LoginVisualOverlay._sprite_anchor_pct["cat-blue"] = Vector2(0.51, 0.74)
+    LoginVisualOverlay._sprite_anchor_pct["cat-white"] = Vector2(0.63, 0.76)
+    LoginVisualOverlay._fade.color.a = 0.0
+    LoginVisualOverlay._husband_card.disabled = false
+    LoginVisualOverlay._wife_card.disabled = true
+    _wife_thinking_index = 0
+    _hide_all_bubbles()
+    for character_id in _players:
+        _players[character_id].play_idle()
+        _schedule_next(character_id)
+    LoginVisualOverlay._layout()
+    _play_login_intro()
 
 func _play_login_intro() -> void:
     await get_tree().create_timer(0.3).timeout
