@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "base_url": "",
+  "login": {
+    "background": {
+      "path": "",
+      "format": "webp",
+      "version": 1
+    },
+    "husband": {
+      "path": "",
+      "format": "webp",
+      "version": 1
+    },
+    "wife": {
+      "path": "",
+      "format": "webp",
+      "version": 1
+    }
+  },
+  "roles": {
+    "0": {
+      "illustration": {
+        "path": "",
+        "format": "webp",
+        "version": 1
+      }
+    }
+  },
+  "benefits": {
+    "0": {
+      "illustration": {
+        "path": "",
+        "format": "webp",
+        "version": 1
+      }
+    }
+  },
+  "wife": {
+    "home": {
+      "path": "",
+      "format": "webp",
+      "version": 1
+    },
+    "growth": {
+      "path": "",
+      "format": "webp",
+      "version": 1
+    },
+    "today": {
+      "path": "",
+      "format": "webp",
+      "version": 1
+    }
+  },
+  "audio": {
+    "bgm-login": {
+      "path": "",
+      "format": "mp3",
+      "version": 1
+    },
+    "ui-swipe-up": {
+      "path": "",
+      "format": "mp3",
+      "version": 1
+    }
+  }
+}
