@@ -9,7 +9,7 @@ import {
   Upload,
 } from "lucide-react";
 import { adminApi } from "../services/adminApi";
-import type { AssetReference } from "../../lib/adminConfig";
+import type { AssetReference, IllustrationLayout } from "../../lib/adminConfig";
 
 type AssetCategory = AssetReference["category"];
 
@@ -36,6 +36,16 @@ function categoryLabel(category: AssetCategory) {
   return categories.find((item) => item.value === category)?.label ?? category;
 }
 
+const defaultLayout: IllustrationLayout = {
+  offsetX: 0,
+  offsetY: 0,
+  scale: 100,
+};
+
+function canAdjustPlacement(asset: AssetReference | null) {
+  return Boolean(asset?.placementKey);
+}
+
 export function AssetsPage() {
   const [assets, setAssets] = useState<AssetReference[]>([]);
   const [selectedId, setSelectedId] = useState("");
@@ -45,6 +55,7 @@ export function AssetsPage() {
   const [url, setUrl] = useState("");
   const [version, setVersion] = useState("");
   const [usedBy, setUsedBy] = useState("");
+  const [layout, setLayout] = useState<IllustrationLayout>(defaultLayout);
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
   const [fileMeta, setFileMeta] = useState<{
     fileName?: string;
@@ -93,6 +104,7 @@ export function AssetsPage() {
     setUrl(selectedAsset.url);
     setVersion(selectedAsset.version ?? "");
     setUsedBy(selectedAsset.usedBy?.join(",") ?? "");
+    setLayout(selectedAsset.layout ?? defaultLayout);
     setFileMeta({
       fileName: selectedAsset.fileName,
       fileType: selectedAsset.fileType,
@@ -119,20 +131,38 @@ export function AssetsPage() {
     setMessage(null);
     setError(null);
     try {
-      const saved = await adminApi.registerAsset({
-        category: assetCategory,
-        label: label || fileMeta.fileName || "未命名素材",
-        url,
-        version: version || undefined,
-        usedBy: usedBy
-          .split(",")
-          .map((item) => item.trim())
-          .filter(Boolean),
-        fileName: fileMeta.fileName,
-        fileType: fileMeta.fileType,
-        sizeBytes: fileMeta.sizeBytes,
-      });
-      setMessage("已保存素材引用；后续可由正式上传接口替换为服务器文件。");
+      const usedByList = usedBy
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+      const saved = selectedAsset
+        ? await adminApi.saveAsset({
+            ...selectedAsset,
+            category: assetCategory,
+            label: label || fileMeta.fileName || "未命名素材",
+            url,
+            version: version || undefined,
+            usedBy: usedByList,
+            fileName: fileMeta.fileName,
+            fileType: fileMeta.fileType,
+            sizeBytes: fileMeta.sizeBytes,
+            layout: canAdjustPlacement(selectedAsset) ? layout : undefined,
+          })
+        : await adminApi.registerAsset({
+            category: assetCategory,
+            label: label || fileMeta.fileName || "未命名素材",
+            url,
+            version: version || undefined,
+            usedBy: usedByList,
+            fileName: fileMeta.fileName,
+            fileType: fileMeta.fileType,
+            sizeBytes: fileMeta.sizeBytes,
+          });
+      setMessage(
+        canAdjustPlacement(saved)
+          ? "已保存素材位置；点击右侧手机预览的刷新按钮即可查看移动端效果。"
+          : "已保存素材引用；后续可由正式上传接口替换为服务器文件。",
+      );
       setCategory(saved.category);
       await load();
       setSelectedId(saved.id);
@@ -324,6 +354,85 @@ export function AssetsPage() {
               <strong>{sizeText(selectedAsset?.sizeBytes)}</strong>
             </div>
           </div>
+
+          {canAdjustPlacement(selectedAsset) ? (
+            <section className="admin-placement-editor" aria-label="手机端插画位置">
+              <div className="admin-panel__header">
+                <div>
+                  <h2>手机端插画位置</h2>
+                  <p>调整仅作用于当前页面的插画展示，不会影响升级动画、Sprite 或其他素材。</p>
+                </div>
+                <button
+                  className="admin-secondary-button"
+                  type="button"
+                  onClick={() => setLayout(defaultLayout)}
+                >
+                  恢复居中
+                </button>
+              </div>
+              <div className="admin-placement-preview" aria-hidden="true">
+                <img
+                  src={filePreviewUrl ?? selectedAsset?.url}
+                  alt=""
+                  style={{
+                    translate: `${layout.offsetX}% ${layout.offsetY}%`,
+                    scale: String(layout.scale / 100),
+                  }}
+                />
+                <span className="admin-placement-preview__crosshair" />
+              </div>
+              <div className="admin-form-grid">
+                <label className="admin-field">
+                  <span>横向位置 {layout.offsetX}%</span>
+                  <input
+                    className="admin-range-input"
+                    max={40}
+                    min={-40}
+                    type="range"
+                    value={layout.offsetX}
+                    onChange={(event) =>
+                      setLayout((current) => ({
+                        ...current,
+                        offsetX: Number(event.target.value),
+                      }))
+                    }
+                  />
+                </label>
+                <label className="admin-field">
+                  <span>纵向位置 {layout.offsetY}%</span>
+                  <input
+                    className="admin-range-input"
+                    max={40}
+                    min={-40}
+                    type="range"
+                    value={layout.offsetY}
+                    onChange={(event) =>
+                      setLayout((current) => ({
+                        ...current,
+                        offsetY: Number(event.target.value),
+                      }))
+                    }
+                  />
+                </label>
+                <label className="admin-field admin-field--wide">
+                  <span>缩放 {layout.scale}%</span>
+                  <input
+                    className="admin-range-input"
+                    max={160}
+                    min={60}
+                    type="range"
+                    value={layout.scale}
+                    onChange={(event) =>
+                      setLayout((current) => ({
+                        ...current,
+                        scale: Number(event.target.value),
+                      }))
+                    }
+                  />
+                </label>
+              </div>
+            </section>
+          ) : null}
 
           <div className="admin-toolbar admin-toolbar--end">
             <button

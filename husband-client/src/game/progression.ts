@@ -69,7 +69,7 @@ export function progressWithLevelRule(
 
 export function salaryForLevel(level: number, maxLevel = DEFAULT_MAX_LEVEL) {
   const safeLevel = clampLevel(level, maxLevel);
-  return safeLevel === 0 ? 100 : 280 + (safeLevel - 1) * 20;
+  return (safeLevel + 1) * 100;
 }
 
 export function hydrateProgress(
@@ -219,7 +219,7 @@ export function settleTaskReward(
 
   rewards.forEach((reward) => {
     if (reward.type === "experience") {
-      const amount = Math.min(30, Math.max(0, Math.trunc(reward.value ?? 0)));
+      const amount = Math.max(0, Math.trunc(reward.value ?? 0));
       const expResult = grantExperience(progress, amount, roles, `完成「${task.title}」`);
       progress = expResult.progress;
       stories.push(...expResult.stories);

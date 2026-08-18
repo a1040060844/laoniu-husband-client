@@ -270,6 +270,10 @@ button {
   object-fit: contain;
   object-position: center center;
   background: #000;
+  translate:
+    var(--asset-illustration-offset-x, 0%)
+    var(--asset-illustration-offset-y, 0%);
+  scale: var(--asset-illustration-scale, 1);
 }
 
 .role-page .cinema-image,
@@ -3655,6 +3659,10 @@ button {
   transform-origin: center center;
   background: #000;
   filter: saturate(0.96) contrast(1.08) brightness(0.84);
+  translate:
+    var(--asset-illustration-offset-x, 0%)
+    var(--asset-illustration-offset-y, 0%);
+  scale: var(--asset-illustration-scale, 1);
 }
 
 .wife-illustration-transition {
@@ -4159,6 +4167,10 @@ button {
   filter: saturate(0.96) contrast(1.08) brightness(0.9);
   transform: translateY(calc(65px + var(--wife-growth-portrait-offset-y, 0px))) scale(1.55);
   transform-origin: 74% 38%;
+  translate:
+    var(--asset-illustration-offset-x, 0%)
+    var(--asset-illustration-offset-y, 0%);
+  scale: var(--asset-illustration-scale, 1);
 }
 
 .wife-growth__shade {
@@ -5505,6 +5517,10 @@ button {
   opacity: 1;
   filter: saturate(0.95) contrast(1.06) brightness(0.8);
   transform: translateY(var(--wife-today-portrait-offset-y, 0px));
+  translate:
+    var(--asset-illustration-offset-x, 0%)
+    var(--asset-illustration-offset-y, 0%);
+  scale: var(--asset-illustration-scale, 1);
 }
 
 .wife-today__shade {
@@ -5890,6 +5906,10 @@ button {
   opacity: 1;
   filter: saturate(0.95) contrast(1.06) brightness(0.8);
   transform: translateY(var(--wife-subpage-portrait-offset-y, 0px));
+  translate:
+    var(--asset-illustration-offset-x, 0%)
+    var(--asset-illustration-offset-y, 0%);
+  scale: var(--asset-illustration-scale, 1);
 }
 
 .wife-subpage__shade {

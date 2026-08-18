@@ -1,4 +1,5 @@
 import { initialTasks } from "../data/tasks";
+import { clearSyntheticBenefitCooldown } from "../data/benefits";
 import {
   hydrateProgress,
   initialProgress,
@@ -19,6 +20,7 @@ import {
 } from "./chatMessages";
 import { mergeMonthlyAllowanceRecords } from "./monthlyAllowance";
 import { mergeNotifications } from "./notifications";
+import { mergeProgressForSave } from "./progressMerge";
 import { refreshTaskCycles, resolveTaskSchedule } from "./taskSchedule";
 import type {
   ChatMessage,
@@ -77,10 +79,26 @@ export const ADMIN_CONFIG_STORAGE_KEY = "laoniu-admin-config-v1";
 export const DEFAULT_PUNISHMENT_DURATION_DAYS = 7;
 export const DEFAULT_REQUIRED_RECOVERY_EXP = 100;
 const DAY_MS = 24 * 60 * 60 * 1000;
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(
+const API_BASE_URL = (import.meta.env?.VITE_API_BASE_URL || "").replace(
   /\/$/,
   "",
 );
+const ALLOW_LOCAL_FALLBACK = Boolean(import.meta.env?.DEV) && !API_BASE_URL;
+
+export class TaskSystemConflictError extends Error {
+  readonly revision?: string;
+
+  constructor(revision?: string) {
+    super("任务状态已被另一端更新，请重试。");
+    this.name = "TaskSystemConflictError";
+    this.revision = revision;
+  }
+}
+
+export interface TaskSystemSnapshot {
+  state: TaskSystemState;
+  revision?: string;
+}
 
 const decreeTypes = new Set<DecreeType>([
   "experience_granted",
@@ -481,7 +499,7 @@ function normalizeBenefit(raw: unknown, fallback: Benefit): Benefit {
       ? value.status
       : "available";
 
-  return {
+  return clearSyntheticBenefitCooldown({
     ...fallback,
     status,
     cooldownText:
@@ -500,7 +518,7 @@ function normalizeBenefit(raw: unknown, fallback: Benefit): Benefit {
       typeof value.cooldownUntil === "string" ? value.cooldownUntil : undefined,
     availableBonusCount: safeNonNegativeInt(value.availableBonusCount, 0),
     pendingRequest: normalizeBenefitRequest(value.pendingRequest),
-  };
+  });
 }
 
 function hydrateBenefits(
@@ -728,37 +746,6 @@ function chooseChangedPart<T>(
   return serverPart;
 }
 
-function mergeProgressForSave(
-  serverProgress: GameProgress,
-  localProgress: GameProgress,
-  baseProgress?: GameProgress,
-): GameProgress {
-  if (!baseProgress) return localProgress;
-  const localChanged = !sameJson(localProgress, baseProgress);
-  const serverChanged = !sameJson(serverProgress, baseProgress);
-  const rewardedTaskIds = Array.from(
-    new Set([
-      ...serverProgress.rewardedTaskIds,
-      ...localProgress.rewardedTaskIds,
-    ]),
-  );
-  if (localChanged && !serverChanged) {
-    return { ...localProgress, rewardedTaskIds };
-  }
-  if (!localChanged && serverChanged) {
-    return { ...serverProgress, rewardedTaskIds };
-  }
-  if (localChanged && serverChanged) {
-    const serverLevelChanged = serverProgress.level !== baseProgress.level;
-    const localLevelChanged = localProgress.level !== baseProgress.level;
-    if (serverLevelChanged && !localLevelChanged) {
-      return { ...serverProgress, rewardedTaskIds };
-    }
-    return { ...localProgress, rewardedTaskIds };
-  }
-  return { ...serverProgress, rewardedTaskIds };
-}
-
 const taskStatusRank: Record<TaskStatus, number> = {
   todo: 0,
   doing: 1,
@@ -786,7 +773,14 @@ function taskLatestTime(task: Task) {
   );
 }
 
-function preferTask(first: Task, second: Task) {
+export function preferTask(first: Task, second: Task) {
+  if (first.cycleId && second.cycleId && first.cycleId !== second.cycleId) {
+    const firstDue = safeTime(first.dueAt);
+    const secondDue = safeTime(second.dueAt);
+    if (firstDue !== secondDue) return firstDue > secondDue ? first : second;
+    return first.cycleId > second.cycleId ? first : second;
+  }
+
   const firstCompleted = first.status === "confirmed" || first.status === "completed";
   const secondCompleted = second.status === "confirmed" || second.status === "completed";
   if (firstCompleted !== secondCompleted) return firstCompleted ? first : second;
@@ -1301,20 +1295,27 @@ function serializeTaskSystem(state: TaskSystemState) {
   };
 }
 
-async function loadTaskSystemRemote(): Promise<TaskSystemState> {
+async function loadTaskSystemSnapshotRemote(): Promise<TaskSystemSnapshot> {
   const response = await fetch(apiUrl("/api/state"), { cache: "no-store" });
   if (!response.ok) {
     throw new Error(`任务状态读取失败：${response.status}`);
   }
-  const payload = (await response.json()) as { state?: unknown };
-  return stateFromUnknown(payload.state);
+  const payload = (await response.json()) as {
+    state?: unknown;
+    revision?: unknown;
+  };
+  return {
+    state: stateFromUnknown(payload.state),
+    revision:
+      typeof payload.revision === "string" ? payload.revision : undefined,
+  };
 }
 
 export async function loadTaskSystem(): Promise<TaskSystemState> {
   try {
-    return await loadTaskSystemRemote();
+    return (await loadTaskSystemSnapshotRemote()).state;
   } catch (error) {
-    if (!API_BASE_URL) return readLocalTaskSystem();
+    if (ALLOW_LOCAL_FALLBACK) return readLocalTaskSystem();
     throw error;
   }
 }
@@ -1323,25 +1324,55 @@ export function loadTaskSystemFresh() {
   return loadTaskSystem();
 }
 
-export async function saveTaskSystem(state: TaskSystemState): Promise<void> {
+export async function loadTaskSystemSnapshotFresh(): Promise<TaskSystemSnapshot> {
   try {
-    await saveTaskSystemRemote(state);
+    return await loadTaskSystemSnapshotRemote();
   } catch (error) {
-    if (!API_BASE_URL) {
+    if (ALLOW_LOCAL_FALLBACK) return { state: readLocalTaskSystem() };
+    throw error;
+  }
+}
+
+export async function saveTaskSystem(
+  state: TaskSystemState,
+  expectedRevision?: string,
+): Promise<string | undefined> {
+  try {
+    return await saveTaskSystemRemote(state, expectedRevision);
+  } catch (error) {
+    if (ALLOW_LOCAL_FALLBACK) {
       persistLocalTaskSystem(state);
-      return;
+      return undefined;
     }
     throw error;
   }
 }
 
-async function saveTaskSystemRemote(state: TaskSystemState): Promise<void> {
+async function saveTaskSystemRemote(
+  state: TaskSystemState,
+  expectedRevision?: string,
+): Promise<string | undefined> {
   const response = await fetch(apiUrl("/api/state"), {
-    body: JSON.stringify({ state: serializeTaskSystem(state) }),
+    body: JSON.stringify({
+      state: serializeTaskSystem(state),
+      revision: expectedRevision,
+    }),
     headers: { "Content-Type": "application/json" },
     method: "PUT",
   });
+  if (response.status === 409) {
+    const payload = (await response.json().catch(() => ({}))) as {
+      revision?: unknown;
+    };
+    throw new TaskSystemConflictError(
+      typeof payload.revision === "string" ? payload.revision : undefined,
+    );
+  }
   if (!response.ok) {
     throw new Error(`任务状态保存失败：${response.status}`);
   }
+  const payload = (await response.json().catch(() => ({}))) as {
+    revision?: unknown;
+  };
+  return typeof payload.revision === "string" ? payload.revision : undefined;
 }

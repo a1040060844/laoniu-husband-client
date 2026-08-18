@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { useCallback } from "react";
+import { useLayoutEffect } from "react";
 import {
   AppLoadingPage,
   type LoadingBackdropMode,
@@ -41,7 +42,10 @@ import {
   type TaskRewardFlightEvent,
 } from "./components/effects/TaskRewardFlight";
 import { roles as defaultRoles } from "./data/roles";
-import { benefitForLevel } from "./data/benefits";
+import {
+  benefitForLevel,
+  makeNewlyUnlockedBenefitsAvailable,
+} from "./data/benefits";
 import {
   wifeHomeIllustrationTransitionForLevelChange,
   wifeIllustrationForLevel,
@@ -64,17 +68,20 @@ import {
   isPunishmentCycleComplete,
   loadTaskSystem,
   loadTaskSystemFresh,
+  loadTaskSystemSnapshotFresh,
   mergeDecrees,
   mergeTaskSystemStateForSave,
   persistLocalTaskSystem,
   readLocalTaskSystem,
   refreshTaskCycles,
   saveTaskSystem,
+  TaskSystemConflictError,
 } from "./lib/taskSystem";
 import { publicAsset } from "./lib/assets";
 import {
   getMaxLevel,
   getRoleByLevel,
+  illustrationLayoutFor,
   type AdminConfigState,
 } from "./lib/adminConfig";
 import {
@@ -335,7 +342,20 @@ function decreeId() {
 }
 
 function taskSystemFingerprint(state: LoadedTaskSystem) {
-  return JSON.stringify(state);
+  return JSON.stringify({
+    progress: state.progress,
+    roles: state.roles,
+    tasks: state.tasks,
+    logs: state.logs,
+    punishment: state.punishment,
+    benefits: state.benefits,
+    walletLedger: state.walletLedger,
+    decrees: state.decrees,
+    monthlyAllowances: state.monthlyAllowances,
+    notifications: state.notifications,
+    chatMessages: state.chatMessages,
+    adminConfig: state.adminConfig,
+  });
 }
 
 function formatDateTime(value?: string) {
@@ -358,37 +378,6 @@ function benefitCooldownMs(benefit: Benefit) {
   if (benefit.frequency.includes("季")) return 90 * 24 * 60 * 60 * 1000;
   if (benefit.frequency.includes("月")) return 30 * 24 * 60 * 60 * 1000;
   return 7 * 24 * 60 * 60 * 1000;
-}
-
-function coolBenefitsForReachedLevels(
-  benefits: Benefit[],
-  fromLevel: number,
-  toLevel: number,
-  reachedAt: string,
-) {
-  if (toLevel <= fromLevel) return benefits;
-  const reachedAtMs = Date.parse(reachedAt);
-  const baseTime = Number.isNaN(reachedAtMs) ? Date.now() : reachedAtMs;
-
-  return benefits.map((benefit) => {
-    if (
-      benefit.levelRequired <= fromLevel ||
-      benefit.levelRequired > toLevel
-    ) {
-      return benefit;
-    }
-
-    const cooldownUntil = new Date(
-      baseTime + benefitCooldownMs(benefit),
-    ).toISOString();
-    return {
-      ...benefit,
-      cooldownUntil,
-      cooldownText: `未冷却至 ${formatDateTime(cooldownUntil)}`,
-      pendingRequest: undefined,
-      status: "cooldown" as const,
-    };
-  });
 }
 
 function benefitMatchesReward(benefit: Benefit, reward: TaskReward) {
@@ -562,8 +551,8 @@ export default function App() {
   const [husbandSyncReady, setHusbandSyncReady] = useState(false);
   const [taskSystemReady, setTaskSystemReady] = useState(false);
   const [anomalyClock, setAnomalyClock] = useState(() => Date.now());
-  const [decreeSaving, setDecreeSaving] = useState(false);
   const [decreeError, setDecreeError] = useState<string>();
+  const [saveRetryNonce, setSaveRetryNonce] = useState(0);
   const [loadingTarget, setLoadingTarget] = useState<AppRoute | null>(
     shouldShowInitialLoading ? initialRoute : null,
   );
@@ -586,6 +575,10 @@ export default function App() {
   const lastRemoteFingerprintRef = useRef<string | null>(null);
   const lastAppliedRemoteStateRef = useRef<LoadedTaskSystem | null>(null);
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const saveGenerationRef = useRef(0);
+  const localSavePendingRef = useRef(false);
+  const saveRetryTimerRef = useRef<number | undefined>(undefined);
+  const syncErrorShownRef = useRef(false);
   const allowanceSessionLocksRef = useRef(new Set<string>());
   const allowanceCreditLocksRef = useRef(new Set<string>());
   const [pixelTransitionKey, setPixelTransitionKey] = useState(0);
@@ -612,6 +605,14 @@ export default function App() {
   const maxLevel = getMaxLevel(roles);
 
   useEffect(() => {
+    return () => {
+      if (saveRetryTimerRef.current !== undefined) {
+        window.clearTimeout(saveRetryTimerRef.current);
+      }
+    };
+  }, []);
+
+  useLayoutEffect(() => {
     roles.forEach((role) => {
       const bgm = "bgm" in role && typeof role.bgm === "string" ? role.bgm : undefined;
       registerRoleBgm(role.level, bgm);
@@ -675,6 +676,19 @@ export default function App() {
     progress,
     maxLevel,
   );
+  const previewRoleIllustrationLayout = illustrationLayoutFor(
+    adminConfig,
+    `role-${previewRole.level}`,
+  );
+  const previewBenefitIllustrationLayout = illustrationLayoutFor(
+    adminConfig,
+    `role-benefit-${previewRole.level}`,
+  );
+  const wifeIllustrationLayouts = {
+    home: illustrationLayoutFor(adminConfig, "wife-home"),
+    growth: illustrationLayoutFor(adminConfig, "wife-growth"),
+    today: illustrationLayoutFor(adminConfig, "wife-today"),
+  };
   const wifeChatIllustration = wifeTaskCompleteIllustrationActive
     ? wifeTaskCompleteIllustration
     : wifeIllustrationForLevel(progress.level);
@@ -867,7 +881,14 @@ export default function App() {
         slaveStateCinematic,
     );
 
-  const applyRemoteState = useCallback((serverState: LoadedTaskSystem) => {
+  const applyRemoteState = useCallback((
+    serverState: LoadedTaskSystem,
+    force = false,
+  ) => {
+    // A periodic read can finish after a local command but before its debounced
+    // write. Keep that stale response from undoing the command in the UI.
+    if (localSavePendingRef.current && !force) return false;
+
     const mergedDecrees = mergeDecrees(
       serverState.decrees,
       decreesRef.current,
@@ -902,6 +923,7 @@ export default function App() {
     setNotifications(mergedNotifications);
     setMonthlyAllowances(mergedMonthlyAllowances);
     setChatMessages(mergedChatMessages);
+    return true;
   }, []);
 
   const enqueueSave = useCallback(
@@ -914,6 +936,25 @@ export default function App() {
         () => undefined,
       );
       return result;
+    },
+    [],
+  );
+
+  const commitStateWithRetry = useCallback(
+    async (buildState: (serverState: LoadedTaskSystem) => LoadedTaskSystem) => {
+      let lastConflict: TaskSystemConflictError | undefined;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const snapshot = await loadTaskSystemSnapshotFresh();
+        const nextState = buildState(snapshot.state);
+        try {
+          await saveTaskSystem(nextState, snapshot.revision);
+          return nextState;
+        } catch (error) {
+          if (!(error instanceof TaskSystemConflictError)) throw error;
+          lastConflict = error;
+        }
+      }
+      throw lastConflict ?? new Error("任务状态冲突，请重试。");
     },
     [],
   );
@@ -1515,21 +1556,36 @@ export default function App() {
     if (route === "husband") setHusbandSyncReady(false);
 
     let cancelled = false;
+    let syncInFlight = false;
+    let syncAgain = false;
     const syncFresh = async () => {
+      if (syncInFlight) {
+        syncAgain = true;
+        return;
+      }
+      syncInFlight = true;
       try {
         const serverState = await loadTaskSystemFresh();
         if (!cancelled) applyRemoteState(serverState);
       } catch {
         // Keep the last local state when the sync service is temporarily offline.
       } finally {
+        syncInFlight = false;
         if (!cancelled && route === "husband") setHusbandSyncReady(true);
+        if (!cancelled && syncAgain) {
+          syncAgain = false;
+          void syncFresh();
+        }
       }
     };
 
     void syncFresh();
-    const timer = window.setInterval(syncFresh, 3_000);
+    const events = new EventSource("/api/state/events");
+    events.addEventListener("state", syncFresh);
+    const timer = window.setInterval(syncFresh, 15_000);
     return () => {
       cancelled = true;
+      events.close();
       window.clearInterval(timer);
     };
   }, [applyRemoteState, route]);
@@ -1567,7 +1623,7 @@ export default function App() {
     chatMessagesRef.current = chatMessages;
   }, [chatMessages]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const state = {
       progress,
       roles,
@@ -1586,25 +1642,64 @@ export default function App() {
 
     if (taskSystemFingerprint(state) === lastRemoteFingerprintRef.current) return;
     if (!hasLoadedServerState.current) return;
+    const saveGeneration = ++saveGenerationRef.current;
+    localSavePendingRef.current = true;
     const timeout = window.setTimeout(() => {
       void enqueueSave(async () => {
-          const serverState = await loadTaskSystemFresh();
-          const mergedState = mergeTaskSystemStateForSave(
-            serverState,
-            state,
-            lastAppliedRemoteStateRef.current,
+        try {
+          const mergedState = await commitStateWithRetry((serverState) =>
+            mergeTaskSystemStateForSave(
+              serverState,
+              state,
+              lastAppliedRemoteStateRef.current,
+            ),
           );
-          await saveTaskSystem(mergedState);
+          // Even when a newer local render supersedes this save, this state is
+          // now committed remotely. Advance the merge baseline so the next
+          // queued save only applies changes made after this commit.
           lastAppliedRemoteStateRef.current = mergedState;
-          lastRemoteFingerprintRef.current = taskSystemFingerprint(mergedState);
-        }).catch(() => undefined);
+          if (saveGeneration !== saveGenerationRef.current) return;
+          syncErrorShownRef.current = false;
+          if (saveRetryTimerRef.current !== undefined) {
+            window.clearTimeout(saveRetryTimerRef.current);
+            saveRetryTimerRef.current = undefined;
+          }
+          applyRemoteState(mergedState, true);
+        } catch {
+          if (saveGeneration !== saveGenerationRef.current) return;
+          if (!syncErrorShownRef.current) {
+            syncErrorShownRef.current = true;
+            setStory({
+              title: "同步暂时中断",
+              text: "当前操作已保留在本机，正在自动重试，请保持页面打开。",
+              tone: "down",
+            });
+          }
+          if (saveRetryTimerRef.current !== undefined) {
+            window.clearTimeout(saveRetryTimerRef.current);
+          }
+          saveRetryTimerRef.current = window.setTimeout(() => {
+            saveRetryTimerRef.current = undefined;
+            setSaveRetryNonce((current) => current + 1);
+          }, 1_500);
+        } finally {
+          if (
+            saveGeneration === saveGenerationRef.current &&
+            saveRetryTimerRef.current === undefined
+          ) {
+            localSavePendingRef.current = false;
+          }
+        }
+      }).catch(() => undefined);
     }, 250);
 
     return () => window.clearTimeout(timeout);
   }, [
+    applyRemoteState,
     benefits,
     adminConfig,
     chatMessages,
+    commitStateWithRetry,
     decrees,
     enqueueSave,
     logs,
@@ -1613,6 +1708,7 @@ export default function App() {
     progress,
     punishment,
     roles,
+    saveRetryNonce,
     tasks,
     walletLedger,
   ]);
@@ -1708,11 +1804,10 @@ export default function App() {
         reason: "任务奖励触发升级",
       });
       setBenefits((current) =>
-        coolBenefitsForReachedLevels(
+        makeNewlyUnlockedBenefitsAvailable(
           current,
           progress.level,
           settled.progress.level,
-          rewardedAt,
         ),
       );
     }
@@ -2519,6 +2614,8 @@ export default function App() {
   function handleAdjustExperience(amount: number) {
     playSoundEffect(amount >= 0 ? "task-reward-exp" : "wife-level-down-command");
     const createdAt = new Date().toISOString();
+    if (amount === 0) return;
+    localSavePendingRef.current = true;
     if (amount > 0) {
       const result = grantExperience(
         progress,
@@ -2530,11 +2627,10 @@ export default function App() {
       if (result.progress.level > progress.level) {
         showRoleUpgradeCinematic(progress.level, result.progress.level);
         setBenefits((current) =>
-          coolBenefitsForReachedLevels(
+          makeNewlyUnlockedBenefitsAvailable(
             current,
             progress.level,
             result.progress.level,
-            createdAt,
           ),
         );
       }
@@ -2593,7 +2689,6 @@ export default function App() {
       return;
     }
 
-    if (amount === 0) return;
     setProgress((current) => ({
       ...current,
       exp: Math.max(0, current.exp + amount),
@@ -2692,11 +2787,10 @@ export default function App() {
     if (safeLevel > previousLevel) {
       showRoleUpgradeCinematic(previousLevel, safeLevel);
       setBenefits((current) =>
-        coolBenefitsForReachedLevels(
+        makeNewlyUnlockedBenefitsAvailable(
           current,
           previousLevel,
           safeLevel,
-          new Date().toISOString(),
         ),
       );
     }
@@ -2864,11 +2958,10 @@ export default function App() {
     }));
     if (restoredLevel > progress.level) {
       setBenefits((current) =>
-        coolBenefitsForReachedLevels(
+        makeNewlyUnlockedBenefitsAvailable(
           current,
           progress.level,
           restoredLevel,
-          new Date().toISOString(),
         ),
       );
     }
@@ -3028,9 +3121,8 @@ export default function App() {
     }
   }
 
-  async function handleAcknowledgeDecree() {
-    if (!activeDecree || decreeSaving) return;
-    setDecreeSaving(true);
+  function handleAcknowledgeDecree() {
+    if (!activeDecree) return;
     setDecreeError(undefined);
     const acknowledgedAt = new Date().toISOString();
     const acknowledgedIds = new Set(decreeAcknowledgeIds(activeDecree));
@@ -3039,38 +3131,22 @@ export default function App() {
         ? { ...decree, acknowledgedAt }
         : decree,
     );
-    try {
-      const savedState = await enqueueSave(async () => {
-        const serverState = await loadTaskSystemFresh();
-        const nextState = {
-          ...serverState,
-          decrees: mergeDecrees(serverState.decrees, localAcknowledged),
-          notifications: mergeNotifications(
-            serverState.notifications,
-            notifications,
-          ),
-          monthlyAllowances,
-        };
-        await saveTaskSystem(nextState);
-        return nextState;
-      });
-      applyRemoteState(savedState);
-    } catch {
-      setDecreeError("领旨保存失败，请检查连接后重试。");
-    } finally {
-      setDecreeSaving(false);
-    }
+    // Confirm locally first. The normal persistence effect writes it with the
+    // same revision/conflict retry as every other state change, without making
+    // the modal wait behind a full-state upload.
+    localSavePendingRef.current = true;
+    decreesRef.current = localAcknowledged;
+    setDecrees(localAcknowledged);
   }
 
-  async function handleAcknowledgeWifeRoleUpgrade() {
-    if (!activeWifeUpgradeDecree || decreeSaving) return;
+  function handleAcknowledgeWifeRoleUpgrade() {
+    if (!activeWifeUpgradeDecree) return;
     const upgradeDecree = activeWifeUpgradeDecree;
     const illustrationTransition =
       wifeHomeIllustrationTransitionForLevelChange(
         clampLevel(Number(upgradeDecree.payload.fromLevel), maxLevel),
         clampLevel(Number(upgradeDecree.payload.toLevel), maxLevel),
       );
-    setDecreeSaving(true);
     setDecreeError(undefined);
     const acknowledgedAt = new Date().toISOString();
     const localAcknowledged = decrees.map((decree) =>
@@ -3078,32 +3154,14 @@ export default function App() {
         ? { ...decree, readAt: decree.readAt ?? acknowledgedAt, acknowledgedAt }
         : decree,
     );
-    try {
-      const savedState = await enqueueSave(async () => {
-        const serverState = await loadTaskSystemFresh();
-        const nextState = {
-          ...serverState,
-          decrees: mergeDecrees(serverState.decrees, localAcknowledged),
-          notifications: mergeNotifications(
-            serverState.notifications,
-            notifications,
-          ),
-          monthlyAllowances,
-        };
-        await saveTaskSystem(nextState);
-        return nextState;
+    localSavePendingRef.current = true;
+    decreesRef.current = localAcknowledged;
+    setDecrees(localAcknowledged);
+    if (illustrationTransition) {
+      setWifeIllustrationTransition({
+        id: `wife-illustration-${upgradeDecree.id}`,
+        ...illustrationTransition,
       });
-      applyRemoteState(savedState);
-      if (illustrationTransition) {
-        setWifeIllustrationTransition({
-          id: `wife-illustration-${upgradeDecree.id}`,
-          ...illustrationTransition,
-        });
-      }
-    } catch {
-      setDecreeError("确认保存失败，请检查连接后重试。");
-    } finally {
-      setDecreeSaving(false);
     }
   }
 
@@ -3333,7 +3391,7 @@ export default function App() {
     <DecreeModal
       decree={activeHusbandUpgradeDecree ? null : activeDecree}
       remainingCount={Math.max(0, pendingDecrees.length - 1)}
-      saving={decreeSaving}
+      saving={false}
       error={decreeError}
       onAcknowledge={handleAcknowledgeDecree}
       onSkip={handleSkipActiveDecree}
@@ -3414,12 +3472,8 @@ export default function App() {
       }
       isOpen
       onComplete={handleAcknowledgeWifeRoleUpgrade}
-      confirmDisabled={decreeSaving}
-      confirmLabel={
-        decreeSaving
-          ? "\u6b63\u5728\u786e\u8ba4..."
-          : "\u77e5\u9053\u4e86"
-      }
+      confirmDisabled={false}
+      confirmLabel="知道了"
       error={decreeError}
     />
   ) : null;
@@ -3452,7 +3506,7 @@ export default function App() {
   const notificationReplayModal = (
     <NotificationReplayModal
       item={activeWifeUpgradeDecree ? null : activeNotificationItem}
-      saving={decreeSaving}
+      saving={false}
       error={decreeError}
       onAcknowledge={handleAcknowledgeNotificationReplay}
       onSkip={handleSkipNotificationReplay}
@@ -3555,6 +3609,7 @@ export default function App() {
           hasNotificationUnread={hasWifeNotificationUnread}
           illustrationTransition={wifeIllustrationTransition}
           illustrationTransitionBlocked={wifeIllustrationTransitionBlocked}
+          illustrationLayouts={wifeIllustrationLayouts}
           onOpenChat={() => handleOpenChat("wife")}
           onOpenNotifications={() => handleOpenNotifications("wife")}
           onIllustrationTransitionDone={(id) =>
@@ -3695,6 +3750,7 @@ export default function App() {
           onCloseBenefit={() => setSelectedBenefit(null)}
           onUseBenefit={handleUseBenefit}
           onSelectView={handleSelectView}
+          illustrationLayout={previewBenefitIllustrationLayout}
         />
 
         <RolePage
@@ -3717,6 +3773,7 @@ export default function App() {
           hasNotificationUnread={hasHusbandNotificationUnread}
           onOpenChat={() => handleOpenChat("husband")}
           onOpenNotifications={() => handleOpenNotifications("husband")}
+          illustrationLayout={previewRoleIllustrationLayout}
         />
 
         <TaskPage

@@ -1,4 +1,64 @@
-import type { Benefit } from "../types/domain";
+import type { Benefit, BenefitStatus } from "../types/domain";
+
+export function benefitStatusForLevel(
+  benefit: Benefit,
+  level: number,
+  now = Date.now(),
+): BenefitStatus {
+  if (level < benefit.levelRequired) return "locked";
+  if (benefit.pendingRequest) return "pending";
+  if (
+    benefit.cooldownUntil &&
+    Date.parse(benefit.cooldownUntil) > now
+  ) {
+    return "cooldown";
+  }
+  if (benefit.status === "cooldown" && !benefit.cooldownUntil) {
+    return "cooldown";
+  }
+  return "available";
+}
+
+function hasBenefitUsageHistory(benefit: Benefit) {
+  return Boolean(
+    benefit.lastApprovedAt ||
+      benefit.lastRequestedAt ||
+      benefit.pendingRequest,
+  );
+}
+
+export function clearSyntheticBenefitCooldown(benefit: Benefit): Benefit {
+  if (!benefit.cooldownUntil || hasBenefitUsageHistory(benefit)) return benefit;
+
+  return {
+    ...benefit,
+    status: "available",
+    cooldownText: undefined,
+    cooldownUntil: undefined,
+  };
+}
+
+export function makeNewlyUnlockedBenefitsAvailable(
+  benefits: Benefit[],
+  fromLevel: number,
+  toLevel: number,
+) {
+  if (toLevel <= fromLevel) return benefits;
+
+  return benefits.map((benefit) => {
+    const newlyUnlocked =
+      benefit.levelRequired > fromLevel && benefit.levelRequired <= toLevel;
+    if (!newlyUnlocked || hasBenefitUsageHistory(benefit)) return benefit;
+
+    return {
+      ...benefit,
+      status: "available" as const,
+      cooldownText: undefined,
+      cooldownUntil: undefined,
+      pendingRequest: undefined,
+    };
+  });
+}
 
 export function benefitForLevel(benefit: Benefit, level: number): Benefit {
   const variants = benefit.displayVariants ?? [];

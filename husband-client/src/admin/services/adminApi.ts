@@ -329,6 +329,18 @@ function defaultAssetsFromRolesAndBenefits(state: TaskSystemState): AssetReferen
     fileType: "image",
     usedBy: ["老哥职务页", "升级动画"],
     isDefault: role.level <= defaultRoleMax,
+    placementKey: `role-${role.level}`,
+  }));
+  const roleBenefitAssets = state.roles.map((role) => ({
+    id: `role-benefit-${role.level}`,
+    category: "benefit-illustration" as const,
+    label: `Lv.${String(role.level).padStart(2, "0")} ${role.title}权益背景`,
+    url: role.benefitImage,
+    fileName: role.benefitImage.split("/").pop(),
+    fileType: "image",
+    usedBy: ["老哥权益页"],
+    isDefault: role.level <= defaultRoleMax,
+    placementKey: `role-benefit-${role.level}`,
   }));
   const benefitAssets = state.benefits.map((benefit) => ({
     id: `benefit-${benefit.id}`,
@@ -338,15 +350,16 @@ function defaultAssetsFromRolesAndBenefits(state: TaskSystemState): AssetReferen
       "illustration" in benefit && typeof benefit.illustration === "string"
         ? benefit.illustration
         : `/assets/benefits/benefit-${String(benefit.levelRequired).padStart(2, "0")}.png`,
-    fileType: "image",
-    usedBy: ["老哥权益页"],
+      fileType: "image",
+      usedBy: ["权益配置素材"],
     isDefault: defaultBenefitIds.has(benefit.id),
   }));
   return [
     ...roleAssets,
+    ...roleBenefitAssets,
     ...benefitAssets,
     {
-      id: "wife-default",
+      id: "wife-home",
       category: "wife-illustration",
       label: "老妞默认插画",
       url: "/assets/wife/wife-home-throne.png",
@@ -354,6 +367,29 @@ function defaultAssetsFromRolesAndBenefits(state: TaskSystemState): AssetReferen
       fileType: "image",
       usedBy: ["老妞主页"],
       isDefault: true,
+      placementKey: "wife-home",
+    },
+    {
+      id: "wife-growth",
+      category: "wife-illustration",
+      label: "老妞成长页插画",
+      url: "/assets/wife/wife-growth-library.png",
+      fileName: "wife-growth-library.png",
+      fileType: "image",
+      usedBy: ["老妞成长页"],
+      isDefault: true,
+      placementKey: "wife-growth",
+    },
+    {
+      id: "wife-today",
+      category: "wife-illustration",
+      label: "老妞今日事务插画",
+      url: "/assets/wife/wife-today-bg.png",
+      fileName: "wife-today-bg.png",
+      fileType: "image",
+      usedBy: ["老妞今日页", "老妞子页面"],
+      isDefault: true,
+      placementKey: "wife-today",
     },
   ];
 }
@@ -873,11 +909,29 @@ export const adminApi = {
 
   async getAssets(category?: AssetReference["category"]) {
     const state = await loadTaskSystemFresh();
-    const assets = [
-      ...defaultAssetsFromRolesAndBenefits(state),
-      ...state.adminConfig.assets,
-    ];
+    const mergedAssets = new Map(
+      defaultAssetsFromRolesAndBenefits(state).map((asset) => [asset.id, asset]),
+    );
+    state.adminConfig.assets.forEach((asset) => {
+      mergedAssets.set(asset.id, { ...mergedAssets.get(asset.id), ...asset });
+    });
+    const assets = [...mergedAssets.values()];
     return category ? assets.filter((asset) => asset.category === category) : assets;
+  },
+
+  async saveAsset(asset: AssetReference) {
+    const nextAsset = { ...asset, createdAt: asset.createdAt ?? nowIso() };
+    await updateRawState((raw, config) => ({
+      ...raw,
+      adminConfig: touchConfig({
+        ...config,
+        assets: [
+          nextAsset,
+          ...config.assets.filter((current) => current.id !== nextAsset.id),
+        ],
+      }),
+    }));
+    return nextAsset;
   },
 
   async registerAsset(asset: Omit<AssetReference, "id" | "createdAt">) {

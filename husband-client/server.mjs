@@ -1,4 +1,5 @@
 import { createReadStream } from "node:fs";
+import { createHash } from "node:crypto";
 import {
   mkdir,
   readFile,
@@ -33,6 +34,22 @@ const MIME_TYPES = {
 };
 
 let writeQueue = Promise.resolve();
+const stateEventClients = new Set();
+
+function stateRevision(state) {
+  return createHash("sha256").update(JSON.stringify(state)).digest("hex");
+}
+
+function broadcastStateRevision(revision) {
+  const event = `event: state\ndata: ${JSON.stringify({ revision })}\n\n`;
+  for (const response of stateEventClients) {
+    try {
+      response.write(event);
+    } catch {
+      stateEventClients.delete(response);
+    }
+  }
+}
 
 function sendJson(response, status, payload) {
   response.statusCode = status;
@@ -57,15 +74,56 @@ async function readState() {
   }
 }
 
-function writeState(state) {
+function writeState(state, expectedRevision) {
   writeQueue = writeQueue
     .catch(() => undefined)
     .then(async () => {
+      const currentState = await readState();
+      const currentRevision = stateRevision(currentState);
+      if (!expectedRevision && Object.keys(currentState).length > 0) {
+        const error = new Error("State revision is required. Please refresh this page.");
+        error.statusCode = 428;
+        error.revision = currentRevision;
+        throw error;
+      }
+      if (expectedRevision && expectedRevision !== currentRevision) {
+        const error = new Error("State revision conflict.");
+        error.statusCode = 409;
+        error.revision = currentRevision;
+        throw error;
+      }
       await mkdir(DATA_DIR, { recursive: true });
       await writeFile(STATE_TEMP_PATH, JSON.stringify(state, null, 2), "utf8");
       await rename(STATE_TEMP_PATH, STATE_PATH);
+      const revision = stateRevision(state);
+      broadcastStateRevision(revision);
+      return revision;
     });
   return writeQueue;
+}
+
+function clearSyntheticBenefitCooldowns(state) {
+  if (!state || typeof state !== "object" || !Array.isArray(state.benefits)) {
+    return state;
+  }
+
+  return {
+    ...state,
+    benefits: state.benefits.map((benefit) => {
+      if (!benefit || typeof benefit !== "object") return benefit;
+      const hasUsageHistory = Boolean(
+        benefit.lastApprovedAt ||
+          benefit.lastRequestedAt ||
+          benefit.pendingRequest,
+      );
+      if (!benefit.cooldownUntil || hasUsageHistory) return benefit;
+
+      const normalized = { ...benefit, status: "available" };
+      delete normalized.cooldownText;
+      delete normalized.cooldownUntil;
+      return normalized;
+    }),
+  };
 }
 
 async function readRequestJson(request) {
@@ -89,7 +147,8 @@ async function readRequestJson(request) {
 async function handleStateApi(request, response) {
   try {
     if (request.method === "GET") {
-      sendJson(response, 200, { state: await readState() });
+      const state = await readState();
+      sendJson(response, 200, { state, revision: stateRevision(state) });
       return;
     }
 
@@ -99,8 +158,11 @@ async function handleStateApi(request, response) {
         sendJson(response, 400, { error: "Missing state payload." });
         return;
       }
-      await writeState(payload.state);
-      sendJson(response, 200, { ok: true });
+      const revision = await writeState(
+        clearSyntheticBenefitCooldowns(payload.state),
+        typeof payload.revision === "string" ? payload.revision : undefined,
+      );
+      sendJson(response, 200, { ok: true, revision });
       return;
     }
 
@@ -109,8 +171,31 @@ async function handleStateApi(request, response) {
   } catch (error) {
     sendJson(response, error.statusCode || 500, {
       error: error.message || "Unknown error",
+      revision: error.revision,
     });
   }
+}
+
+async function handleStateEvents(request, response) {
+  response.writeHead(200, {
+    "Content-Type": "text/event-stream; charset=utf-8",
+    "Cache-Control": "no-cache, no-transform",
+    Connection: "keep-alive",
+    "X-Accel-Buffering": "no",
+  });
+  const state = await readState();
+  response.write(
+    `event: ready\ndata: ${JSON.stringify({ revision: stateRevision(state) })}\n\n`,
+  );
+  stateEventClients.add(response);
+
+  const keepAlive = setInterval(() => response.write(": keep-alive\n\n"), 20_000);
+  const close = () => {
+    clearInterval(keepAlive);
+    stateEventClients.delete(response);
+  };
+  request.once("close", close);
+  response.once("close", close);
 }
 
 function resolveStaticPath(urlPath) {
@@ -169,6 +254,11 @@ const server = createServer(async (request, response) => {
 
   if (url.pathname === "/api/state") {
     await handleStateApi(request, response);
+    return;
+  }
+
+  if (url.pathname === "/api/state/events") {
+    await handleStateEvents(request, response);
     return;
   }
 

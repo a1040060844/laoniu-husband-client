@@ -9,7 +9,8 @@ import { VerticalMagicSwipeHint } from "./VerticalMagicSwipeHint";
 import { AnimatedContent } from "./effects/AnimatedContent";
 import { ClickSpark } from "./effects/ClickSpark";
 import { CountUp } from "./effects/CountUp";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
+import type { IllustrationLayout } from "../lib/adminConfig";
 import {
   getAudioEnabled,
   isAudioUnlocked,
@@ -38,6 +39,7 @@ interface RolePageProps {
   onSelectView: (view: ViewKey) => void;
   onOpenChat: () => void;
   onOpenNotifications: () => void;
+  illustrationLayout?: IllustrationLayout;
 }
 
 export function RolePage({
@@ -58,6 +60,7 @@ export function RolePage({
   onSelectView,
   onOpenChat,
   onOpenNotifications,
+  illustrationLayout,
 }: RolePageProps) {
   const isPreviewing = previewRole.level !== role.level;
   const isLockedPreview = previewRole.level > role.level;
@@ -90,6 +93,13 @@ export function RolePage({
         className="cinema-image"
         src={previewRole.roleImage}
         alt={`${previewRole.title}职务形象`}
+        style={
+          {
+            "--asset-illustration-offset-x": `${illustrationLayout?.offsetX ?? 0}%`,
+            "--asset-illustration-offset-y": `${illustrationLayout?.offsetY ?? 0}%`,
+            "--asset-illustration-scale": `${(illustrationLayout?.scale ?? 100) / 100}`,
+          } as CSSProperties
+        }
       />
       <div className="image-scrim" />
       {isLockedPreview && (

@@ -44,6 +44,7 @@ import {
 import { expRequiredForLevel, type GameProgress } from "../game/progression";
 import { publicAsset } from "../lib/assets";
 import { getMaxLevel, getRoleByLevel, getNextRole } from "../lib/adminConfig";
+import type { IllustrationLayout } from "../lib/adminConfig";
 import {
   getPunishmentRemainingDays,
 } from "../lib/taskSystem";
@@ -150,6 +151,11 @@ interface WifeDashboardProps {
   onOpenChat: () => void;
   onOpenNotifications: () => void;
   onIllustrationTransitionDone?: (id: string) => void;
+  illustrationLayouts?: {
+    home?: IllustrationLayout;
+    growth?: IllustrationLayout;
+    today?: IllustrationLayout;
+  };
 }
 
 interface TaskDraft {
@@ -166,7 +172,7 @@ interface TaskDraft {
   repeatFrequency: NonNullable<TaskTimeConfig["repeatFrequency"]>;
   repeatCount: number;
   rewardType: RewardFormType;
-  rewardExp: number;
+  rewardExp: number | "";
   rewardMoney: number;
   levelUpCount: number;
   benefitName: string;
@@ -263,7 +269,7 @@ function createDraftReward(type: TaskRewardType): TaskReward {
 }
 
 function clampExperience(value: number) {
-  return Math.min(30, Math.max(0, Math.trunc(value)));
+  return Math.max(0, Math.trunc(value));
 }
 
 function finalizeReward(reward: TaskReward): TaskReward {
@@ -293,7 +299,7 @@ function rewardsFromDraft(draft: TaskDraft): TaskReward[] {
         label: "",
         type: "experience",
         unit: "经验",
-        value: draft.rewardExp,
+        value: draft.rewardExp === "" ? 0 : draft.rewardExp,
       }),
     ];
   }
@@ -317,7 +323,7 @@ function rewardsFromDraft(draft: TaskDraft): TaskReward[] {
         label: "",
         type: "experience",
         unit: "经验",
-        value: draft.rewardExp,
+        value: draft.rewardExp === "" ? 0 : draft.rewardExp,
       }),
       finalizeReward({
         id: "draft-reward-money",
@@ -408,6 +414,7 @@ export function WifeDashboard({
   onOpenChat,
   onOpenNotifications,
   onIllustrationTransitionDone,
+  illustrationLayouts,
 }: WifeDashboardProps) {
   const wifeLevelIllustration = wifeIllustrationForLevel(progress.level);
   const wifeIllustration = taskCompleteIllustrationActive
@@ -425,6 +432,9 @@ export function WifeDashboard({
       : 0;
   const wifeGrowthPortraitStyle = {
     "--wife-growth-portrait-offset-y": `${wifeGrowthOffsetY}px`,
+    "--asset-illustration-offset-x": `${illustrationLayouts?.growth?.offsetX ?? 0}%`,
+    "--asset-illustration-offset-y": `${illustrationLayouts?.growth?.offsetY ?? 0}%`,
+    "--asset-illustration-scale": `${(illustrationLayouts?.growth?.scale ?? 100) / 100}`,
   } as CSSProperties;
   const wifeTodayBackground = publicAsset(
     wifeIllustration?.todayPath ?? "/assets/wife/wife-today-bg.png",
@@ -439,9 +449,20 @@ export function WifeDashboard({
       : wifeTodayOffsetY;
   const wifeTodayPortraitStyle = {
     "--wife-today-portrait-offset-y": `${wifeTodayOffsetY}px`,
+    "--asset-illustration-offset-x": `${illustrationLayouts?.today?.offsetX ?? 0}%`,
+    "--asset-illustration-offset-y": `${illustrationLayouts?.today?.offsetY ?? 0}%`,
+    "--asset-illustration-scale": `${(illustrationLayouts?.today?.scale ?? 100) / 100}`,
   } as CSSProperties;
   const wifeSubpagePortraitStyle = {
     "--wife-subpage-portrait-offset-y": `${wifeSubpageOffsetY}px`,
+    "--asset-illustration-offset-x": `${illustrationLayouts?.today?.offsetX ?? 0}%`,
+    "--asset-illustration-offset-y": `${illustrationLayouts?.today?.offsetY ?? 0}%`,
+    "--asset-illustration-scale": `${(illustrationLayouts?.today?.scale ?? 100) / 100}`,
+  } as CSSProperties;
+  const wifeHomePortraitStyle = {
+    "--asset-illustration-offset-x": `${illustrationLayouts?.home?.offsetX ?? 0}%`,
+    "--asset-illustration-offset-y": `${illustrationLayouts?.home?.offsetY ?? 0}%`,
+    "--asset-illustration-scale": `${(illustrationLayouts?.home?.scale ?? 100) / 100}`,
   } as CSSProperties;
   const walletBaseAmount = Math.max(0, Math.trunc(monthlyAllowanceBaseAmount));
   const currentMonthlyAllowanceTotal = Math.max(
@@ -1566,6 +1587,7 @@ export function WifeDashboard({
           <img
             className="wife-portrait wife-portrait--home"
             src={wifeHomeImage}
+            style={wifeHomePortraitStyle}
             alt=""
           />
           {activeIllustrationTransition ? (
@@ -2550,16 +2572,16 @@ export function WifeDashboard({
                           <label>
                             奖励经验
                             <input
-                              max="30"
                               min="0"
                               type="number"
                               value={draft.rewardExp}
-                              onChange={(event) =>
+                              onChange={(event) => {
+                                const value = event.target.value;
                                 updateDraft(
                                   "rewardExp",
-                                  clampExperience(Number(event.target.value)),
-                                )
-                              }
+                                  value === "" ? "" : clampExperience(Number(value)),
+                                );
+                              }}
                             />
                           </label>
                         </article>

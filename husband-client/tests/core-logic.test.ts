@@ -7,6 +7,7 @@ import {
   grantExperience,
   hydrateProgress,
   progressWithLevelRule,
+  salaryForLevel,
   settleTaskReward,
   type GameProgress,
 } from "../src/game/progression.ts";
@@ -15,6 +16,7 @@ import {
   resolveTaskSchedule,
   taskTypeForTimeConfig,
 } from "../src/lib/taskSchedule.ts";
+import { mergeProgressForSave } from "../src/lib/progressMerge.ts";
 import {
   isTaskCompleteStatus,
   isTaskSubmittableStatus,
@@ -31,7 +33,13 @@ import {
   decreeAcknowledgeIds,
   pendingWifeRoleUpgradeDecrees,
 } from "../src/lib/decreeQueue.ts";
-import { benefitForLevel, benefits } from "../src/data/benefits.ts";
+import {
+  benefitForLevel,
+  benefitStatusForLevel,
+  benefits,
+  clearSyntheticBenefitCooldown,
+  makeNewlyUnlockedBenefitsAvailable,
+} from "../src/data/benefits.ts";
 import {
   createMonthlyAllowanceRecord,
   mergeMonthlyAllowanceRecords,
@@ -45,7 +53,10 @@ import {
   markNotificationViewed,
 } from "../src/lib/notifications.ts";
 import { wifeHomeIllustrationTransitionForLevelChange } from "../src/data/wifeIllustrations.ts";
+import { createRewardLabel } from "../src/data/taskModules.ts";
+import { canReturnFromTaskPage } from "../src/lib/pagerGesture.ts";
 import type {
+  Benefit,
   DecreeEvent,
   ChatMessage,
   NotificationEvent,
@@ -143,11 +154,51 @@ test("hydrateProgress rejects invalid persisted numbers", () => {
   );
 });
 
+test("a queued experience save uses the preceding committed save as its baseline", () => {
+  const base: GameProgress = {
+    level: 3,
+    exp: 380,
+    totalExp: 1519,
+    wallet: 52,
+    rewardedTaskIds: [],
+  };
+  const firstCommitted: GameProgress = {
+    ...base,
+    exp: 390,
+    totalExp: 1529,
+  };
+  const localAfterSecondTap: GameProgress = {
+    ...base,
+    exp: 400,
+    totalExp: 1539,
+  };
+
+  assert.deepEqual(
+    mergeProgressForSave(
+      firstCommitted,
+      localAfterSecondTap,
+      firstCommitted,
+    ),
+    localAfterSecondTap,
+  );
+});
+
 test("level experience requirements start at 500 and grow by 500", () => {
   assert.equal(expRequiredForLevel(0), 500);
   assert.equal(expRequiredForLevel(1), 500);
   assert.equal(expRequiredForLevel(2), 1000);
   assert.equal(expRequiredForLevel(3), 1500);
+});
+
+test("default monthly allowance starts at 100 and grows by 100 per level", () => {
+  assert.deepEqual(
+    Array.from({ length: 12 }, (_, level) => salaryForLevel(level)),
+    [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200],
+  );
+});
+
+test("custom-role salary fallback continues the default allowance rule", () => {
+  assert.equal(salaryForLevel(12, 12), 1300);
 });
 
 test("pending wife experience changes are merged into one husband popup", () => {
@@ -278,6 +329,90 @@ test("benefit copy and frequency follow the current role level", () => {
   assert.equal(benefitForLevel(cos, 9).name, "cos时刻");
   assert.match(benefitForLevel(lovePlus, 10).description, /不能和恩爱奖励叠加使用/);
   assert.match(benefitForLevel(lovePlus, 11).description, /可以和恩爱奖励叠加使用/);
+});
+
+test("benefit cooldown keeps running globally while a downgraded level stays locked", () => {
+  const cooldownStart = Date.parse("2026-07-15T00:00:00.000Z");
+  const cooldownUntil = "2026-07-22T00:00:00.000Z";
+  const levelTenBenefit: Benefit = {
+    id: "level-ten-benefit",
+    levelRequired: 10,
+    name: "十级权益",
+    frequency: "周1次",
+    description: "测试",
+    status: "cooldown",
+    lastApprovedAt: new Date(cooldownStart).toISOString(),
+    cooldownUntil,
+    icon: "gift",
+  };
+
+  assert.equal(benefitStatusForLevel(levelTenBenefit, 10, cooldownStart), "cooldown");
+  assert.equal(benefitStatusForLevel(levelTenBenefit, 1, cooldownStart), "locked");
+  assert.equal(
+    benefitStatusForLevel(levelTenBenefit, 1, Date.parse(cooldownUntil) + 1),
+    "locked",
+  );
+  assert.equal(
+    benefitStatusForLevel(levelTenBenefit, 10, Date.parse(cooldownUntil) + 1),
+    "available",
+  );
+});
+
+test("a newly unlocked benefit is immediately available without resetting real usage", () => {
+  const syntheticCooldown: Benefit = {
+    id: "new-level-ten-benefit",
+    levelRequired: 10,
+    name: "新解锁权益",
+    frequency: "月1次",
+    description: "测试",
+    status: "cooldown",
+    cooldownText: "未冷却",
+    cooldownUntil: "2026-08-15T00:00:00.000Z",
+    icon: "gift",
+  };
+  const usedCooldown: Benefit = {
+    ...syntheticCooldown,
+    id: "used-level-ten-benefit",
+    lastApprovedAt: "2026-07-15T00:00:00.000Z",
+  };
+
+  const [newlyUnlocked, previouslyUsed] = makeNewlyUnlockedBenefitsAvailable(
+    [syntheticCooldown, usedCooldown],
+    9,
+    10,
+  );
+
+  assert.equal(newlyUnlocked.status, "available");
+  assert.equal(newlyUnlocked.cooldownUntil, undefined);
+  assert.equal(previouslyUsed.cooldownUntil, usedCooldown.cooldownUntil);
+  assert.equal(previouslyUsed.status, "cooldown");
+});
+
+test("persisted synthetic upgrade cooldown is cleared during state hydration", () => {
+  const syntheticCooldown: Benefit = {
+    id: "legacy-upgrade-cooldown",
+    levelRequired: 2,
+    name: "旧升级冷却",
+    frequency: "2周1次",
+    description: "测试",
+    status: "cooldown",
+    cooldownText: "未冷却",
+    cooldownUntil: "2026-07-29T05:53:30.000Z",
+    icon: "coffee",
+  };
+  const realCooldown: Benefit = {
+    ...syntheticCooldown,
+    id: "real-cooldown",
+    lastApprovedAt: "2026-07-15T05:53:30.000Z",
+  };
+
+  assert.deepEqual(clearSyntheticBenefitCooldown(syntheticCooldown), {
+    ...syntheticCooldown,
+    status: "available",
+    cooldownText: undefined,
+    cooldownUntil: undefined,
+  });
+  assert.equal(clearSyntheticBenefitCooldown(realCooldown), realCooldown);
 });
 
 test("notification queue orders unread notices by creation time", () => {
@@ -418,6 +553,23 @@ test("experience resets to zero when a grant upgrades the role", () => {
   assert.equal(result.stories.length, 1);
 });
 
+test("exactly reaching 1000 experience upgrades instead of remaining at 990", () => {
+  const current: GameProgress = {
+    level: 2,
+    exp: 990,
+    totalExp: 990,
+    wallet: 0,
+    rewardedTaskIds: [],
+  };
+
+  const result = grantExperience(current, 10, roles, "测试临界升级");
+
+  assert.equal(result.progress.level, 3);
+  assert.equal(result.progress.exp, 0);
+  assert.equal(result.progress.totalExp, 1000);
+  assert.equal(result.stories.length, 1);
+});
+
 test("task rewards are settled only once per task cycle", () => {
   const current: GameProgress = {
     level: 1,
@@ -440,6 +592,38 @@ test("task rewards are settled only once per task cycle", () => {
   assert.equal(first.progress.wallet, 0);
   assert.deepEqual(second.progress, first.progress);
   assert.deepEqual(second.stories, []);
+});
+
+test("task experience rewards above 30 keep their configured value", () => {
+  const reward = {
+    id: "high-exp",
+    type: "experience" as const,
+    label: "",
+    value: 75,
+    unit: "经验",
+  };
+  const current: GameProgress = {
+    level: 0,
+    exp: 0,
+    totalExp: 0,
+    wallet: 0,
+    rewardedTaskIds: [],
+  };
+  const configuredTask = task({
+    status: "confirmed",
+    rewards: [reward],
+  });
+
+  assert.equal(createRewardLabel(reward), "75经验");
+  assert.equal(settleTaskReward(current, configuredTask, roles).progress.exp, 75);
+});
+
+test("task page requires a new swipe that starts at the scroll top", () => {
+  assert.equal(canReturnFromTaskPage(120), false);
+  assert.equal(canReturnFromTaskPage(3), false);
+  assert.equal(canReturnFromTaskPage(2), true);
+  assert.equal(canReturnFromTaskPage(0), true);
+  assert.equal(canReturnFromTaskPage(null), false);
 });
 
 test("approved final task archives as completed and cannot be resubmitted", () => {
