@@ -83,8 +83,10 @@ func get_progress() -> Dictionary:
     }
 
 func get_roles() -> Array:
-    var roles: Variant = state.get("roles", [])
-    return roles as Array if roles is Array else []
+    var roles_value: Variant = state.get("roles", [])
+    if roles_value is Array:
+        return roles_value as Array
+    return []
 
 func get_role_for_level(level: int) -> Dictionary:
     for value: Variant in get_roles():
@@ -103,6 +105,13 @@ func _on_state_loaded(next_state: Dictionary, next_revision: String) -> void:
     is_syncing = false
     has_loaded_state = true
     last_sync_error = ""
+    print(
+        "Godot state loaded: keys=%s roles=%s progress=%s" % [
+            state.keys(),
+            get_roles().size(),
+            get_progress(),
+        ]
+    )
     changed.emit(state)
     _set_sync_message("服务器状态已同步")
 
@@ -122,6 +131,7 @@ func _on_revision_conflict(next_revision: String) -> void:
 func _on_request_failed(message: String) -> void:
     is_syncing = false
     last_sync_error = message
+    print("Godot state sync failed: %s" % message)
     sync_failed.emit(message)
     _set_sync_message("同步失败：%s" % message)
 
@@ -179,12 +189,15 @@ func _resolve_roles(raw_state: Dictionary) -> Array:
             else:
                 roles.append(custom_role)
 
-    roles.sort_custom(func(a: Variant, b: Variant) -> bool:
-        if not a is Dictionary or not b is Dictionary:
-            return false
-        return int((a as Dictionary).get("level", 0)) < int((b as Dictionary).get("level", 0))
-    )
+    roles.sort_custom(_role_less)
     return roles
+
+func _role_less(a: Variant, b: Variant) -> bool:
+    if not a is Dictionary or not b is Dictionary:
+        return false
+    var role_a: Dictionary = a as Dictionary
+    var role_b: Dictionary = b as Dictionary
+    return int(role_a.get("level", 0)) < int(role_b.get("level", 0))
 
 func _default_roles() -> Array:
     var roles: Array = []
