@@ -61,6 +61,12 @@ func load_manifest() -> void:
 func get_login_asset(name: String) -> Dictionary:
     return _nested_entry(["login", name])
 
+func get_login_animations(character_id: String) -> Dictionary:
+    return _nested_entry(["login", "animations", character_id])
+
+func get_login_animation(character_id: String, action: String) -> Dictionary:
+    return _nested_entry(["login", "animations", character_id, action])
+
 func get_role_asset(level: int, name: String = "illustration") -> Dictionary:
     return _nested_entry(["roles", str(level), name])
 
