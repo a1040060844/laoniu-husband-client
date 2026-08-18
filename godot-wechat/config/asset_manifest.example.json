@@ -14,89 +14,43 @@
     "music-toggle": { "path": "ui/login-music-toggle.png", "format": "png", "version": 1 },
     "animations": {
       "husband": {
-        "idle": {
-          "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/husband/blink",
-          "version": 1,
-          "target_visual_height": 188,
-          "loop": true,
-          "playback_rate": 2
-        },
-        "drag": {
-          "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/husband/drag",
-          "version": 1,
-          "target_visual_height": 188,
-          "loop": true
-        },
-        "select": {
-          "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/husband/select",
-          "version": 1,
-          "target_visual_height": 188,
-          "loop": false,
-          "playback_rate": 2
-        }
+        "idle": { "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/husband/blink", "version": 1, "target_visual_height": 188, "loop": true, "playback_rate": 2 },
+        "drag": { "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/husband/drag", "version": 1, "target_visual_height": 188, "loop": true },
+        "select": { "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/husband/select", "version": 1, "target_visual_height": 188, "loop": false, "playback_rate": 2 },
+        "adjustGlasses": { "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/husband/adjust-glasses", "version": 1, "target_visual_height": 188, "loop": false },
+        "nervous": { "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/husband/nervous", "version": 1, "target_visual_height": 188, "loop": false, "playback_rate": 2 }
       },
       "wife": {
-        "idle": {
-          "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/wife/blink",
-          "version": 1,
-          "target_visual_height": 188,
-          "loop": true,
-          "playback_rate": 2
-        },
-        "drag": {
-          "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/wife/drag",
-          "version": 1,
-          "target_visual_height": 179,
-          "loop": true
-        },
-        "select": {
-          "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/wife/select",
-          "version": 1,
-          "target_visual_height": 188,
-          "loop": false,
-          "playback_rate": 2
-        }
+        "idle": { "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/wife/blink", "version": 1, "target_visual_height": 188, "loop": true, "playback_rate": 2 },
+        "drag": { "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/wife/drag", "version": 1, "target_visual_height": 179, "loop": true },
+        "select": { "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/wife/select", "version": 1, "target_visual_height": 188, "loop": false, "playback_rate": 2 },
+        "response": { "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/wife/helpless", "version": 1, "target_visual_height": 188, "loop": false, "playback_rate": 2 },
+        "thinking": { "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/wife/thinking", "version": 1, "target_visual_height": 154, "loop": false, "visual_offset_y": -34 }
       },
       "cat-blue": {
-        "idle": {
-          "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/cat-blue/blink",
-          "version": 1,
-          "display_width": 82,
-          "loop": true,
-          "playback_rate": 2
-        },
-        "drag": {
-          "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/cat-blue/drag",
-          "version": 1,
-          "display_width": 82,
-          "loop": true
-        }
+        "idle": { "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/cat-blue/blink", "version": 1, "display_width": 82, "loop": true, "playback_rate": 2 },
+        "blink": { "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/cat-blue/blink", "version": 1, "display_width": 82, "loop": false, "playback_rate": 2 },
+        "drag": { "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/cat-blue/drag", "version": 1, "display_width": 82, "loop": true },
+        "lick": { "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/cat-blue/lick", "version": 1, "display_width": 82, "loop": false, "stabilize_bottom": true, "visual_offset_y": -24 },
+        "lift": { "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/cat-blue/lift", "version": 1, "display_width": 82, "loop": false },
+        "tail": { "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/cat-blue/tail", "version": 1, "display_width": 82, "loop": false },
+        "yawn": { "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/cat-blue/yawn", "version": 1, "display_width": 82, "loop": false, "stabilize_bottom": true, "visual_offset_y": -24 }
       },
       "cat-white": {
-        "idle": {
-          "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/cat-white/idle",
-          "version": 1,
-          "display_width": 72,
-          "loop": true
-        },
-        "drag": {
-          "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/cat-white/drag",
-          "version": 1,
-          "display_width": 72,
-          "loop": true
-        }
+        "idle": { "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/cat-white/idle", "version": 1, "display_width": 72, "loop": true },
+        "drag": { "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/cat-white/drag", "version": 1, "display_width": 72, "loop": true },
+        "jump": { "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/cat-white/jump", "version": 1, "display_width": 74, "loop": false },
+        "lookaround": { "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/cat-white/lookaround", "version": 1, "display_width": 72, "loop": false },
+        "roll": { "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/cat-white/roll", "version": 1, "display_width": 74, "loop": false },
+        "stretch": { "root_url": "https://raw.githubusercontent.com/a1040060844/laoniu-husband-client/main/husband-client/src/assets/login-final/cat-white/stretch", "version": 1, "display_width": 75, "loop": false }
       }
     }
   },
   "roles": {
-    "0": {
-      "illustration": { "path": "", "format": "webp", "version": 1 }
-    }
+    "0": { "illustration": { "path": "", "format": "webp", "version": 1 } }
   },
   "benefits": {
-    "0": {
-      "illustration": { "path": "", "format": "webp", "version": 1 }
-    }
+    "0": { "illustration": { "path": "", "format": "webp", "version": 1 } }
   },
   "wife": {
     "home": { "path": "", "format": "webp", "version": 1 },
