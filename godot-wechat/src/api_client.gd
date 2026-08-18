@@ -5,10 +5,10 @@ signal state_saved(revision: String)
 signal revision_conflict(revision: String)
 signal request_failed(message: String)
 
-@export var base_url := "https://www.laoniulaoge.cn"
+@export var base_url: String = "https://www.laoniulaoge.cn"
 
-var _http := HTTPRequest.new()
-var _operation := ""
+var _http: HTTPRequest = HTTPRequest.new()
+var _operation: String = ""
 
 func _ready() -> void:
     add_child(_http)
@@ -19,7 +19,7 @@ func load_state() -> void:
         request_failed.emit("状态请求仍在进行中")
         return
     _operation = "load"
-    var error := _http.request(
+    var error: int = _http.request(
         "%s/api/state" % base_url,
         ["Accept: application/json"],
         HTTPClient.METHOD_GET
@@ -33,11 +33,11 @@ func save_state(state: Dictionary, revision: String = "") -> void:
         request_failed.emit("状态请求仍在进行中")
         return
     _operation = "save"
-    var payload := {"state": state}
+    var payload: Dictionary = {"state": state}
     if not revision.is_empty():
         payload["revision"] = revision
-    var body := JSON.stringify(payload)
-    var error := _http.request(
+    var body: String = JSON.stringify(payload)
+    var error: int = _http.request(
         "%s/api/state" % base_url,
         ["Content-Type: application/json", "Accept: application/json"],
         HTTPClient.METHOD_PUT,
@@ -53,15 +53,15 @@ func _on_request_completed(
     _headers: PackedStringArray,
     body: PackedByteArray
 ) -> void:
-    var operation := _operation
+    var operation: String = _operation
     _operation = ""
 
     if result != HTTPRequest.RESULT_SUCCESS:
         request_failed.emit("网络请求失败：%s" % result)
         return
 
-    var text := body.get_string_from_utf8()
-    var parsed = JSON.parse_string(text)
+    var text: String = body.get_string_from_utf8()
+    var parsed: Variant = JSON.parse_string(text)
     var payload: Dictionary = parsed if parsed is Dictionary else {}
 
     if response_code == 409:
@@ -75,7 +75,7 @@ func _on_request_completed(
         return
 
     if operation == "load":
-        var raw_state = payload.get("state", {})
+        var raw_state: Variant = payload.get("state", {})
         var state: Dictionary = raw_state if raw_state is Dictionary else {}
         state_loaded.emit(state, str(payload.get("revision", "")))
     elif operation == "save":
