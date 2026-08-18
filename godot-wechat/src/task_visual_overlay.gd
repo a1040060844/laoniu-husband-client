@@ -1,6 +1,6 @@
 extends Node
 
-const STATUS_LABELS := {
+const STATUS_LABELS: Dictionary = {
     "todo": "待执行",
     "doing": "进行中",
     "submitted": "待确认",
@@ -10,7 +10,7 @@ const STATUS_LABELS := {
     "failed_pending": "待裁定",
     "completed": "已完成",
 }
-const FILTERS := {
+const FILTERS: Dictionary = {
     "all": ["todo", "doing", "submitted", "confirmed", "failed", "expired", "failed_pending", "completed"],
     "todo": ["todo"],
     "doing": ["doing"],
@@ -30,10 +30,10 @@ var _filter_row: HBoxContainer
 var _scroll: ScrollContainer
 var _list: VBoxContainer
 var _empty_label: Label
-var _source := "wife"
-var _filter := "all"
+var _source: String = "wife"
+var _filter: String = "all"
 var _tasks: Array = []
-var _loaded_backdrop := false
+var _loaded_backdrop: bool = false
 var _status_label: Label
 
 func _ready() -> void:
@@ -60,7 +60,7 @@ func _build_ui() -> void:
     _root.mouse_filter = Control.MOUSE_FILTER_IGNORE
     _canvas.add_child(_root)
 
-    var black := ColorRect.new()
+    var black: ColorRect = ColorRect.new()
     black.color = Color.BLACK
     black.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     black.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -72,10 +72,10 @@ func _build_ui() -> void:
     _backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
     _root.add_child(_backdrop)
 
-    var scrim := ColorRect.new()
+    var scrim: ColorRect = ColorRect.new()
     scrim.color = Color.WHITE
     scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    var shader := Shader.new()
+    var shader: Shader = Shader.new()
     shader.code = """
 shader_type canvas_item;
 void fragment() {
@@ -85,13 +85,13 @@ void fragment() {
     COLOR = vec4(0.0, 0.0, 0.0, clamp(max(top, max(bottom, side)), 0.0, 0.94));
 }
 """
-    var material := ShaderMaterial.new()
+    var material: ShaderMaterial = ShaderMaterial.new()
     material.shader = shader
     scrim.material = material
     scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     _root.add_child(scrim)
 
-    var swipe := _label("↓  下滑进入主页", 13, Color("c1ad86"))
+    var swipe: Label = _label("↓  下滑进入主页", 13, Color("c1ad86"))
     swipe.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     swipe.set_meta("layout", "swipe")
     _root.add_child(swipe)
@@ -116,9 +116,9 @@ void fragment() {
     _filter_row.alignment = BoxContainer.ALIGNMENT_CENTER
     _filter_row.add_theme_constant_override("separation", 4)
     _root.add_child(_filter_row)
-    for key in ["all", "todo", "doing", "submitted", "completed"]:
-        var label := {"all":"全部", "todo":"待执行", "doing":"进行中", "submitted":"待确认", "completed":"已完成"}[key]
-        _filter_row.add_child(_tab_button(label, key, false))
+    var filter_labels: Dictionary = {"all":"全部", "todo":"待执行", "doing":"进行中", "submitted":"待确认", "completed":"已完成"}
+    for key: String in ["all", "todo", "doing", "submitted", "completed"]:
+        _filter_row.add_child(_tab_button(str(filter_labels.get(key, key)), key, false))
 
     _scroll = ScrollContainer.new()
     _scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -142,7 +142,7 @@ void fragment() {
     _root.add_child(_status_label)
 
 func _label(text_value: String, font_size: int, color: Color) -> Label:
-    var label := Label.new()
+    var label: Label = Label.new()
     label.text = text_value
     label.add_theme_font_size_override("font_size", font_size)
     label.add_theme_color_override("font_color", color)
@@ -150,7 +150,7 @@ func _label(text_value: String, font_size: int, color: Color) -> Label:
     return label
 
 func _tab_button(text_value: String, key: String, source_tab: bool) -> Button:
-    var button := Button.new()
+    var button: Button = Button.new()
     button.text = text_value
     button.add_theme_font_size_override("font_size", 11)
     button.custom_minimum_size = Vector2(62, 30)
@@ -165,49 +165,51 @@ func _tab_button(text_value: String, key: String, source_tab: bool) -> Button:
 func _process(_delta: float) -> void:
     if _root == null:
         return
-    var scene := get_tree().current_scene
+    var scene: Node = get_tree().current_scene
     if scene == null:
         _root.visible = false
         return
-    var husband_view = scene.get("husband_view")
-    var page_value = scene.get("current_page")
-    _root.visible = husband_view is Control and husband_view.visible and int(page_value) == 2
+    var husband_view_value: Variant = scene.get("husband_view")
+    var page_value: Variant = scene.get("current_page")
+    _root.visible = husband_view_value is Control and husband_view_value.visible and int(page_value) == 2
 
 func _on_state_changed(_state: Dictionary) -> void:
-    var progress := GameState.get_progress()
-    var level := int(progress.get("level", 0))
-    var role := _role_for_level(level)
+    var progress: Dictionary = GameState.get_progress()
+    var level: int = int(progress.get("level", 0))
+    var role: Dictionary = _role_for_level(level)
     _level_label.text = "Lv. %02d" % level
     _title_label.text = "%s · 老哥任务簿" % str(role.get("title", ""))
-    var source_value = GameState.state.get("tasks", [])
+    var source_value: Variant = GameState.state.get("tasks", [])
     _tasks = source_value if source_value is Array else []
     _refresh_stats()
     _rebuild_task_list()
 
 func _role_for_level(level: int) -> Dictionary:
-    var roles = GameState.state.get("roles", [])
+    var roles: Variant = GameState.state.get("roles", [])
     if roles is Array:
-        for role in roles:
-            if role is Dictionary and int(role.get("level", -1)) == level:
-                return role
+        for role_value: Variant in roles:
+            if role_value is Dictionary:
+                var role: Dictionary = role_value
+                if int(role.get("level", -1)) == level:
+                    return role
     return {}
 
 func _refresh_stats() -> void:
-    var pending := 0
-    var doing := 0
-    var submitted := 0
-    var today_exp := 0
-    var month_money := 0
-    var month_count := 0
-    var month_exp := 0
-    var today := Time.get_date_dict_from_system()
-    var month_prefix := "%04d-%02d" % [int(today.year), int(today.month)]
+    var pending: int = 0
+    var doing: int = 0
+    var submitted: int = 0
+    var today_exp: int = 0
+    var month_money: int = 0
+    var month_count: int = 0
+    var month_exp: int = 0
+    var today: Dictionary = Time.get_date_dict_from_system()
+    var month_prefix: String = "%04d-%02d" % [int(today.get("year", 2024)), int(today.get("month", 1))]
 
-    for value in _tasks:
+    for value: Variant in _tasks:
         if not value is Dictionary:
             continue
         var task: Dictionary = value
-        var status := str(task.get("status", ""))
+        var status: String = str(task.get("status", ""))
         if status == "todo":
             pending += 1
             today_exp += _reward_exp(task)
@@ -218,7 +220,7 @@ func _refresh_stats() -> void:
             submitted += 1
 
         if status == "confirmed" or status == "completed":
-            var completed_at := str(task.get("rewardedAt", task.get("confirmedAt", "")))
+            var completed_at: String = str(task.get("rewardedAt", task.get("confirmedAt", "")))
             if completed_at.begins_with(month_prefix):
                 month_count += 1
                 month_money += _reward_money(task)
@@ -228,24 +230,28 @@ func _refresh_stats() -> void:
     _month_label.text = "本月获得 ¥%s · 完成 %s 个 · %s EXP" % [month_money, month_count, month_exp]
 
 func _reward_exp(task: Dictionary) -> int:
-    var rewards = task.get("rewards", [])
+    var rewards: Variant = task.get("rewards", [])
     if rewards is Array and not rewards.is_empty():
-        var total := 0
-        for reward in rewards:
-            if reward is Dictionary and str(reward.get("type", "")) == "experience":
-                total += max(0, int(reward.get("value", 0)))
+        var total: int = 0
+        for reward_value: Variant in rewards:
+            if reward_value is Dictionary:
+                var reward: Dictionary = reward_value
+                if str(reward.get("type", "")) == "experience":
+                    total += maxi(0, int(reward.get("value", 0)))
         return total
-    return max(0, int(task.get("rewardExp", 0)))
+    return maxi(0, int(task.get("rewardExp", 0)))
 
 func _reward_money(task: Dictionary) -> int:
-    var rewards = task.get("rewards", [])
+    var rewards: Variant = task.get("rewards", [])
     if rewards is Array and not rewards.is_empty():
-        var total := 0
-        for reward in rewards:
-            if reward is Dictionary and str(reward.get("type", "")) == "allowance":
-                total += max(0, int(reward.get("value", 0)))
+        var total: int = 0
+        for reward_value: Variant in rewards:
+            if reward_value is Dictionary:
+                var reward: Dictionary = reward_value
+                if str(reward.get("type", "")) == "allowance":
+                    total += maxi(0, int(reward.get("value", 0)))
         return total
-    return max(0, int(task.get("rewardMoney", 0)))
+    return maxi(0, int(task.get("rewardMoney", 0)))
 
 func _select_source(key: String) -> void:
     if _source == key:
@@ -262,22 +268,25 @@ func _select_filter(key: String) -> void:
     _update_tab_states()
 
 func _update_tab_states() -> void:
-    for child in _source_row.get_children():
+    for child: Node in _source_row.get_children():
         if child is Button:
-            child.modulate = Color.WHITE if str(child.get_meta("source-key")) == _source else Color(1, 1, 1, 0.55)
-    for child in _filter_row.get_children():
+            var button: Button = child as Button
+            button.modulate = Color.WHITE if str(button.get_meta("source-key")) == _source else Color(1, 1, 1, 0.55)
+    for child: Node in _filter_row.get_children():
         if child is Button:
-            child.modulate = Color.WHITE if str(child.get_meta("filter-key")) == _filter else Color(1, 1, 1, 0.55)
+            var button: Button = child as Button
+            button.modulate = Color.WHITE if str(button.get_meta("filter-key")) == _filter else Color(1, 1, 1, 0.55)
 
 func _rebuild_task_list() -> void:
     if _list == null:
         return
-    for child in _list.get_children():
+    for child: Node in _list.get_children():
         child.queue_free()
 
-    var count := 0
-    var allowed: Array = FILTERS.get(_filter, FILTERS["all"])
-    for value in _tasks:
+    var count: int = 0
+    var allowed_value: Variant = FILTERS.get(_filter, FILTERS["all"])
+    var allowed: Array = allowed_value if allowed_value is Array else []
+    for value: Variant in _tasks:
         if not value is Dictionary:
             continue
         var task: Dictionary = value
@@ -289,16 +298,16 @@ func _rebuild_task_list() -> void:
         count += 1
 
     if count == 0:
-        var empty := _label("暂无符合条件的任务", 13, Color("8e8069"))
+        var empty: Label = _label("暂无符合条件的任务", 13, Color("8e8069"))
         empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
         empty.custom_minimum_size = Vector2(0, 80)
         _list.add_child(empty)
     _update_tab_states()
 
 func _build_task_card(task: Dictionary) -> Panel:
-    var card := Panel.new()
+    var card: Panel = Panel.new()
     card.custom_minimum_size = Vector2(0, 158)
-    var style := StyleBoxFlat.new()
+    var style: StyleBoxFlat = StyleBoxFlat.new()
     style.bg_color = Color(0.045, 0.033, 0.022, 0.90)
     style.border_color = Color(0.91, 0.78, 0.55, 0.18)
     style.set_border_width_all(1)
@@ -308,44 +317,49 @@ func _build_task_card(task: Dictionary) -> Panel:
     style.corner_radius_bottom_right = 10
     card.add_theme_stylebox_override("panel", style)
 
-    var type_text := str(task.get("moduleLabel", ""))
+    var type_text: String = str(task.get("moduleLabel", ""))
     if type_text.is_empty():
-        type_text = {"daily":"日任务", "weekly":"周任务", "repeat":"重复任务", "custom":"自定义任务", "urgent":"紧急任务"}.get(str(task.get("type", "custom")), "任务")
+        var type_labels: Dictionary = {"daily":"日任务", "weekly":"周任务", "repeat":"重复任务", "custom":"自定义任务", "urgent":"紧急任务"}
+        type_text = str(type_labels.get(str(task.get("type", "custom")), "任务"))
     if str(task.get("source", "wife")) == "wife":
         type_text += " / 老婆发布"
 
-    var head := _label("%s    %s" % [type_text, STATUS_LABELS.get(str(task.get("status", "")), "")], 10, Color("bba77f"))
+    var head: Label = _label("%s    %s" % [type_text, str(STATUS_LABELS.get(str(task.get("status", "")), ""))], 10, Color("bba77f"))
     head.position = Vector2(14, 10)
     head.size = Vector2(260, 20)
     card.add_child(head)
 
-    var title := _label(str(task.get("title", "任务")), 16, Color("f3e2bd"))
+    var title: Label = _label(str(task.get("title", "任务")), 16, Color("f3e2bd"))
     title.position = Vector2(14, 34)
     title.size = Vector2(250, 24)
     card.add_child(title)
 
-    var description := _label(str(task.get("description", "")), 11, Color("c7baa5"))
+    var description: Label = _label(str(task.get("description", "")), 11, Color("c7baa5"))
     description.position = Vector2(14, 60)
     description.size = Vector2(250, 38)
     description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     card.add_child(description)
 
-    var reward := _label("奖励：+%s EXP%s" % [_reward_exp(task), " · ¥%s" % _reward_money(task) if _reward_money(task) > 0 else ""], 10, Color("d7b879"))
+    var money: int = _reward_money(task)
+    var money_text: String = " · ¥%s" % money if money > 0 else ""
+    var reward: Label = _label("奖励：+%s EXP%s" % [_reward_exp(task), money_text], 10, Color("d7b879"))
     reward.position = Vector2(14, 102)
     reward.size = Vector2(250, 20)
     card.add_child(reward)
 
-    var deadline_text := str(task.get("deadline", ""))
-    var time_config = task.get("timeConfig", {})
-    if time_config is Dictionary and not str(time_config.get("label", "")).is_empty():
-        deadline_text = str(time_config.get("label"))
-    var deadline := _label(deadline_text, 9, Color("8e8069"))
+    var deadline_text: String = str(task.get("deadline", ""))
+    var time_config_value: Variant = task.get("timeConfig", {})
+    if time_config_value is Dictionary:
+        var time_config: Dictionary = time_config_value
+        if not str(time_config.get("label", "")).is_empty():
+            deadline_text = str(time_config.get("label", ""))
+    var deadline: Label = _label(deadline_text, 9, Color("8e8069"))
     deadline.position = Vector2(14, 126)
     deadline.size = Vector2(190, 18)
     card.add_child(deadline)
 
-    var action := Button.new()
-    var status := str(task.get("status", ""))
+    var action: Button = Button.new()
+    var status: String = str(task.get("status", ""))
     if status == "todo":
         action.text = "开始执行"
         action.pressed.connect(_start_task.bind(str(task.get("id", ""))))
@@ -370,47 +384,52 @@ func _build_task_card(task: Dictionary) -> Panel:
 func _start_task(task_id: String) -> void:
     if GameState.is_syncing:
         return
-    var next_state := GameState.state.duplicate(true)
-    var tasks = next_state.get("tasks", [])
-    if not tasks is Array:
+    var next_state: Dictionary = GameState.state.duplicate(true)
+    var tasks_value: Variant = next_state.get("tasks", [])
+    if not tasks_value is Array:
         return
-    for index in range(tasks.size()):
-        var task = tasks[index]
-        if task is Dictionary and str(task.get("id", "")) == task_id and str(task.get("status", "")) == "todo":
-            task["status"] = "doing"
-            tasks[index] = task
-            break
+    var tasks: Array = tasks_value
+    for index: int in range(tasks.size()):
+        var task_value: Variant = tasks[index]
+        if task_value is Dictionary:
+            var task: Dictionary = task_value
+            if str(task.get("id", "")) == task_id and str(task.get("status", "")) == "todo":
+                task["status"] = "doing"
+                tasks[index] = task
+                break
     next_state["tasks"] = tasks
     GameState.save_remote(next_state)
 
 func _submit_task(task_id: String) -> void:
     if GameState.is_syncing:
         return
-    var next_state := GameState.state.duplicate(true)
-    var tasks = next_state.get("tasks", [])
-    if not tasks is Array:
+    var next_state: Dictionary = GameState.state.duplicate(true)
+    var tasks_value: Variant = next_state.get("tasks", [])
+    if not tasks_value is Array:
         return
+    var tasks: Array = tasks_value
 
-    var submitted_at := Time.get_datetime_string_from_system()
-    var submitted_title := ""
-    var changed := false
-    for index in range(tasks.size()):
-        var task = tasks[index]
-        if task is Dictionary and str(task.get("id", "")) == task_id and str(task.get("status", "")) == "doing":
-            task["status"] = "submitted"
-            task["submittedAt"] = submitted_at
-            task["submitNote"] = "已完成，请老妞大人确认。"
-            submitted_title = str(task.get("title", "任务"))
-            tasks[index] = task
-            changed = true
-            break
+    var submitted_at: String = Time.get_datetime_string_from_system()
+    var submitted_title: String = ""
+    var changed: bool = false
+    for index: int in range(tasks.size()):
+        var task_value: Variant = tasks[index]
+        if task_value is Dictionary:
+            var task: Dictionary = task_value
+            if str(task.get("id", "")) == task_id and str(task.get("status", "")) == "doing":
+                task["status"] = "submitted"
+                task["submittedAt"] = submitted_at
+                task["submitNote"] = "已完成，请老妞大人确认。"
+                submitted_title = str(task.get("title", "任务"))
+                tasks[index] = task
+                changed = true
+                break
     if not changed:
         return
 
     next_state["tasks"] = tasks
-    var logs = next_state.get("logs", [])
-    if not logs is Array:
-        logs = []
+    var logs_value: Variant = next_state.get("logs", [])
+    var logs: Array = logs_value if logs_value is Array else []
     logs.push_front({
         "id": "log-task-submitted-%s" % int(Time.get_unix_time_from_system() * 1000.0),
         "type": "task_submitted",
@@ -435,28 +454,30 @@ func _load_backdrop() -> void:
     if _loaded_backdrop:
         return
     _loaded_backdrop = true
-    var entry := {
+    var entry: Dictionary = {
         "url": "https://www.laoniulaoge.cn/assets/tasks/task-lv01.png",
         "format": "png",
         "version": 1,
     }
-    var texture := await CloudAssetManager.load_texture("task-backdrop", entry)
+    var texture: Texture2D = await CloudAssetManager.load_texture("task-backdrop", entry)
     if texture != null:
         _backdrop.texture = texture
 
 func _layout() -> void:
     if _root == null:
         return
-    var viewport_size := get_viewport().get_visible_rect().size
+    var viewport_size: Vector2 = get_viewport().get_visible_rect().size
     _root.position = Vector2.ZERO
     _root.size = viewport_size
     _backdrop.position = Vector2.ZERO
     _backdrop.size = viewport_size
 
-    for child in _root.get_children():
+    for child: Node in _root.get_children():
         if child.has_meta("layout") and str(child.get_meta("layout")) == "swipe":
-            child.position = Vector2(20, 18)
-            child.size = Vector2(viewport_size.x - 40, 24)
+            var control: Control = child as Control
+            if control != null:
+                control.position = Vector2(20, 18)
+                control.size = Vector2(viewport_size.x - 40, 24)
 
     _level_label.position = Vector2(22, 54)
     _level_label.size = Vector2(120, 20)
