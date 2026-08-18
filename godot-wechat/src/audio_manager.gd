@@ -6,6 +6,7 @@ signal audio_failed(asset_id: String, message: String)
 var _bgm_player := AudioStreamPlayer.new()
 var _sfx_player := AudioStreamPlayer.new()
 var _current_bgm_id := ""
+var _bgm_generation := 0
 var bgm_volume_db := -10.0
 var sfx_volume_db := -4.0
 var muted := false
@@ -19,19 +20,25 @@ func _ready() -> void:
     _sfx_player.volume_db = sfx_volume_db
 
 func play_bgm(asset_id: String) -> void:
-    if asset_id == _current_bgm_id and _bgm_player.playing:
-        return
-
     var entry := AssetManifest.get_audio_asset(asset_id)
     if entry.is_empty():
         audio_failed.emit(asset_id, "资源清单中不存在该 BGM")
         return
+    play_bgm_entry(asset_id, entry, bgm_volume_db)
 
+func play_bgm_entry(asset_id: String, entry: Dictionary, volume_db_value: float = -10.0) -> void:
+    if asset_id == _current_bgm_id and _bgm_player.playing:
+        set_bgm_volume_db(volume_db_value)
+        return
+
+    _bgm_generation += 1
+    var generation := _bgm_generation
     var stream := await _stream_from_entry(asset_id, entry, true)
-    if stream == null:
+    if generation != _bgm_generation or stream == null:
         return
 
     _current_bgm_id = asset_id
+    bgm_volume_db = volume_db_value
     _bgm_player.stop()
     _bgm_player.stream = stream
     _bgm_player.volume_db = -80.0 if muted else bgm_volume_db
@@ -53,8 +60,12 @@ func play_sfx(asset_id: String) -> void:
     _sfx_player.play()
 
 func stop_bgm() -> void:
+    _bgm_generation += 1
     _bgm_player.stop()
     _current_bgm_id = ""
+
+func current_bgm_id() -> String:
+    return _current_bgm_id
 
 func set_muted(value: bool) -> void:
     muted = value
