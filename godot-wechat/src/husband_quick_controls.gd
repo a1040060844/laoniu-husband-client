@@ -1,7 +1,7 @@
 extends Node
 
-const RETURN_URL := "https://www.laoniulaoge.cn/assets/ui/return-login.png"
-const MUSIC_URL := "https://www.laoniulaoge.cn/assets/ui/login-music-toggle.png"
+const RETURN_URL: String = "https://www.laoniulaoge.cn/assets/ui/return-login.png"
+const MUSIC_URL: String = "https://www.laoniulaoge.cn/assets/ui/login-music-toggle.png"
 
 var _canvas: CanvasLayer
 var _root: Control
@@ -45,28 +45,28 @@ func _mount() -> void:
 func _process(_delta: float) -> void:
     if _root == null:
         return
-    var scene := get_tree().current_scene
+    var scene: Node = get_tree().current_scene
     if scene == null:
         _root.visible = false
         return
-    var husband_view = scene.get("husband_view")
-    var page_value = scene.get("current_page")
-    _root.visible = husband_view is Control and husband_view.visible and int(page_value) == 1
+    var husband_view_value: Variant = scene.get("husband_view")
+    var page_value: Variant = scene.get("current_page")
+    _root.visible = husband_view_value is Control and husband_view_value.visible and int(page_value) == 1
 
 func _load_texture(button: TextureButton, url: String, asset_id: String) -> void:
-    var entry := {"url": url, "format": "png", "version": 1}
-    var texture := await CloudAssetManager.load_texture(asset_id, entry)
-    if texture != null and button != null:
+    var entry: Dictionary = {"url": url, "format": "png", "version": 1}
+    var texture: Texture2D = await CloudAssetManager.load_texture(asset_id, entry)
+    if texture != null:
         button.texture_normal = texture
 
 func _layout() -> void:
     if _root == null:
         return
-    var viewport_size := get_viewport().get_visible_rect().size
+    var viewport_size: Vector2 = get_viewport().get_visible_rect().size
     _root.position = Vector2.ZERO
     _root.size = viewport_size
 
-    var button_size := clamp(viewport_size.x * 0.115, 42.0, 54.0)
+    var button_size: float = clampf(viewport_size.x * 0.115, 42.0, 54.0)
     _return_button.position = Vector2(14, 72)
     _return_button.size = Vector2(button_size, button_size)
     _music_button.position = Vector2(viewport_size.x - 14 - button_size, 72)
@@ -81,15 +81,15 @@ func _sync_music_visual() -> void:
         _music_button.modulate = Color.WHITE if not AudioManager.muted else Color(1.0, 1.0, 1.0, 0.42)
 
 func _return_to_login() -> void:
-    var scene := get_tree().current_scene
+    var scene: Node = get_tree().current_scene
     if scene == null:
         return
-    var husband_view = scene.get("husband_view")
-    if husband_view is Control:
-        husband_view.visible = false
-    var login_view = scene.get("login_view")
-    if login_view is Control:
-        login_view.visible = true
+    var husband_view_value: Variant = scene.get("husband_view")
+    if husband_view_value is Control:
+        husband_view_value.visible = false
+    var login_view_value: Variant = scene.get("login_view")
+    if login_view_value is Control:
+        login_view_value.visible = true
 
     if LoginVisualOverlay._root != null:
         LoginVisualOverlay._root.visible = true
