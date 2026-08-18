@@ -62,7 +62,9 @@ func _on_request_completed(
 
     var text: String = body.get_string_from_utf8()
     var parsed: Variant = JSON.parse_string(text)
-    var payload: Dictionary = parsed if parsed is Dictionary else {}
+    var payload: Dictionary = {}
+    if parsed is Dictionary:
+        payload = parsed
 
     if response_code == 409:
         revision_conflict.emit(str(payload.get("revision", "")))
@@ -76,7 +78,9 @@ func _on_request_completed(
 
     if operation == "load":
         var raw_state: Variant = payload.get("state", {})
-        var state: Dictionary = raw_state if raw_state is Dictionary else {}
+        var state: Dictionary = {}
+        if raw_state is Dictionary:
+            state = raw_state
         state_loaded.emit(state, str(payload.get("revision", "")))
     elif operation == "save":
         state_saved.emit(str(payload.get("revision", "")))
