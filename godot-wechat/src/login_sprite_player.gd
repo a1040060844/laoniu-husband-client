@@ -1,4 +1,5 @@
 extends Control
+class_name LoginSpritePlayer
 
 signal visual_ready(character_id: String)
 signal action_finished(character_id: String, action: String)
