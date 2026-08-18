@@ -13,13 +13,13 @@ var _modal_description: Label
 var _modal_frequency: Label
 var _modal_status: Label
 var _modal_close: Button
-var _loaded_level := -1
+var _loaded_level: int = -1
 var _benefits: Array = []
 var _bubble_buttons: Array[Button] = []
-var _marquee_offset := 0.0
-var _marquee_width := 390.0
-var _marquee_duration := 18.0
-var _visible_last_frame := false
+var _marquee_offset: float = 0.0
+var _marquee_width: float = 390.0
+var _marquee_duration: float = 18.0
+var _visible_last_frame: bool = false
 
 func _ready() -> void:
     process_mode = Node.PROCESS_MODE_ALWAYS
@@ -42,7 +42,7 @@ func _build_ui() -> void:
     _root.mouse_filter = Control.MOUSE_FILTER_IGNORE
     _canvas.add_child(_root)
 
-    var black := ColorRect.new()
+    var black: ColorRect = ColorRect.new()
     black.color = Color.BLACK
     black.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     black.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -54,10 +54,10 @@ func _build_ui() -> void:
     _illustration.mouse_filter = Control.MOUSE_FILTER_IGNORE
     _root.add_child(_illustration)
 
-    var scrim := ColorRect.new()
+    var scrim: ColorRect = ColorRect.new()
     scrim.color = Color.WHITE
     scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    var shader := Shader.new()
+    var shader: Shader = Shader.new()
     shader.code = """
 shader_type canvas_item;
 void fragment() {
@@ -69,7 +69,7 @@ void fragment() {
     COLOR = vec4(0.0, 0.0, 0.0, a);
 }
 """
-    var material := ShaderMaterial.new()
+    var material: ShaderMaterial = ShaderMaterial.new()
     material.shader = shader
     scrim.material = material
     scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -92,7 +92,7 @@ void fragment() {
     _commission_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     _root.add_child(_commission_label)
 
-    var swipe := _label("↑  上滑进入主页", 14, Color("e8d4aa"))
+    var swipe: Label = _label("↑  上滑进入主页", 14, Color("e8d4aa"))
     swipe.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     swipe.set_meta("layout", "swipe")
     _root.add_child(swipe)
@@ -103,7 +103,7 @@ func _build_modal() -> void:
     _modal = Panel.new()
     _modal.visible = false
     _modal.z_index = 300
-    var style := StyleBoxFlat.new()
+    var style: StyleBoxFlat = StyleBoxFlat.new()
     style.bg_color = Color(0.035, 0.026, 0.018, 0.96)
     style.border_color = Color(0.91, 0.78, 0.55, 0.42)
     style.set_border_width_all(1)
@@ -137,7 +137,7 @@ func _build_modal() -> void:
     _modal.add_child(_modal_close)
 
 func _label(text_value: String, font_size: int, color: Color) -> Label:
-    var label := Label.new()
+    var label: Label = Label.new()
     label.text = text_value
     label.add_theme_font_size_override("font_size", font_size)
     label.add_theme_color_override("font_color", color)
@@ -147,13 +147,13 @@ func _label(text_value: String, font_size: int, color: Color) -> Label:
 func _process(delta: float) -> void:
     if _root == null:
         return
-    var scene := get_tree().current_scene
+    var scene: Node = get_tree().current_scene
     if scene == null:
         _root.visible = false
         return
-    var husband_view = scene.get("husband_view")
-    var page_value = scene.get("current_page")
-    var should_show := husband_view is Control and husband_view.visible and int(page_value) == 0
+    var husband_view_value: Variant = scene.get("husband_view")
+    var page_value: Variant = scene.get("current_page")
+    var should_show: bool = husband_view_value is Control and husband_view_value.visible and int(page_value) == 0
     _root.visible = should_show
 
     if should_show and not _visible_last_frame:
@@ -167,9 +167,9 @@ func _process(delta: float) -> void:
         _position_bubbles()
 
 func _on_state_changed(_state: Dictionary) -> void:
-    var progress := GameState.get_progress()
-    var level := int(progress.get("level", 0))
-    var role := _role_for_level(level)
+    var progress: Dictionary = GameState.get_progress()
+    var level: int = int(progress.get("level", 0))
+    var role: Dictionary = _role_for_level(level)
     if role.is_empty():
         return
 
@@ -184,57 +184,61 @@ func _on_state_changed(_state: Dictionary) -> void:
         _load_illustration(level, str(role.get("benefitImage", "")))
 
 func _role_for_level(level: int) -> Dictionary:
-    var roles = GameState.state.get("roles", [])
+    var roles: Variant = GameState.state.get("roles", [])
     if roles is Array:
-        for role in roles:
-            if role is Dictionary and int(role.get("level", -1)) == level:
-                return role
+        for role_value: Variant in roles:
+            if role_value is Dictionary:
+                var role: Dictionary = role_value
+                if int(role.get("level", -1)) == level:
+                    return role
     return {}
 
 func _visible_benefits(level: int) -> Array:
     var result: Array = []
-    var source = GameState.state.get("benefits", [])
+    var source: Variant = GameState.state.get("benefits", [])
     if not source is Array:
         return result
-    for value in source:
+    for value: Variant in source:
         if not value is Dictionary:
             continue
-        var required := int(value.get("levelRequired", 0))
-        var visible := required == 0 if level == 0 else required > 0 and required <= level
+        var benefit: Dictionary = value
+        var required: int = int(benefit.get("levelRequired", 0))
+        var visible: bool = (required == 0) if level == 0 else (required > 0 and required <= level)
         if visible:
-            result.append(_benefit_for_level(value, level))
+            result.append(_benefit_for_level(benefit, level))
     return result
 
 func _benefit_for_level(benefit: Dictionary, level: int) -> Dictionary:
-    var resolved := benefit.duplicate(true)
-    var variants = benefit.get("displayVariants", [])
+    var resolved: Dictionary = benefit.duplicate(true)
+    var variants: Variant = benefit.get("displayVariants", [])
     if variants is Array:
-        var best_level := -1
-        for value in variants:
+        var best_level: int = -1
+        for value: Variant in variants:
             if not value is Dictionary:
                 continue
-            var min_level := int(value.get("minLevel", -1))
+            var variant: Dictionary = value
+            var min_level: int = int(variant.get("minLevel", -1))
             if min_level <= level and min_level >= best_level:
                 best_level = min_level
-                for key in ["name", "frequency", "description"]:
-                    if value.has(key) and not str(value.get(key, "")).is_empty():
-                        resolved[key] = value[key]
+                for key: String in ["name", "frequency", "description"]:
+                    if variant.has(key) and not str(variant.get(key, "")).is_empty():
+                        resolved[key] = variant[key]
     return resolved
 
 func _rebuild_bubbles(level: int) -> void:
-    for child in _bubble_layer.get_children():
+    for child: Node in _bubble_layer.get_children():
         child.queue_free()
     _bubble_buttons.clear()
     _marquee_offset = 0.0
 
-    var copies := 2 if _benefits.size() > 5 else 1
-    _marquee_width = max(390.0, float(_benefits.size()) * 86.0 + 120.0)
-    _marquee_duration = max(18.0, float(_benefits.size()) * 3.8)
+    var copies: int = 2 if _benefits.size() > 5 else 1
+    _marquee_width = maxf(390.0, float(_benefits.size()) * 86.0 + 120.0)
+    _marquee_duration = maxf(18.0, float(_benefits.size()) * 3.8)
 
-    for copy_index in range(copies):
-        for index in range(_benefits.size()):
-            var benefit = _benefits[index] as Dictionary
-            var button := Button.new()
+    for copy_index: int in range(copies):
+        for index: int in range(_benefits.size()):
+            var benefit: Dictionary = _benefits[index] as Dictionary
+            var button: Button = Button.new()
             button.custom_minimum_size = Vector2(72, 72)
             button.text = "%s\n%s" % [str(benefit.get("name", "权益")), _status_text(benefit, level)]
             button.add_theme_font_size_override("font_size", 10)
@@ -251,7 +255,7 @@ func _rebuild_bubbles(level: int) -> void:
     _position_bubbles()
 
 func _apply_bubble_style(button: Button, status: String) -> void:
-    var style := StyleBoxFlat.new()
+    var style: StyleBoxFlat = StyleBoxFlat.new()
     style.corner_radius_top_left = 40
     style.corner_radius_top_right = 40
     style.corner_radius_bottom_left = 40
@@ -268,7 +272,7 @@ func _apply_bubble_style(button: Button, status: String) -> void:
         style.border_color = Color(0.55, 0.55, 0.55, 0.22)
     button.add_theme_stylebox_override("normal", style)
     button.add_theme_stylebox_override("disabled", style)
-    var hover := style.duplicate()
+    var hover: StyleBoxFlat = style.duplicate() as StyleBoxFlat
     hover.bg_color = Color(0.18, 0.125, 0.06, 0.9)
     button.add_theme_stylebox_override("hover", hover)
     button.add_theme_stylebox_override("pressed", hover)
@@ -276,15 +280,15 @@ func _apply_bubble_style(button: Button, status: String) -> void:
 func _position_bubbles() -> void:
     if _bubble_layer == null:
         return
-    var total := _benefits.size()
+    var total: int = _benefits.size()
     if total == 0:
         return
-    var screen_scale := get_viewport().get_visible_rect().size.x / 390.0
-    for button in _bubble_buttons:
-        var index := int(button.get_meta("index"))
-        var copy_index := int(button.get_meta("copy"))
-        var point := _bubble_position(index, total)
-        var x := point.x + copy_index * _marquee_width
+    var screen_scale: float = get_viewport().get_visible_rect().size.x / 390.0
+    for button: Button in _bubble_buttons:
+        var index: int = int(button.get_meta("index"))
+        var copy_index: int = int(button.get_meta("copy"))
+        var point: Vector2 = _bubble_position(index, total)
+        var x: float = point.x + float(copy_index) * _marquee_width
         if total > 5:
             x -= _marquee_offset
         button.position = Vector2(x * screen_scale - 36.0, point.y)
@@ -292,24 +296,27 @@ func _position_bubbles() -> void:
 
 func _bubble_position(index: int, total: int) -> Vector2:
     if total <= 5:
-        var layouts := [
+        var layouts: Array = [
             [Vector2(195, 78)],
             [Vector2(128, 64), Vector2(262, 122)],
             [Vector2(94, 118), Vector2(195, 54), Vector2(296, 118)],
             [Vector2(82, 70), Vector2(170, 128), Vector2(258, 62), Vector2(340, 124)],
             [Vector2(64, 114), Vector2(132, 56), Vector2(204, 128), Vector2(282, 62), Vector2(354, 118)],
         ]
-        return layouts[total - 1][index]
-    var stagger_x := [0, 12, -8, 6, -12][index % 5]
-    var row_offset := 0 if int(index / 5) % 2 == 0 else 8
-    var y_base := 54 if index % 2 == 0 else 118
-    var y_drift := [0, 8, -4, 10, -8][index % 5]
-    return Vector2(60 + index * 82 + stagger_x, min(140, y_base + y_drift + row_offset))
+        var row: Array = layouts[total - 1]
+        return row[index] as Vector2
+    var stagger_values: Array[int] = [0, 12, -8, 6, -12]
+    var drift_values: Array[int] = [0, 8, -4, 10, -8]
+    var stagger_x: int = stagger_values[index % 5]
+    var row_offset: int = 0 if int(index / 5) % 2 == 0 else 8
+    var y_base: int = 54 if index % 2 == 0 else 118
+    var y_drift: int = drift_values[index % 5]
+    return Vector2(60 + index * 82 + stagger_x, mini(140, y_base + y_drift + row_offset))
 
 func _computed_status(benefit: Dictionary, level: int) -> String:
     if level < int(benefit.get("levelRequired", 0)):
         return "locked"
-    var raw_status := str(benefit.get("status", "available"))
+    var raw_status: String = str(benefit.get("status", "available"))
     if benefit.get("pendingRequest", null) is Dictionary or raw_status == "pending":
         return "pending"
     if raw_status == "frozen":
@@ -319,7 +326,7 @@ func _computed_status(benefit: Dictionary, level: int) -> String:
     return "available"
 
 func _status_text(benefit: Dictionary, level: int) -> String:
-    var status := _computed_status(benefit, level)
+    var status: String = _computed_status(benefit, level)
     match status:
         "locked":
             return "未解锁"
@@ -328,10 +335,10 @@ func _status_text(benefit: Dictionary, level: int) -> String:
         "frozen":
             return "已冻结"
         "cooldown":
-            var text := str(benefit.get("cooldownText", ""))
+            var text: String = str(benefit.get("cooldownText", ""))
             return text if not text.is_empty() else "未冷却"
         _:
-            var bonus := int(benefit.get("availableBonusCount", 0))
+            var bonus: int = int(benefit.get("availableBonusCount", 0))
             if bonus > 0:
                 return "奖励 %s 次" % bonus
             if not str(benefit.get("lastApprovedAt", "")).is_empty():
@@ -351,22 +358,23 @@ func _close_modal() -> void:
 func _load_illustration(level: int, raw_url: String) -> void:
     if raw_url.is_empty():
         return
-    var url := raw_url
+    var url: String = raw_url
     if not url.begins_with("http://") and not url.begins_with("https://"):
         if not url.begins_with("/"):
             url = "/%s" % url
         url = "https://www.laoniulaoge.cn%s" % url
-    var path_only := url.split("?", true, 1)[0]
-    var format := str(path_only).get_extension().to_lower()
-    var entry := {"url": url, "format": format, "version": 1}
-    var texture := await CloudAssetManager.load_texture("benefit-%02d-illustration" % level, entry)
+    var split_result: PackedStringArray = url.split("?", true, 1)
+    var path_only: String = split_result[0]
+    var format: String = path_only.get_extension().to_lower()
+    var entry: Dictionary = {"url": url, "format": format, "version": 1}
+    var texture: Texture2D = await CloudAssetManager.load_texture("benefit-%02d-illustration" % level, entry)
     if level == _loaded_level and texture != null:
         _illustration.texture = texture
 
 func _layout() -> void:
     if _root == null:
         return
-    var viewport_size := get_viewport().get_visible_rect().size
+    var viewport_size: Vector2 = get_viewport().get_visible_rect().size
     _root.position = Vector2.ZERO
     _root.size = viewport_size
     _illustration.position = Vector2(0, viewport_size.y * 0.13)
@@ -382,13 +390,15 @@ func _layout() -> void:
     _commission_label.position = Vector2(20, viewport_size.y - 116)
     _commission_label.size = Vector2(viewport_size.x - 40, 28)
 
-    for child in _root.get_children():
+    for child: Node in _root.get_children():
         if child.has_meta("layout") and str(child.get_meta("layout")) == "swipe":
-            child.position = Vector2(20, viewport_size.y - 72)
-            child.size = Vector2(viewport_size.x - 40, 26)
+            var control: Control = child as Control
+            if control != null:
+                control.position = Vector2(20, viewport_size.y - 72)
+                control.size = Vector2(viewport_size.x - 40, 26)
 
     _modal.position = Vector2(32, viewport_size.y * 0.30)
-    _modal.size = Vector2(viewport_size.x - 64, min(360.0, viewport_size.y * 0.48))
+    _modal.size = Vector2(viewport_size.x - 64, minf(360.0, viewport_size.y * 0.48))
     _modal_title.position = Vector2(18, 20)
     _modal_title.size = Vector2(_modal.size.x - 36, 34)
     _modal_status.position = Vector2(18, 60)
