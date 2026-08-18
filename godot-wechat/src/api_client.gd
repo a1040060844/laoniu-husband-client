@@ -11,6 +11,7 @@ var _http: HTTPRequest = HTTPRequest.new()
 var _operation: String = ""
 
 func _ready() -> void:
+    _http.timeout = 12.0
     add_child(_http)
     _http.request_completed.connect(_on_request_completed)
 
@@ -57,14 +58,16 @@ func _on_request_completed(
     _operation = ""
 
     if result != HTTPRequest.RESULT_SUCCESS:
-        request_failed.emit("网络请求失败：%s" % result)
+        request_failed.emit("网络请求失败（result=%s）" % result)
         return
 
     var text: String = body.get_string_from_utf8()
     var parsed: Variant = JSON.parse_string(text)
-    var payload: Dictionary = {}
-    if parsed is Dictionary:
-        payload = parsed
+    if not parsed is Dictionary:
+        request_failed.emit("服务器返回的 JSON 不是对象（HTTP %s）" % response_code)
+        return
+
+    var payload: Dictionary = parsed as Dictionary
 
     if response_code == 409:
         revision_conflict.emit(str(payload.get("revision", "")))
@@ -72,15 +75,15 @@ func _on_request_completed(
 
     if response_code < 200 or response_code >= 300:
         request_failed.emit(
-            "服务器返回 %s：%s" % [response_code, str(payload.get("error", text))]
+            "服务器返回 HTTP %s：%s" % [response_code, str(payload.get("error", text))]
         )
         return
 
     if operation == "load":
-        var raw_state: Variant = payload.get("state", {})
-        var state: Dictionary = {}
-        if raw_state is Dictionary:
-            state = raw_state
-        state_loaded.emit(state, str(payload.get("revision", "")))
+        var raw_state: Variant = payload.get("state", null)
+        if not raw_state is Dictionary:
+            request_failed.emit("/api/state 缺少有效 state 对象")
+            return
+        state_loaded.emit(raw_state as Dictionary, str(payload.get("revision", "")))
     elif operation == "save":
         state_saved.emit(str(payload.get("revision", "")))
