@@ -3,6 +3,18 @@ extends Node
 signal cloud_assets_ready
 signal cloud_assets_degraded(message: String)
 
+const LOGIN_PREFETCH_ASSETS := [
+    "background",
+    "husband",
+    "wife",
+    "cat-blue",
+    "cat-white",
+    "card-husband",
+    "card-wife",
+    "title",
+    "subtitle",
+]
+
 var ready := false
 
 func _ready() -> void:
@@ -24,7 +36,7 @@ func _on_manifest_failed(message: String) -> void:
     cloud_assets_degraded.emit(message)
 
 func _prefetch_login_assets() -> void:
-    for asset_name in ["background", "husband", "wife"]:
+    for asset_name in LOGIN_PREFETCH_ASSETS:
         var entry := AssetManifest.get_login_asset(asset_name)
         if entry.is_empty() or AssetManifest.resolve_url(entry).is_empty():
             continue
