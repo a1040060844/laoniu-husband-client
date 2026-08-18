@@ -2,7 +2,7 @@
 
 这个目录与现有 React/PWA 完全隔离，用于验证 Godot 4 → 微信小游戏重构路线。生产站点和 `main` 不受影响。
 
-## 当前目录
+## 当前结构
 
 ```text
 godot-wechat/
@@ -22,48 +22,50 @@ godot-wechat/
     ├── login_sprite_player.gd
     ├── login_animation_overlay.gd
     ├── role_visual_overlay.gd
+    ├── benefit_visual_overlay.gd
+    ├── task_visual_overlay.gd
+    ├── husband_audio_controller.gd
+    ├── husband_quick_controls.gd
     └── main.gd
 ```
 
 ## 已完成
 
-### 基础运行骨架
+### 基础与状态同步
 
 - 390×844 手机基准画布
 - nearest texture filtering
 - 老哥三屏：权益 / 职务 / 任务
-- 上下滑切屏与 Tween 动画
+- 上下滑切屏 + Tween
 - GET `/api/state`
 - PUT `/api/state` + revision
 - HTTP 409 revision conflict 处理
 
-### 云资源层
+### 云资源
 
 - 远程 `manifest.json`
-- `user://cloud-assets` 本地缓存
-- 资源 version 缓存键
+- `user://cloud-assets` 缓存
+- version 缓存键
 - PNG / WebP / JPEG 运行时纹理解码
 - MP3 / WAV 运行时音频加载
 - BGM / SFX 管理器
-- 登录资源预取
+- 异步 BGM 代际保护，旧下载不会覆盖新曲目
 
-正式资源清单默认地址：
+默认资源清单：
 
 ```text
 https://www.laoniulaoge.cn/game-assets/manifest.json
 ```
 
-如果远程清单不存在，开发环境会使用 `config/asset_manifest.example.json`。
+远程清单不可用时，开发环境降级到 `config/asset_manifest.example.json`。
 
 ### 登录页
 
-已按 React 页面参数迁移：
+按原 React 参数迁移：
 
 ```text
 背景源尺寸     941 × 1672
-背景缩放       contain / keep aspect centered
-标题宽度       86vw，上限 370
-副标题宽度     57vw，上限 245
+背景缩放       contain / centered
 老哥锚点       38%, 65%
 老妞锚点       59%, 65%
 蓝猫锚点       51%, 74%
@@ -73,83 +75,111 @@ https://www.laoniulaoge.cn/game-assets/manifest.json
 
 已实现：
 
-- 背景、标题、副标题
-- 老哥、老妞、蓝猫、白猫
-- 两张身份卡
-- 音乐按钮
-- 复位按钮
-- 上下暗角
-- 恋爱天数挂牌
+- 背景、标题、副标题、身份卡、音乐按钮、复位按钮
+- 上下暗角、恋爱天数挂牌
 - 人物/猫咪拖拽
-- 标题和卡片轻浮动
+- 标题与卡片浮动
 - 登录 BGM
 - `index.json + metrics.json + sprite.png` Sprite Sheet 播放器
 - 老哥 idle / drag / select / adjust-glasses / nervous
 - 老妞 idle / drag / select / response / thinking
 - 蓝猫 idle / blink / drag / lick / lift / tail / yawn
 - 白猫 idle / drag / jump / lookaround / roll / stretch
-- 原 React 随机待机时间与权重
-- 登录欢迎气泡
-- 老妞思考气泡
+- 原 React 随机待机间隔与权重
+- 登录欢迎气泡、老妞思考气泡
 - 选择老哥时 `husband.select + wife.response + 气泡`
-- select 完成后延迟进入老哥端
-- 动画下载失败 7 秒兜底，避免登录页卡死
-- 动画首帧加载成功前保留静态 PNG，避免白屏
+- select 完成后进入老哥端
+- 动画下载失败 7 秒兜底
+- 动画首帧成功前保留静态 PNG
 
-### 老哥职务主页
+### 老哥职务页
 
-已新增状态驱动的 Godot 覆盖层：
-
-- 根据 `/api/state` 当前 level 找到 role
+- 根据 `/api/state` 当前 level 读取 role
 - 动态加载 `roleImage`
 - Lv / 职务名称
 - 基础零花钱
-- 当前经验 / 所需经验
-- 经验条
+- 当前经验 / 所需经验 + 经验条
 - 人物小传
-- 12 个等级指示点
-- 下滑查看权益 / 上滑查看任务提示
-- 全屏插画 contain + 暗角遮罩
+- 12 个等级点
+- 下滑权益 / 上滑任务提示
+- 全屏插画 contain + 暗角
+- 返回登录按钮
+- 音乐开关
+
+### 老哥权益页
+
+- 动态加载当前 role 的 `benefitImage`
+- 按 `levelRequired` 过滤已解锁权益
+- 支持 `displayVariants`
+- 可申请 / 待审批 / 冷却 / 冻结 / 锁定状态
+- 1–5 个权益复刻原稀疏气泡布局
+- 超过 5 个自动循环漂移
+- 权益名称、状态、频率、说明详情弹窗
+- 显示当前职务佣金
+
+### 老哥任务页
+
+- 真实 `/api/state.tasks`
+- 老婆发布 / 每日任务来源切换
+- 全部 / 待执行 / 进行中 / 待确认 / 已完成筛选
+- 今日待执行 / 待提交 / 待确认 / 今日可得 EXP 统计
+- 本月零花钱 / 完成任务 / EXP 汇总
+- 真实任务标题、描述、奖励、期限、状态
+- `todo → doing` 开始执行
+- `doing → submitted` 提交完成
+- 写入 `submittedAt / submitNote`
+- 追加 `task_submitted` 日志
+- 保存继续走 revision 冲突保护
+
+### BGM 路由
+
+保持 Web 版规则：
+
+```text
+登录页           bgm-login
+职务页           bgm-role-00 ~ bgm-role-11
+权益页           延续当前等级 role BGM
+任务页           停止 BGM
+```
+
+登录 BGM 约 -20 dB；职务/权益约 -20.92 dB，对应 Web 中约 0.10 / 0.09 的线性音量。
 
 ## 开发期资源说明
 
-当前网站已有的静态资源直接使用：
+当前网站静态资源暂时直接读取：
 
 ```text
 https://www.laoniulaoge.cn/assets/...
 ```
 
-`login-final` Sprite Sheet 和部分气泡目前为了方便 Godot 编辑器验证，fallback 临时读取 `raw.githubusercontent.com`。
+`login-final` Sprite Sheet、JSON 和部分气泡为了开发验证，fallback 暂时指向 `raw.githubusercontent.com`。
 
-**这不是微信小游戏正式资源方案。** 正式导出前必须把这些 Sprite Sheet、JSON 和气泡一起迁到你自己的 HTTPS 云资源域名，并在正式 manifest 中替换 `root_url`。页面和动画代码不需要随之修改。
+**正式微信小游戏导出前必须迁移到自己的 HTTPS 云资源域名。** 迁移时只需要替换 manifest / `root_url`，页面和动画逻辑不需要重写。
 
-## 当前不处理
+## 当前验收状态
 
-- 不修改现有 React/PWA 生产前端
-- 不迁移 `/admin`
-- 不替换 Node/SQLite
-- 不把当前大 PNG / Sprite Sheet / BGM 打入小游戏首包
-- 暂不接微信登录、支付或审核 API
+- GitHub 分支代码和资源路径已完成静态核对。
+- 使用 Godot 4.x 官方稳定 API 编写。
+- 当前执行容器没有预装 Godot，且容器到 GitHub 的直接 DNS/二进制下载受限，所以尚未完成 `godot --headless` 真机解析。
+- 因此当前不能把“代码已写入”表述为“Godot 已实际启动通过”。
 
-## 下一阶段
+## 后续
 
-1. 在 Godot 4.x 实际运行并截图，对登录页做 390×844 overlay 校准。
-2. 校准 Sprite anchor、人物层级和气泡位置。
-3. 完成职务页左右等级预览、返回登录、通知/音乐/聊天快捷按钮。
-4. 把权益页从占位层替换成真实插画和权益数据。
-5. 把任务页接真实任务数组和统计数据。
-6. 将开发期 GitHub Sprite 资源迁到正式云资源清单。
-7. 接入 Godot → 微信小游戏导出适配层。
+1. 在可运行 Godot 4.x 的环境执行 headless import / parse。
+2. 运行 390×844 场景并与 Web 截图 overlay 校准。
+3. 修正人物 anchor、气泡、职务页面板等像素差异。
+4. 补职务左右等级预览、通知和聊天快捷入口。
+5. 继续迁移老妞端。
+6. 把开发期 GitHub 动画资源迁到正式云资源。
+7. 接入 Godot → 微信小游戏导出适配层并在微信开发者工具验证。
 
 ## 运行
-
-使用 Godot 4.x 打开：
 
 ```text
 godot-wechat/project.godot
 ```
 
-API 默认：
+默认 API：
 
 ```text
 https://www.laoniulaoge.cn
