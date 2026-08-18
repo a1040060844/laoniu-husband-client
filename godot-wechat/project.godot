@@ -18,6 +18,7 @@ LoginVisualOverlay="*res://src/login_visual_overlay.gd"
 LoginAnimationOverlay="*res://src/login_animation_overlay.gd"
 RoleVisualOverlay="*res://src/role_visual_overlay.gd"
 BenefitVisualOverlay="*res://src/benefit_visual_overlay.gd"
+TaskVisualOverlay="*res://src/task_visual_overlay.gd"
 HusbandAudioController="*res://src/husband_audio_controller.gd"
 
 [display]
