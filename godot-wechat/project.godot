@@ -17,6 +17,7 @@ AssetBootstrap="*res://src/asset_bootstrap.gd"
 LoginVisualOverlay="*res://src/login_visual_overlay.gd"
 LoginAnimationOverlay="*res://src/login_animation_overlay.gd"
 RoleVisualOverlay="*res://src/role_visual_overlay.gd"
+HusbandAudioController="*res://src/husband_audio_controller.gd"
 
 [display]
 window/size/viewport_width=390
