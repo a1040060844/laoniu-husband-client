@@ -3,15 +3,15 @@ extends Node
 signal manifest_loaded(data: Dictionary)
 signal manifest_failed(message: String)
 
-const DEFAULT_MANIFEST_URL := "https://www.laoniulaoge.cn/game-assets/manifest.json"
-const LOCAL_FALLBACK_PATH := "res://config/asset_manifest.example.json"
+const DEFAULT_MANIFEST_URL: String = "https://www.laoniulaoge.cn/game-assets/manifest.json"
+const LOCAL_FALLBACK_PATH: String = "res://config/asset_manifest.example.json"
 
-var manifest_url := DEFAULT_MANIFEST_URL
+var manifest_url: String = DEFAULT_MANIFEST_URL
 var data: Dictionary = {}
-var loading := false
+var loading: bool = false
 
 func _ready() -> void:
-    var configured_url = ProjectSettings.get_setting(
+    var configured_url: Variant = ProjectSettings.get_setting(
         "laoniu/assets/manifest_url",
         DEFAULT_MANIFEST_URL
     )
@@ -26,9 +26,9 @@ func load_manifest() -> void:
         _finish_with_local_fallback("未配置云资源清单地址")
         return
 
-    var request := HTTPRequest.new()
+    var request: HTTPRequest = HTTPRequest.new()
     add_child(request)
-    var error := request.request(
+    var error: Error = request.request(
         manifest_url,
         ["Accept: application/json"],
         HTTPClient.METHOD_GET
@@ -38,18 +38,18 @@ func load_manifest() -> void:
         _finish_with_local_fallback("无法发起资源清单请求：%s" % error_string(error))
         return
 
-    var response = await request.request_completed
+    var response: Array = await request.request_completed
     request.queue_free()
 
-    var result := int(response[0])
-    var response_code := int(response[1])
+    var result: int = int(response[0])
+    var response_code: int = int(response[1])
     var body: PackedByteArray = response[3]
 
     if result != HTTPRequest.RESULT_SUCCESS or response_code < 200 or response_code >= 300:
         _finish_with_local_fallback("云资源清单读取失败：HTTP %s" % response_code)
         return
 
-    var parsed = JSON.parse_string(body.get_string_from_utf8())
+    var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
     if not parsed is Dictionary:
         _finish_with_local_fallback("云资源清单不是有效 JSON 对象")
         return
@@ -80,15 +80,15 @@ func get_audio_asset(name: String) -> Dictionary:
     return _nested_entry(["audio", name])
 
 func resolve_url(entry: Dictionary) -> String:
-    var raw_url := str(entry.get("url", "")).strip_edges()
+    var raw_url: String = str(entry.get("url", "")).strip_edges()
     if raw_url.begins_with("https://") or raw_url.begins_with("http://"):
         return raw_url
 
-    var path := str(entry.get("path", "")).strip_edges()
+    var path: String = str(entry.get("path", "")).strip_edges()
     if path.is_empty():
         return ""
 
-    var base_url := str(data.get("base_url", "")).trim_suffix("/")
+    var base_url: String = str(data.get("base_url", "")).trim_suffix("/")
     if base_url.is_empty():
         return path
     return "%s/%s" % [base_url, path.trim_prefix("/")]
@@ -97,22 +97,25 @@ func cache_version(entry: Dictionary) -> String:
     return str(entry.get("version", data.get("version", "1")))
 
 func asset_format(entry: Dictionary) -> String:
-    var explicit := str(entry.get("format", "")).to_lower()
+    var explicit: String = str(entry.get("format", "")).to_lower()
     if not explicit.is_empty():
         return explicit
-    var path := str(entry.get("path", entry.get("url", "")))
+    var path: String = str(entry.get("path", entry.get("url", "")))
     return path.get_extension().to_lower()
 
 func _nested_entry(parts: Array[String]) -> Dictionary:
     var current: Variant = data
-    for part in parts:
-        if not current is Dictionary or not current.has(part):
+    for part: String in parts:
+        if not current is Dictionary:
             return {}
-        current = current[part]
+        var current_dict: Dictionary = current
+        if not current_dict.has(part):
+            return {}
+        current = current_dict[part]
     return current if current is Dictionary else {}
 
 func _finish_with_local_fallback(reason: String) -> void:
-    var fallback := _read_local_manifest()
+    var fallback: Dictionary = _read_local_manifest()
     loading = false
     if fallback.is_empty():
         manifest_failed.emit(reason)
@@ -123,8 +126,8 @@ func _finish_with_local_fallback(reason: String) -> void:
 func _read_local_manifest() -> Dictionary:
     if not FileAccess.file_exists(LOCAL_FALLBACK_PATH):
         return {}
-    var file := FileAccess.open(LOCAL_FALLBACK_PATH, FileAccess.READ)
+    var file: FileAccess = FileAccess.open(LOCAL_FALLBACK_PATH, FileAccess.READ)
     if file == null:
         return {}
-    var parsed = JSON.parse_string(file.get_as_text())
+    var parsed: Variant = JSON.parse_string(file.get_as_text())
     return parsed if parsed is Dictionary else {}
