@@ -1,5 +1,6 @@
 import { benefits as defaultBenefits } from "../data/benefits";
 import { roles as defaultRoles } from "../data/roles";
+import { DEFAULT_MAX_LEVEL, salaryForLevel } from "../game/progression";
 import type {
   Benefit,
   BenefitRequest,
@@ -11,6 +12,12 @@ import type {
 } from "../types/domain";
 
 export type ConfigSource = "default" | "override" | "custom";
+
+export interface IllustrationLayout {
+  offsetX: number;
+  offsetY: number;
+  scale: number;
+}
 
 export interface AssetReference {
   id: string;
@@ -34,6 +41,8 @@ export interface AssetReference {
   usedBy?: string[];
   isDefault?: boolean;
   createdAt?: string;
+  placementKey?: string;
+  layout?: IllustrationLayout;
 }
 
 export interface RoleThemeConfig {
@@ -185,6 +194,28 @@ function safeInt(value: unknown, fallback: number, min = 0) {
   return Math.max(min, Math.trunc(number));
 }
 
+function safeNumber(
+  value: unknown,
+  fallback: number,
+  min: number,
+  max: number,
+) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(max, Math.max(min, number));
+}
+
+function normalizeIllustrationLayout(
+  raw: unknown,
+): IllustrationLayout | undefined {
+  if (!isRecord(raw)) return undefined;
+  return {
+    offsetX: safeNumber(raw.offsetX, 0, -40, 40),
+    offsetY: safeNumber(raw.offsetY, 0, -40, 40),
+    scale: safeNumber(raw.scale, 100, 60, 160),
+  };
+}
+
 function defaultRoleImage(level: number) {
   const mapped: Record<number, string> = {
     0: "/assets/roles/role-00-street-vagrant.png",
@@ -248,7 +279,10 @@ function normalizeRoleDefinition(raw: unknown): RoleDefinition | null {
     level,
     title: nonEmptyString(raw.title, `Lv.${level} 自定义职务`),
     englishTitle: optionalString(raw.englishTitle),
-    salary: safeInt(raw.salary, 280 + Math.max(0, level - 1) * 20),
+    salary: safeInt(
+      raw.salary,
+      salaryForLevel(level, Math.max(DEFAULT_MAX_LEVEL, level)),
+    ),
     description: optionalString(raw.description),
     story: nonEmptyString(raw.story, "后台新增的自定义职务。"),
     illustration: nonEmptyString(raw.illustration, defaultRoleImage(level)),
@@ -438,7 +472,17 @@ function normalizeAsset(raw: unknown): AssetReference | null {
       : [],
     isDefault: raw.isDefault === true,
     createdAt: optionalString(raw.createdAt),
+    placementKey: optionalString(raw.placementKey),
+    layout: normalizeIllustrationLayout(raw.layout),
   };
+}
+
+export function illustrationLayoutFor(
+  config: AdminConfigState,
+  placementKey: string,
+): IllustrationLayout | undefined {
+  return config.assets.find((asset) => asset.placementKey === placementKey)
+    ?.layout;
 }
 
 export function normalizeAdminConfig(raw: unknown): AdminConfigState {

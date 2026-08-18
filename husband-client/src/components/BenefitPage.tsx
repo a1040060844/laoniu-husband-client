@@ -7,8 +7,9 @@ import { OrnateSwipeHint } from "./OrnateSwipeHint";
 import { RoleNavigator } from "./RoleNavigator";
 import type { Benefit, BenefitStatus, Role, ViewKey } from "../types/domain";
 import { AnimatedContent } from "./effects/AnimatedContent";
-import { benefitForLevel } from "../data/benefits";
+import { benefitForLevel, benefitStatusForLevel } from "../data/benefits";
 import { playSoundEffect } from "../lib/soundEffects";
+import type { IllustrationLayout } from "../lib/adminConfig";
 
 interface BenefitPageProps {
   role: Role;
@@ -27,6 +28,7 @@ interface BenefitPageProps {
   onCloseBenefit: () => void;
   onUseBenefit: (benefit: Benefit) => void;
   onSelectView: (view: ViewKey) => void;
+  illustrationLayout?: IllustrationLayout;
 }
 
 function getStatus(
@@ -37,22 +39,17 @@ function getStatus(
   if (forceFrozen) {
     return { status: "frozen", text: "已冻结" };
   }
-  if (currentLevel < benefit.levelRequired) {
+  const status = benefitStatusForLevel(benefit, currentLevel);
+  if (status === "locked") {
     return {
       status: "locked",
       text: "未解锁",
     };
   }
-  if (benefit.pendingRequest) {
+  if (status === "pending") {
     return { status: "pending", text: "待审批" };
   }
-  if (
-    benefit.cooldownUntil &&
-    Date.parse(benefit.cooldownUntil) > Date.now()
-  ) {
-    return { status: "cooldown", text: benefit.cooldownText ?? "未冷却" };
-  }
-  if (benefit.status === "cooldown" && !benefit.cooldownUntil) {
+  if (status === "cooldown") {
     return { status: "cooldown", text: benefit.cooldownText ?? "未冷却" };
   }
   return {
@@ -135,6 +132,7 @@ export function BenefitPage({
   onCloseBenefit,
   onUseBenefit,
   onSelectView,
+  illustrationLayout,
 }: BenefitPageProps) {
   const [burstingBenefitId, setBurstingBenefitId] = useState<string | null>(
     null,
@@ -223,6 +221,13 @@ export function BenefitPage({
         className="cinema-image"
         src={role.benefitImage}
         alt={`${role.title}权益背景`}
+        style={
+          {
+            "--asset-illustration-offset-x": `${illustrationLayout?.offsetX ?? 0}%`,
+            "--asset-illustration-offset-y": `${illustrationLayout?.offsetY ?? 0}%`,
+            "--asset-illustration-scale": `${(illustrationLayout?.scale ?? 100) / 100}`,
+          } as CSSProperties
+        }
       />
       <div className="image-scrim image-scrim--benefit" />
       {isLockedPreview && (

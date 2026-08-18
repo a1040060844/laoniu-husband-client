@@ -331,7 +331,7 @@ export function buildTaskDescription(
 
 export function createRewardLabel(reward: TaskReward) {
   if (reward.type === "experience") {
-    return `${Math.min(30, Math.max(0, Math.trunc(reward.value ?? 0)))}经验`;
+    return `${Math.max(0, Math.trunc(reward.value ?? 0))}经验`;
   }
   if (reward.type === "allowance") {
     return `${Math.max(0, Math.trunc(reward.value ?? 0))}元`;

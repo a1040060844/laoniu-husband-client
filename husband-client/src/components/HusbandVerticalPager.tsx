@@ -7,6 +7,7 @@ import {
   type WheelEvent,
 } from "react";
 import { playSoundEffect } from "../lib/soundEffects";
+import { canReturnFromTaskPage } from "../lib/pagerGesture";
 
 export const HUSBAND_PAGES = {
   BENEFIT: 0,
@@ -51,6 +52,7 @@ export function HusbandVerticalPager({
 }: HusbandVerticalPagerProps) {
   const [internalPage, setInternalPage] = useState<number>(initialPage);
   const touchStart = useRef<TouchPoint | null>(null);
+  const taskScrollTopAtTouchStart = useRef<number | null>(null);
   const wheelLocked = useRef(false);
   const currentPage = clampPage(activePage ?? internalPage, minPage, maxPage);
   const trackStyle = {
@@ -72,6 +74,13 @@ export function HusbandVerticalPager({
   function handleTouchStart(event: TouchEvent<HTMLDivElement>) {
     const touch = event.touches[0];
     touchStart.current = touch ? { x: touch.clientX, y: touch.clientY } : null;
+    const taskScroller = (event.target as HTMLElement | null)?.closest(
+      ".task-page",
+    );
+    taskScrollTopAtTouchStart.current =
+      currentPage === HUSBAND_PAGES.TASK && taskScroller instanceof HTMLElement
+        ? taskScroller.scrollTop
+        : null;
   }
 
   function handleTouchEnd(event: TouchEvent<HTMLDivElement>) {
@@ -82,6 +91,8 @@ export function HusbandVerticalPager({
     const deltaY =
       (touch?.clientY ?? touchStart.current.y) - touchStart.current.y;
     touchStart.current = null;
+    const taskScrollTop = taskScrollTopAtTouchStart.current;
+    taskScrollTopAtTouchStart.current = null;
 
     if (
       Math.abs(deltaX) > Math.abs(deltaY) &&
@@ -92,6 +103,14 @@ export function HusbandVerticalPager({
       } else {
         onSwipeRight?.();
       }
+      return;
+    }
+
+    if (
+      deltaY > SWIPE_THRESHOLD &&
+      currentPage === HUSBAND_PAGES.TASK &&
+      !canReturnFromTaskPage(taskScrollTop)
+    ) {
       return;
     }
 
