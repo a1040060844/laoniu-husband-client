@@ -13,6 +13,7 @@ const LOGIN_PREFETCH_ASSETS := [
     "card-wife",
     "title",
     "subtitle",
+    "music-toggle",
 ]
 
 var ready := false
