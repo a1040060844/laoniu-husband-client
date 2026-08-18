@@ -3,13 +3,13 @@ extends Node
 signal bgm_changed(asset_id: String)
 signal audio_failed(asset_id: String, message: String)
 
-var _bgm_player := AudioStreamPlayer.new()
-var _sfx_player := AudioStreamPlayer.new()
-var _current_bgm_id := ""
-var _bgm_generation := 0
-var bgm_volume_db := -20.0
-var sfx_volume_db := -4.0
-var muted := false
+var _bgm_player: AudioStreamPlayer = AudioStreamPlayer.new()
+var _sfx_player: AudioStreamPlayer = AudioStreamPlayer.new()
+var _current_bgm_id: String = ""
+var _bgm_generation: int = 0
+var bgm_volume_db: float = -20.0
+var sfx_volume_db: float = -4.0
+var muted: bool = false
 
 func _ready() -> void:
     _bgm_player.name = "BGM"
@@ -20,7 +20,7 @@ func _ready() -> void:
     _sfx_player.volume_db = sfx_volume_db
 
 func play_bgm(asset_id: String) -> void:
-    var entry := AssetManifest.get_audio_asset(asset_id)
+    var entry: Dictionary = AssetManifest.get_audio_asset(asset_id)
     if entry.is_empty():
         audio_failed.emit(asset_id, "资源清单中不存在该 BGM")
         return
@@ -32,8 +32,8 @@ func play_bgm_entry(asset_id: String, entry: Dictionary, volume_db_value: float 
         return
 
     _bgm_generation += 1
-    var generation := _bgm_generation
-    var stream := await _stream_from_entry(asset_id, entry, true)
+    var generation: int = _bgm_generation
+    var stream: AudioStream = await _stream_from_entry(asset_id, entry, true)
     if generation != _bgm_generation or stream == null:
         return
 
@@ -46,12 +46,12 @@ func play_bgm_entry(asset_id: String, entry: Dictionary, volume_db_value: float 
     bgm_changed.emit(asset_id)
 
 func play_sfx(asset_id: String) -> void:
-    var entry := AssetManifest.get_audio_asset(asset_id)
+    var entry: Dictionary = AssetManifest.get_audio_asset(asset_id)
     if entry.is_empty():
         audio_failed.emit(asset_id, "资源清单中不存在该音效")
         return
 
-    var stream := await _stream_from_entry(asset_id, entry, false)
+    var stream: AudioStream = await _stream_from_entry(asset_id, entry, false)
     if stream == null:
         return
 
@@ -87,26 +87,26 @@ func _stream_from_entry(
     entry: Dictionary,
     should_loop: bool
 ) -> AudioStream:
-    var bytes := await CloudAssetManager.load_bytes(asset_id, entry)
+    var bytes: PackedByteArray = await CloudAssetManager.load_bytes(asset_id, entry)
     if bytes.is_empty():
         audio_failed.emit(asset_id, "音频下载或缓存读取失败")
         return null
 
-    var format := AssetManifest.asset_format(entry)
+    var format: String = AssetManifest.asset_format(entry)
     match format:
         "mp3":
-            var stream := AudioStreamMP3.load_from_buffer(bytes)
-            if stream == null:
+            var mp3_stream: AudioStreamMP3 = AudioStreamMP3.load_from_buffer(bytes)
+            if mp3_stream == null:
                 audio_failed.emit(asset_id, "MP3 解码失败")
                 return null
-            stream.loop = should_loop
-            return stream
+            mp3_stream.loop = should_loop
+            return mp3_stream
         "wav":
-            var stream := AudioStreamWAV.load_from_buffer(bytes)
-            if stream == null:
+            var wav_stream: AudioStreamWAV = AudioStreamWAV.load_from_buffer(bytes)
+            if wav_stream == null:
                 audio_failed.emit(asset_id, "WAV 解码失败")
                 return null
-            return stream
+            return wav_stream
         _:
             audio_failed.emit(asset_id, "PoC 暂不支持音频格式：%s" % format)
             return null
