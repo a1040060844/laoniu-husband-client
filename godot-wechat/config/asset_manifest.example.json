@@ -46,6 +46,11 @@
       "path": "login/subtitle.png",
       "format": "png",
       "version": 1
+    },
+    "music-toggle": {
+      "path": "ui/login-music-toggle.png",
+      "format": "png",
+      "version": 1
     }
   },
   "roles": {
