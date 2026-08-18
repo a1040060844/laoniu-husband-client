@@ -14,6 +14,7 @@ AssetManifest="*res://src/asset_manifest.gd"
 CloudAssetManager="*res://src/cloud_asset_manager.gd"
 AudioManager="*res://src/audio_manager.gd"
 AssetBootstrap="*res://src/asset_bootstrap.gd"
+LoginVisualOverlay="*res://src/login_visual_overlay.gd"
 
 [display]
 window/size/viewport_width=390
