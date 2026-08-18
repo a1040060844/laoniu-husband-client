@@ -13,6 +13,7 @@ GameState="*res://src/game_state.gd"
 AssetManifest="*res://src/asset_manifest.gd"
 CloudAssetManager="*res://src/cloud_asset_manager.gd"
 AudioManager="*res://src/audio_manager.gd"
+AssetBootstrap="*res://src/asset_bootstrap.gd"
 
 [display]
 window/size/viewport_width=390
