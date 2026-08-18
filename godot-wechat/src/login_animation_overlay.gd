@@ -58,6 +58,11 @@ func _mount_when_ready() -> void:
     else:
         AssetBootstrap.cloud_assets_ready.connect(_setup_players, CONNECT_ONE_SHOT)
 
+func _player_for(character_id: String) -> LoginSpritePlayer:
+    if not _players.has(character_id):
+        return null
+    return _players[character_id] as LoginSpritePlayer
+
 func _setup_players() -> void:
     if _mounted:
         return
@@ -67,7 +72,9 @@ func _setup_players() -> void:
         var action_map: Dictionary = AssetManifest.get_login_animations(character_id)
         if action_map.is_empty():
             continue
-        var player: Node = LoginSpritePlayerScript.new()
+        var player: LoginSpritePlayer = LoginSpritePlayerScript.new() as LoginSpritePlayer
+        if player == null:
+            continue
         player.name = "Animated_%s" % character_id.replace("-", "_")
         player.visual_ready.connect(_on_visual_ready)
         player.action_finished.connect(_on_action_finished)
@@ -119,11 +126,15 @@ func _process(delta: float) -> void:
 
     _elapsed += delta
     var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-    for character_id: Variant in _players.keys():
-        var id: String = str(character_id)
-        var player: Node = _players[id]
-        var anchor_value: Variant = LoginVisualOverlay._sprite_anchor_pct.get(id, Vector2(0.5, 0.5))
-        var anchor_pct: Vector2 = anchor_value as Vector2
+    for character_value: Variant in _players.keys():
+        var character_id: String = str(character_value)
+        var player: LoginSpritePlayer = _player_for(character_id)
+        if player == null:
+            continue
+        var anchor_value: Variant = LoginVisualOverlay._sprite_anchor_pct.get(character_id, Vector2(0.5, 0.5))
+        var anchor_pct: Vector2 = Vector2(0.5, 0.5)
+        if anchor_value is Vector2:
+            anchor_pct = anchor_value
         player.position = Vector2(viewport_size.x * anchor_pct.x, viewport_size.y * anchor_pct.y)
         player.z_index = 10 + int(round(anchor_pct.y * 100.0))
 
@@ -148,7 +159,9 @@ func _layout_bubbles(viewport_size: Vector2) -> void:
         if bubble == null or not bubble.visible:
             continue
         var anchor_value: Variant = LoginVisualOverlay._sprite_anchor_pct.get(target, Vector2(0.5, 0.5))
-        var anchor_pct: Vector2 = anchor_value as Vector2
+        var anchor_pct: Vector2 = Vector2(0.5, 0.5)
+        if anchor_value is Vector2:
+            anchor_pct = anchor_value
         var anchor: Vector2 = Vector2(viewport_size.x * anchor_pct.x, viewport_size.y * anchor_pct.y)
         var width: float = 107.0
         if target == "wife" and bubble.has_meta("thinking"):
@@ -167,17 +180,17 @@ func _sync_drag_action() -> void:
     if drag_id == _last_drag_id:
         return
 
-    if not _last_drag_id.is_empty() and _players.has(_last_drag_id):
-        var previous_player: Node = _players[_last_drag_id]
-        previous_player.play_idle()
-        _schedule_next(_last_drag_id)
+    if not _last_drag_id.is_empty():
+        var previous_player: LoginSpritePlayer = _player_for(_last_drag_id)
+        if previous_player != null:
+            previous_player.play_idle()
+            _schedule_next(_last_drag_id)
 
     _last_drag_id = drag_id
     if not drag_id.is_empty():
         _hide_bubble(drag_id)
-    if not drag_id.is_empty() and _players.has(drag_id):
-        var player: Node = _players[drag_id]
-        if player.has_action("drag"):
+        var player: LoginSpritePlayer = _player_for(drag_id)
+        if player != null and player.has_action("drag"):
             player.play_action("drag")
 
 func _run_weighted_idle_actions() -> void:
@@ -185,8 +198,8 @@ func _run_weighted_idle_actions() -> void:
         var character_id: String = str(character_value)
         if _elapsed < float(_next_idle_at.get(character_id, INF)):
             continue
-        var player: Node = _players[character_id]
-        if str(player.current_action) != "idle":
+        var player: LoginSpritePlayer = _player_for(character_id)
+        if player == null or player.current_action != "idle":
             continue
         var action: String = _pick_weighted_action(character_id)
         _schedule_next(character_id)
@@ -225,7 +238,8 @@ func _on_visual_ready(character_id: String) -> void:
         static_node.modulate.a = 0.0
 
 func _on_action_finished(character_id: String, action: String) -> void:
-    if not _players.has(character_id):
+    var player: LoginSpritePlayer = _player_for(character_id)
+    if player == null:
         return
     if str(LoginVisualOverlay._drag_id) == character_id:
         return
@@ -240,7 +254,6 @@ func _on_action_finished(character_id: String, action: String) -> void:
         return
 
     if action != "select" or not _selection_busy:
-        var player: Node = _players[character_id]
         player.play_idle()
 
 func _on_load_failed(character_id: String, action: String, message: String) -> void:
@@ -257,14 +270,12 @@ func _begin_select_husband() -> void:
     LoginVisualOverlay._drag_id = ""
     _hide_all_bubbles()
 
-    if _players.has("husband"):
-        var husband_player: Node = _players["husband"]
-        if husband_player.has_action("select"):
-            husband_player.play_action("select")
-    if _players.has("wife"):
-        var wife_player: Node = _players["wife"]
-        if wife_player.has_action("response"):
-            wife_player.play_action("response")
+    var husband_player: LoginSpritePlayer = _player_for("husband")
+    if husband_player != null and husband_player.has_action("select"):
+        husband_player.play_action("select")
+    var wife_player: LoginSpritePlayer = _player_for("wife")
+    if wife_player != null and wife_player.has_action("response"):
+        wife_player.play_action("response")
 
     _selection_fallback()
     await get_tree().create_timer(0.1).timeout
@@ -300,9 +311,10 @@ func _reset_login() -> void:
     _hide_all_bubbles()
     for character_value: Variant in _players.keys():
         var character_id: String = str(character_value)
-        var player: Node = _players[character_id]
-        player.play_idle()
-        _schedule_next(character_id)
+        var player: LoginSpritePlayer = _player_for(character_id)
+        if player != null:
+            player.play_idle()
+            _schedule_next(character_id)
     LoginVisualOverlay._layout()
     _play_login_intro()
 
