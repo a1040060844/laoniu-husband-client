@@ -7,7 +7,7 @@ var _bgm_player := AudioStreamPlayer.new()
 var _sfx_player := AudioStreamPlayer.new()
 var _current_bgm_id := ""
 var _bgm_generation := 0
-var bgm_volume_db := -10.0
+var bgm_volume_db := -20.0
 var sfx_volume_db := -4.0
 var muted := false
 
@@ -26,7 +26,7 @@ func play_bgm(asset_id: String) -> void:
         return
     play_bgm_entry(asset_id, entry, bgm_volume_db)
 
-func play_bgm_entry(asset_id: String, entry: Dictionary, volume_db_value: float = -10.0) -> void:
+func play_bgm_entry(asset_id: String, entry: Dictionary, volume_db_value: float = -20.0) -> void:
     if asset_id == _current_bgm_id and _bgm_player.playing:
         set_bgm_volume_db(volume_db_value)
         return
