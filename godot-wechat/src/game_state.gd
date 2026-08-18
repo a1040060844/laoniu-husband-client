@@ -31,7 +31,9 @@ func save_remote(next_state: Dictionary) -> void:
 
 func get_progress() -> Dictionary:
     var raw: Variant = state.get("progress", state)
-    return raw as Dictionary if raw is Dictionary else {}
+    if raw is Dictionary:
+        return raw
+    return {}
 
 func _on_state_loaded(next_state: Dictionary, next_revision: String) -> void:
     state = next_state.duplicate(true)
