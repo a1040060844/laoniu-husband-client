@@ -1,20 +1,50 @@
 {
   "version": 1,
-  "base_url": "",
+  "base_url": "https://www.laoniulaoge.cn/assets",
   "login": {
     "background": {
-      "path": "",
-      "format": "webp",
+      "path": "login/bg-room.png",
+      "format": "png",
       "version": 1
     },
     "husband": {
-      "path": "",
-      "format": "webp",
+      "path": "login/husband.png",
+      "format": "png",
       "version": 1
     },
     "wife": {
-      "path": "",
-      "format": "webp",
+      "path": "login/wife.png",
+      "format": "png",
+      "version": 1
+    },
+    "cat-blue": {
+      "path": "login/cat-blue.png",
+      "format": "png",
+      "version": 1
+    },
+    "cat-white": {
+      "path": "login/cat-white.png",
+      "format": "png",
+      "version": 1
+    },
+    "card-husband": {
+      "path": "login/card-husband.png",
+      "format": "png",
+      "version": 1
+    },
+    "card-wife": {
+      "path": "login/card-wife.png",
+      "format": "png",
+      "version": 1
+    },
+    "title": {
+      "path": "login/title.png",
+      "format": "png",
+      "version": 1
+    },
+    "subtitle": {
+      "path": "login/subtitle.png",
+      "format": "png",
       "version": 1
     }
   },
@@ -55,7 +85,7 @@
   },
   "audio": {
     "bgm-login": {
-      "path": "",
+      "path": "audio/bgm/bgm-login.mp3",
       "format": "mp3",
       "version": 1
     },
