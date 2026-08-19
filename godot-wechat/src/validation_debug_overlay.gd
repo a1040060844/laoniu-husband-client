@@ -4,6 +4,7 @@ var _canvas: CanvasLayer
 var _panel: PanelContainer
 var _status: Label
 var _toggle: Button
+var _actions: HBoxContainer
 var _collapsed: bool = false
 var _elapsed: float = 0.0
 
@@ -62,23 +63,28 @@ func _mount() -> void:
     _status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     box.add_child(_status)
 
-    var actions: HBoxContainer = HBoxContainer.new()
-    actions.add_theme_constant_override("separation", 6)
-    box.add_child(actions)
+    _actions = HBoxContainer.new()
+    _actions.add_theme_constant_override("separation", 6)
+    box.add_child(_actions)
 
     var animation_test: Button = Button.new()
     animation_test.text = "动作测试"
     animation_test.focus_mode = Control.FOCUS_NONE
     animation_test.add_theme_font_size_override("font_size", 10)
     animation_test.pressed.connect(_run_animation_test)
-    actions.add_child(animation_test)
+    _actions.add_child(animation_test)
 
     var bubble_test: Button = Button.new()
     bubble_test.text = "重播气泡"
     bubble_test.focus_mode = Control.FOCUS_NONE
     bubble_test.add_theme_font_size_override("font_size", 10)
     bubble_test.pressed.connect(_replay_bubbles)
-    actions.add_child(bubble_test)
+    _actions.add_child(bubble_test)
+
+    if not AudioManager.bgm_changed.is_connected(_on_bgm_changed):
+        AudioManager.bgm_changed.connect(_on_bgm_changed)
+    if not AudioManager.audio_failed.is_connected(_on_audio_failed):
+        AudioManager.audio_failed.connect(_on_audio_failed)
 
     get_viewport().size_changed.connect(_layout)
     _layout()
@@ -106,9 +112,8 @@ func _toggle_panel() -> void:
     _toggle.text = "展开" if _collapsed else "收起"
     if _status != null:
         _status.visible = not _collapsed
-    var box: VBoxContainer = _panel.get_child(0) as VBoxContainer
-    if box != null and box.get_child_count() >= 3:
-        box.get_child(2).visible = not _collapsed
+    if _actions != null:
+        _actions.visible = not _collapsed
     _layout()
 
 func _refresh_status() -> void:
@@ -131,20 +136,29 @@ func _refresh_status() -> void:
     lines.append("页面：%s" % page_text)
     lines.append("BGM：%s | playing=%s | muted=%s | %.1f dB" % [bgm_id, str(bgm_playing), str(AudioManager.muted), volume_db])
 
+    var players: Dictionary = {}
     var players_value: Variant = LoginAnimationOverlay.get("_players")
-    var players: Dictionary = players_value as Dictionary if players_value is Dictionary else {}
+    if players_value is Dictionary:
+        players = players_value as Dictionary
+
     for character_id: String in ["husband", "wife", "cat-blue", "cat-white"]:
         if not players.has(character_id):
             lines.append("%s：未创建" % character_id)
             continue
-        var player: Object = players[character_id] as Object
+        var object_value: Variant = players[character_id]
+        if not object_value is Object:
+            lines.append("%s：对象无效" % character_id)
+            continue
+        var player: Object = object_value as Object
         var action: String = str(player.get("current_action"))
         var ready: bool = bool(player.get("_has_visual"))
         var playing: bool = bool(player.get("_playing"))
         lines.append("%s：%s | ready=%s | playing=%s" % [character_id, action, str(ready), str(playing)])
 
+    var bubbles: Dictionary = {}
     var bubbles_value: Variant = LoginAnimationOverlay.get("_bubble_nodes")
-    var bubbles: Dictionary = bubbles_value as Dictionary if bubbles_value is Dictionary else {}
+    if bubbles_value is Dictionary:
+        bubbles = bubbles_value as Dictionary
     var husband_bubble: bool = _bubble_visible(bubbles, "husband")
     var wife_bubble: bool = _bubble_visible(bubbles, "wife")
     lines.append("气泡：husband=%s | wife=%s" % [str(husband_bubble), str(wife_bubble)])
@@ -171,7 +185,10 @@ func _bubble_visible(bubbles: Dictionary, key: String) -> bool:
     if not bubbles.has(key):
         return false
     var value: Variant = bubbles[key]
-    return value is CanvasItem and (value as CanvasItem).visible
+    if value is CanvasItem:
+        var item: CanvasItem = value as CanvasItem
+        return item.visible
+    return false
 
 func _run_animation_test() -> void:
     if LoginVisualOverlay._root == null or not LoginVisualOverlay._root.visible:
@@ -194,7 +211,10 @@ func _run_animation_test() -> void:
 func _play_test_action(players: Dictionary, character_id: String, action: String) -> void:
     if not players.has(character_id):
         return
-    var player: Object = players[character_id] as Object
+    var object_value: Variant = players[character_id]
+    if not object_value is Object:
+        return
+    var player: Object = object_value as Object
     if player.has_method("has_action") and bool(player.call("has_action", action)):
         player.call("play_action", action)
 
@@ -205,3 +225,9 @@ func _replay_bubbles() -> void:
     if LoginAnimationOverlay.has_method("_play_login_intro"):
         LoginAnimationOverlay.call("_play_login_intro")
         print("Validation bubble replay: intro requested")
+
+func _on_bgm_changed(asset_id: String) -> void:
+    print("Validation BGM changed: %s" % asset_id)
+
+func _on_audio_failed(asset_id: String, message: String) -> void:
+    print("Validation audio failed [%s]: %s" % [asset_id, message])
