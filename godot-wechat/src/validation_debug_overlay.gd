@@ -110,7 +110,7 @@ func _layout() -> void:
         _panel.size = Vector2(112.0, 38.0)
     else:
         _panel.position = Vector2(6.0, 6.0)
-        _panel.size = Vector2(viewport_size.x - 12.0, 236.0)
+        _panel.size = Vector2(viewport_size.x - 12.0, 260.0)
 
 func _toggle_panel() -> void:
     _collapsed = not _collapsed
@@ -137,8 +137,23 @@ func _refresh_status() -> void:
         bgm_playing = bgm_player.playing
         volume_db = bgm_player.volume_db
 
+    var animation_count: int = 0
+    for character_id: String in ["husband", "wife", "cat-blue", "cat-white"]:
+        animation_count += AssetManifest.get_login_animations(character_id).size()
+    var login_bgm_registered: bool = not AssetManifest.get_audio_asset("bgm-login").is_empty()
+
     var lines: Array[String] = []
     lines.append("页面：%s" % page_text)
+    lines.append(
+        "Manifest：remote=%s fallback=%s ready=%s anim=%s loginBgm=%s" % [
+            str(AssetManifest.remote_loaded),
+            str(AssetManifest.local_fallback_loaded),
+            str(AssetBootstrap.assets_ready),
+            animation_count,
+            str(login_bgm_registered),
+        ]
+    )
+    lines.append("清单：%s" % AssetManifest.last_manifest_message)
     lines.append("BGM：%s | playing=%s | muted=%s | %.1f dB" % [bgm_id, str(bgm_playing), str(AudioManager.muted), volume_db])
 
     var players: Dictionary = {}
