@@ -5,6 +5,8 @@ signal asset_failed(asset_id: String, message: String)
 
 const CACHE_ROOT: String = "user://cloud-assets"
 const REPO_ASSET_MARKER: String = "husband-client/src/assets/"
+const PUBLIC_ASSET_ORIGIN: String = "https://www.laoniulaoge.cn/assets/"
+const PUBLIC_ASSET_MARKER: String = "husband-client/public/assets/"
 
 var _memory_textures: Dictionary = {}
 var _memory_bytes: Dictionary = {}
@@ -136,11 +138,17 @@ func _debug_local_bytes_for_url(url: String) -> PackedByteArray:
     return FileAccess.get_file_as_bytes(local_path)
 
 func _debug_local_path_for_url(url: String) -> String:
-    var marker_index: int = url.find(REPO_ASSET_MARKER)
-    if marker_index < 0:
+    var clean_url: String = url.get_slice("?", 0)
+    var relative_asset_path: String = ""
+
+    var marker_index: int = clean_url.find(REPO_ASSET_MARKER)
+    if marker_index >= 0:
+        relative_asset_path = clean_url.substr(marker_index)
+    elif clean_url.begins_with(PUBLIC_ASSET_ORIGIN):
+        relative_asset_path = PUBLIC_ASSET_MARKER + clean_url.trim_prefix(PUBLIC_ASSET_ORIGIN)
+    else:
         return ""
 
-    var relative_asset_path: String = url.substr(marker_index)
     var godot_project_dir: String = ProjectSettings.globalize_path("res://").trim_suffix("/").trim_suffix("\\")
     var repository_root: String = godot_project_dir.get_base_dir()
     return repository_root.path_join(relative_asset_path).simplify_path()
