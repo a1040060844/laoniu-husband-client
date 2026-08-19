@@ -35,6 +35,7 @@ var _selection_busy: bool = false
 var _elapsed: float = 0.0
 var _next_idle_at: Dictionary = {}
 var _wife_thinking_index: int = 0
+var _bubble_sequence_generation: int = 0
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 func _ready() -> void:
@@ -279,7 +280,7 @@ func _begin_select_husband() -> void:
 
     _selection_fallback()
     await get_tree().create_timer(0.1).timeout
-    _show_bubble("husband", "thought-wife-food-1.png", false)
+    await _show_bubble("husband", "thought-wife-food-1.png", false)
 
 func _selection_fallback() -> void:
     await get_tree().create_timer(7.0).timeout
@@ -319,31 +320,47 @@ func _reset_login() -> void:
     _play_login_intro()
 
 func _play_login_intro() -> void:
+    _bubble_sequence_generation += 1
+    var generation: int = _bubble_sequence_generation
+
     await get_tree().create_timer(0.3).timeout
+    if generation != _bubble_sequence_generation:
+        return
     if _selection_busy or LoginVisualOverlay._root == null or not LoginVisualOverlay._root.visible:
         return
-    _show_bubble("wife", "speech-wife-login.png", false)
-    await get_tree().create_timer(0.3).timeout
-    if _selection_busy:
+
+    await _show_bubble("wife", "speech-wife-login.png", false)
+    if generation != _bubble_sequence_generation:
         return
-    _show_bubble("husband", "speech-husband-login.png", false)
+
+    await get_tree().create_timer(0.3).timeout
+    if generation != _bubble_sequence_generation or _selection_busy:
+        return
+
+    await _show_bubble("husband", "speech-husband-login.png", false)
+    if generation != _bubble_sequence_generation:
+        return
+
     await get_tree().create_timer(3.6).timeout
-    if not _selection_busy:
-        _hide_all_bubbles()
+    if generation == _bubble_sequence_generation and not _selection_busy:
+        _hide_all_bubbles(false)
 
 func _show_next_wife_thinking_bubble() -> void:
     var file_name: String = WIFE_THINKING_FILES[_wife_thinking_index % WIFE_THINKING_FILES.size()]
     _wife_thinking_index += 1
-    _show_bubble("wife", file_name, true)
+    await _show_bubble("wife", file_name, true)
 
 func _show_bubble(target: String, file_name: String, thinking: bool) -> void:
     if not _bubble_nodes.has(target):
+        print("Login bubble failed: missing node %s" % target)
         return
     var texture: Texture2D = await _load_speech_texture(file_name)
     if texture == null:
+        print("Login bubble failed: texture %s" % file_name)
         return
     var bubble: TextureRect = _bubble_nodes[target] as TextureRect
     if bubble == null:
+        print("Login bubble failed: invalid node %s" % target)
         return
     bubble.texture = texture
     if thinking:
@@ -351,6 +368,7 @@ func _show_bubble(target: String, file_name: String, thinking: bool) -> void:
     elif bubble.has_meta("thinking"):
         bubble.remove_meta("thinking")
     bubble.visible = true
+    print("Login bubble visible: %s <- %s" % [target, file_name])
 
 func _load_speech_texture(file_name: String) -> Texture2D:
     if _bubble_texture_cache.has(file_name):
@@ -371,7 +389,9 @@ func _hide_bubble(target: String) -> void:
         if bubble != null:
             bubble.visible = false
 
-func _hide_all_bubbles() -> void:
+func _hide_all_bubbles(cancel_sequences: bool = true) -> void:
+    if cancel_sequences:
+        _bubble_sequence_generation += 1
     for target_value: Variant in _bubble_nodes.keys():
         var bubble: TextureRect = _bubble_nodes[target_value] as TextureRect
         if bubble != null:
