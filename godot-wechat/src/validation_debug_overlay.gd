@@ -5,7 +5,7 @@ var _panel: PanelContainer
 var _status: Label
 var _toggle: Button
 var _actions: HBoxContainer
-var _collapsed: bool = false
+var _collapsed: bool = true
 var _elapsed: float = 0.0
 
 func _ready() -> void:
@@ -44,14 +44,14 @@ func _mount() -> void:
     box.add_child(header)
 
     var title: Label = Label.new()
-    title.text = "Godot 验收状态"
+    title.text = "验收"
     title.add_theme_font_size_override("font_size", 12)
     title.add_theme_color_override("font_color", Color("f3dfb7"))
     title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     header.add_child(title)
 
     _toggle = Button.new()
-    _toggle.text = "收起"
+    _toggle.text = "展开"
     _toggle.focus_mode = Control.FOCUS_NONE
     _toggle.add_theme_font_size_override("font_size", 10)
     _toggle.pressed.connect(_toggle_panel)
@@ -61,10 +61,12 @@ func _mount() -> void:
     _status.add_theme_font_size_override("font_size", 10)
     _status.add_theme_color_override("font_color", Color("d9c8a6"))
     _status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    _status.visible = false
     box.add_child(_status)
 
     _actions = HBoxContainer.new()
     _actions.add_theme_constant_override("separation", 6)
+    _actions.visible = false
     box.add_child(_actions)
 
     var animation_test: Button = Button.new()
@@ -103,9 +105,12 @@ func _layout() -> void:
     if _panel == null:
         return
     var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-    var height: float = 54.0 if _collapsed else 236.0
-    _panel.position = Vector2(6.0, viewport_size.y - height - 6.0)
-    _panel.size = Vector2(viewport_size.x - 12.0, height)
+    if _collapsed:
+        _panel.position = Vector2(6.0, 6.0)
+        _panel.size = Vector2(112.0, 38.0)
+    else:
+        _panel.position = Vector2(6.0, 6.0)
+        _panel.size = Vector2(viewport_size.x - 12.0, 236.0)
 
 func _toggle_panel() -> void:
     _collapsed = not _collapsed
