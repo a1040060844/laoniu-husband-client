@@ -4,6 +4,7 @@ signal asset_downloaded(asset_id: String, cache_path: String)
 signal asset_failed(asset_id: String, message: String)
 
 const CACHE_ROOT: String = "user://cloud-assets"
+const REPO_ASSET_MARKER: String = "husband-client/src/assets/"
 
 var _memory_textures: Dictionary = {}
 var _memory_bytes: Dictionary = {}
@@ -69,6 +70,15 @@ func load_bytes(asset_id: String, entry: Dictionary) -> PackedByteArray:
     if url.is_empty():
         return PackedByteArray()
 
+    if OS.is_debug_build():
+        var local_bytes: PackedByteArray = _debug_local_bytes_for_url(url)
+        if not local_bytes.is_empty():
+            _write_cache(cache_path, local_bytes)
+            _memory_bytes[memory_key] = local_bytes
+            asset_downloaded.emit(asset_id, cache_path)
+            print("Godot debug local asset: %s <- %s" % [asset_id, _debug_local_path_for_url(url)])
+            return local_bytes
+
     var downloaded: PackedByteArray = await _download(url)
     if downloaded.is_empty():
         asset_failed.emit(asset_id, "云资源下载失败：%s" % url)
@@ -102,6 +112,7 @@ func _download(url: String) -> PackedByteArray:
     )
     if error != OK:
         request.queue_free()
+        print("Cloud asset request start failed: %s %s" % [error_string(error), url])
         return PackedByteArray()
 
     var response: Array = await request.request_completed
@@ -111,10 +122,28 @@ func _download(url: String) -> PackedByteArray:
     var response_code: int = int(response[1])
     var body: PackedByteArray = response[3]
     if result != HTTPRequest.RESULT_SUCCESS:
+        print("Cloud asset request failed: result=%s HTTP=%s %s" % [result, response_code, url])
         return PackedByteArray()
     if response_code < 200 or response_code >= 300:
+        print("Cloud asset HTTP failed: HTTP=%s %s" % [response_code, url])
         return PackedByteArray()
     return body
+
+func _debug_local_bytes_for_url(url: String) -> PackedByteArray:
+    var local_path: String = _debug_local_path_for_url(url)
+    if local_path.is_empty() or not FileAccess.file_exists(local_path):
+        return PackedByteArray()
+    return FileAccess.get_file_as_bytes(local_path)
+
+func _debug_local_path_for_url(url: String) -> String:
+    var marker_index: int = url.find(REPO_ASSET_MARKER)
+    if marker_index < 0:
+        return ""
+
+    var relative_asset_path: String = url.substr(marker_index)
+    var godot_project_dir: String = ProjectSettings.globalize_path("res://").trim_suffix("/").trim_suffix("\\")
+    var repository_root: String = godot_project_dir.get_base_dir()
+    return repository_root.path_join(relative_asset_path).simplify_path()
 
 func _write_cache(path: String, bytes: PackedByteArray) -> void:
     _ensure_cache_dir()
