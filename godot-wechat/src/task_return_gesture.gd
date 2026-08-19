@@ -72,6 +72,12 @@ func _return_to_role() -> void:
     var scene: Node = get_tree().current_scene
     if scene == null:
         return
+
+    # main.gd also tracks the same press/release pair. Clear its pending
+    # gesture before changing the page so the later release cannot apply
+    # a second downward navigation (ROLE -> BENEFIT).
+    scene.set("touch_tracking", false)
+
     if scene.has_method("_set_page"):
         scene.call("_set_page", PAGE_ROLE)
         get_viewport().set_input_as_handled()
