@@ -4,6 +4,7 @@ const PAGE_BENEFIT: int = 0
 const PAGE_ROLE: int = 1
 const PAGE_TASK: int = 2
 const SWIPE_THRESHOLD: float = 60.0
+const TASK_SCROLL_TOP_TOLERANCE: int = 4
 
 var login_view: Control
 var husband_view: Control
@@ -132,13 +133,23 @@ func _finish_swipe(delta_y: float) -> void:
     if absf(delta_y) < SWIPE_THRESHOLD:
         return
 
-    if current_page == PAGE_TASK and delta_y > 0.0 and touch_start_y > 140.0:
+    if current_page == PAGE_TASK and delta_y > 0.0 and not _task_scroll_is_at_top():
         return
 
     if delta_y < 0.0:
         _set_page(current_page + 1)
     else:
         _set_page(current_page - 1)
+
+func _task_scroll_is_at_top() -> bool:
+    var task_overlay: Node = get_node_or_null("/root/TaskVisualOverlay")
+    if task_overlay == null:
+        return true
+    var scroll_value: Variant = task_overlay.get("_scroll")
+    if scroll_value is ScrollContainer:
+        var task_scroll: ScrollContainer = scroll_value as ScrollContainer
+        return task_scroll.scroll_vertical <= TASK_SCROLL_TOP_TOLERANCE
+    return true
 
 func _set_page(index: int) -> void:
     var next_page: int = clampi(index, PAGE_BENEFIT, PAGE_TASK)
