@@ -29,6 +29,7 @@ TaskReturnGesture="*res://src/task_return_gesture.gd"
 HusbandAudioController="*res://src/husband_audio_controller.gd"
 HusbandQuickControls="*res://src/husband_quick_controls.gd"
 InputDiagnostics="*res://src/input_diagnostics.gd"
+DebugWindowResizer="*res://src/debug_window_resizer.gd"
 ValidationDebugOverlay="*res://src/validation_debug_overlay.gd"
 
 [display]
