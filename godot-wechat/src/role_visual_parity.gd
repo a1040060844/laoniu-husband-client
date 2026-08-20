@@ -227,6 +227,11 @@ func _layout_role_parity() -> void:
     _panel.size = Vector2(viewport_size.x - 36.0, panel_height)
 
     var bio_height: float = 108.0 if not compact else 98.0
+    var bio_top: float = 112.0
+    var bio_bottom: float = bio_top + bio_height
+    var dots_top: float = bio_bottom + 4.0
+    var swipe_top: float = dots_top + 18.0
+
     for child: Node in _panel.get_children():
         if not child.has_meta("layout"):
             continue
@@ -250,11 +255,11 @@ func _layout_role_parity() -> void:
                 control.position = Vector2(18.0, 146.0)
                 control.size = Vector2(_panel.size.x - 36.0, bio_height - 35.0)
             "dots":
-                control.position = Vector2(18.0, 146.0 + bio_height)
-                control.size = Vector2(_panel.size.x - 36.0, 18.0)
+                control.position = Vector2(18.0, dots_top)
+                control.size = Vector2(_panel.size.x - 36.0, 14.0)
             "swipe-bottom":
-                control.position = Vector2(18.0, 174.0 + bio_height)
-                control.size = Vector2(_panel.size.x - 36.0, 28.0)
+                control.position = Vector2(18.0, swipe_top)
+                control.size = Vector2(_panel.size.x - 36.0, 24.0)
 
     _style_salary_box()
     _style_bio_region(bio_height)
