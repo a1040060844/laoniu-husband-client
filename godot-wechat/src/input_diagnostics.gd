@@ -3,6 +3,9 @@ extends Node
 var _sequence: int = 0
 var _unhandled_seen: Dictionary = {}
 var _last_geometry_signature: String = ""
+var _poll_elapsed: float = 0.0
+var _last_f8_down: bool = false
+var _last_left_down: bool = false
 
 func _ready() -> void:
     process_mode = Node.PROCESS_MODE_ALWAYS
@@ -14,6 +17,15 @@ func _ready() -> void:
         viewport.size_changed.connect(_on_viewport_size_changed)
 
     call_deferred("_print_geometry", "ready")
+
+func _process(delta: float) -> void:
+    if not OS.is_debug_build():
+        return
+
+    _poll_elapsed += delta
+    if _poll_elapsed >= 0.25:
+        _poll_elapsed = 0.0
+        _poll_runtime_state()
 
 func _input(event: InputEvent) -> void:
     if not OS.is_debug_build() or not _should_log_event(event):
@@ -121,6 +133,22 @@ func _report_event_route(event_id: int, sequence: int) -> void:
 
 func _on_viewport_size_changed() -> void:
     call_deferred("_print_geometry", "size_changed")
+
+func _poll_runtime_state() -> void:
+    var signature: String = _runtime_geometry()
+    if signature != _last_geometry_signature:
+        _last_geometry_signature = signature
+        print("InputDiag geometry [poll] %s" % signature)
+
+    var f8_down: bool = Input.is_key_pressed(KEY_F8)
+    if f8_down != _last_f8_down:
+        _last_f8_down = f8_down
+        print("InputDiag physical F8=%s | %s" % [str(f8_down), signature])
+
+    var left_down: bool = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+    if left_down != _last_left_down:
+        _last_left_down = left_down
+        print("InputDiag physical left_mouse=%s | %s" % [str(left_down), signature])
 
 func _print_geometry(reason: String) -> void:
     if not OS.is_debug_build():
