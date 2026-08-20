@@ -34,11 +34,15 @@ func _process(_delta: float) -> void:
     _last_level = level
 
     if not visible:
+        print("Husband audio route: hidden")
         return
 
     if page == 0 or page == 1:
+        var asset_id: String = "bgm-role-%02d" % clampi(level, 0, 11)
+        print("Husband audio route: page=%s level=%02d target=%s" % [_page_name(page), level, asset_id])
         _play_role_bgm(level)
     elif page == 2:
+        print("Husband audio route: page=task level=%02d target=none" % level)
         AudioManager.stop_bgm()
 
 func _on_state_changed(_state: Dictionary) -> void:
@@ -53,3 +57,14 @@ func _play_role_bgm(level: int) -> void:
         "version": 1,
     }
     AudioManager.play_bgm_entry(asset_id, entry, ROLE_BGM_VOLUME_DB)
+
+func _page_name(page: int) -> String:
+    match page:
+        0:
+            return "benefit"
+        1:
+            return "role"
+        2:
+            return "task"
+        _:
+            return "page-%s" % page
