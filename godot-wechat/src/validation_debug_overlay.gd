@@ -14,6 +14,17 @@ func _ready() -> void:
         return
     call_deferred("_mount")
 
+func _input(event: InputEvent) -> void:
+    if not OS.is_debug_build():
+        return
+    if event is InputEventKey:
+        var key_event: InputEventKey = event as InputEventKey
+        if key_event.pressed and not key_event.echo and key_event.keycode == KEY_F8:
+            _toggle_panel()
+            if _panel != null:
+                get_viewport().set_input_as_handled()
+            print("Validation panel toggled by F8: collapsed=%s" % str(_collapsed))
+
 func _mount() -> void:
     _canvas = CanvasLayer.new()
     _canvas.layer = 300
@@ -113,6 +124,8 @@ func _layout() -> void:
         _panel.size = Vector2(viewport_size.x - 12.0, 260.0)
 
 func _toggle_panel() -> void:
+    if _panel == null or _toggle == null:
+        return
     _collapsed = not _collapsed
     _toggle.text = "展开" if _collapsed else "收起"
     if _status != null:
