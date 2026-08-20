@@ -6,6 +6,15 @@ var _bio_title: Label
 var _bottom_scrim: ColorRect
 var _level_left_line: ColorRect
 var _level_right_line: ColorRect
+var _lock_mask: ColorRect
+var _image_offset_x: float = 0.0
+var _image_alpha: float = 1.0
+var _header_offset_y: float = 0.0
+var _header_alpha: float = 1.0
+var _panel_offset_y: float = 0.0
+var _panel_alpha: float = 1.0
+var _image_tween: Tween
+var _content_tween: Tween
 
 func _ready() -> void:
     process_mode = Node.PROCESS_MODE_ALWAYS
@@ -26,7 +35,11 @@ func _mount_when_ready() -> void:
     _install_role_scrim()
     _install_bottom_scrim()
     _install_level_lines()
+    _install_lock_mask()
     _apply_static_style()
+    RoleVisualOverlay.preview_changed.connect(_on_preview_changed)
+    RoleVisualOverlay.illustration_ready.connect(_on_illustration_ready)
+    _sync_preview_visuals()
     _mounted = true
 
 func _process(_delta: float) -> void:
@@ -35,6 +48,7 @@ func _process(_delta: float) -> void:
     if not RoleVisualOverlay._root.visible:
         return
     _layout_role_parity()
+    _sync_preview_visuals()
 
 func _find_role_panel() -> Panel:
     for child: Node in RoleVisualOverlay._root.get_children():
@@ -127,6 +141,32 @@ func _install_level_lines() -> void:
     RoleVisualOverlay._root.add_child(_level_left_line)
     RoleVisualOverlay._root.add_child(_level_right_line)
 
+func _install_lock_mask() -> void:
+    _lock_mask = ColorRect.new()
+    _lock_mask.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    _lock_mask.color = Color.WHITE
+    _lock_mask.z_index = -1
+    _lock_mask.visible = false
+
+    var shader: Shader = Shader.new()
+    shader.code = """
+shader_type canvas_item;
+void fragment() {
+    vec2 delta = UV - vec2(0.5, 0.56);
+    delta.x *= 1.28;
+    delta.y *= 0.82;
+    float radius = length(delta);
+    float center = 1.0 - smoothstep(0.16, 0.46, radius);
+    float middle = 1.0 - smoothstep(0.28, 0.68, radius);
+    float alpha = center * 0.30 + middle * 0.14;
+    COLOR = vec4(0.0, 0.0, 0.0, alpha);
+}
+"""
+    var material: ShaderMaterial = ShaderMaterial.new()
+    material.shader = shader
+    _lock_mask.material = material
+    RoleVisualOverlay._root.add_child(_lock_mask)
+
 func _make_level_line(fade_from_left: bool) -> ColorRect:
     var line: ColorRect = ColorRect.new()
     line.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -195,24 +235,33 @@ func _layout_role_parity() -> void:
     var viewport_size: Vector2 = get_viewport().get_visible_rect().size
     var compact: bool = viewport_size.y <= 780.0 and viewport_size.x <= 430.0
 
-    RoleVisualOverlay._illustration.position = Vector2(0.0, viewport_size.y * 0.11)
+    RoleVisualOverlay._illustration.position = Vector2(_image_offset_x, viewport_size.y * 0.11)
     RoleVisualOverlay._illustration.size = viewport_size
+    RoleVisualOverlay._illustration.modulate = Color(1.0, 1.0, 1.0, _image_alpha)
 
-    var header_top: float = 28.0 if compact else 42.0
+    if _lock_mask != null:
+        _lock_mask.position = Vector2.ZERO
+        _lock_mask.size = viewport_size
+
+    var header_top: float = (28.0 if compact else 42.0) + _header_offset_y
     RoleVisualOverlay._level_label.position = Vector2(78.0, header_top)
     RoleVisualOverlay._level_label.size = Vector2(viewport_size.x - 156.0, 38.0)
+    RoleVisualOverlay._level_label.modulate = Color(1.0, 1.0, 1.0, _header_alpha)
 
     var line_width: float = 56.0 if not compact else 48.0
     var line_y: float = header_top + 18.0
     _level_left_line.position = Vector2((viewport_size.x * 0.5) - 52.0 - line_width, line_y)
     _level_left_line.size = Vector2(line_width, 1.0)
+    _level_left_line.modulate = Color(1.0, 1.0, 1.0, _header_alpha)
     _level_right_line.position = Vector2((viewport_size.x * 0.5) + 52.0, line_y)
     _level_right_line.size = Vector2(line_width, 1.0)
+    _level_right_line.modulate = Color(1.0, 1.0, 1.0, _header_alpha)
 
     RoleVisualOverlay._title_label.position = Vector2(16.0, header_top + 40.0)
     RoleVisualOverlay._title_label.size = Vector2(viewport_size.x - 32.0, 58.0)
+    RoleVisualOverlay._title_label.modulate = Color(1.0, 1.0, 1.0, _header_alpha)
 
-    RoleVisualOverlay._swipe_top.position = Vector2(20.0, header_top + 102.0)
+    RoleVisualOverlay._swipe_top.position = Vector2(20.0, (28.0 if compact else 42.0) + 102.0)
     RoleVisualOverlay._swipe_top.size = Vector2(viewport_size.x - 40.0, 24.0)
 
     if _bottom_scrim != null:
@@ -223,8 +272,9 @@ func _layout_role_parity() -> void:
         return
 
     var panel_height: float = 304.0 if not compact else 276.0
-    _panel.position = Vector2(18.0, viewport_size.y - panel_height - 8.0 + 24.0)
+    _panel.position = Vector2(18.0, viewport_size.y - panel_height - 8.0 + 24.0 + _panel_offset_y)
     _panel.size = Vector2(viewport_size.x - 36.0, panel_height)
+    _panel.modulate = Color(1.0, 1.0, 1.0, _panel_alpha)
 
     var bio_height: float = 108.0 if not compact else 98.0
     var bio_top: float = 112.0
@@ -304,7 +354,7 @@ func _style_bio_region(bio_height: float) -> void:
     bio_background.add_theme_stylebox_override("panel", style)
 
 func _restyle_dots() -> void:
-    var active_level: int = int(GameState.get_progress().get("level", 0))
+    var active_level: int = RoleVisualOverlay.get_display_level()
     var index: int = 0
     for child: Node in RoleVisualOverlay._dots.get_children():
         if not child is ColorRect:
@@ -313,3 +363,59 @@ func _restyle_dots() -> void:
         dot.custom_minimum_size = Vector2(6.0, 6.0)
         dot.color = Color("fff0c7") if index == active_level else Color(0.953, 0.918, 0.859, 0.28)
         index += 1
+
+func _on_preview_changed(_display_level: int, _current_level: int, locked: bool, direction: String) -> void:
+    if _lock_mask != null:
+        _lock_mask.visible = locked
+    if direction == "next" or direction == "prev":
+        _play_content_transition()
+    else:
+        _header_offset_y = 0.0
+        _header_alpha = 1.0
+        _panel_offset_y = 0.0
+        _panel_alpha = 1.0
+
+func _on_illustration_ready(level: int, direction: String) -> void:
+    if level != RoleVisualOverlay.get_display_level():
+        return
+    _play_image_transition(direction)
+
+func _play_image_transition(direction: String) -> void:
+    if _image_tween != null and _image_tween.is_valid():
+        _image_tween.kill()
+
+    if direction != "next" and direction != "prev":
+        _image_offset_x = 0.0
+        _image_alpha = 1.0
+        return
+
+    _image_offset_x = 24.0 if direction == "next" else -24.0
+    _image_alpha = 0.0
+    _image_tween = create_tween()
+    _image_tween.set_parallel(true)
+    _image_tween.set_trans(Tween.TRANS_QUART)
+    _image_tween.set_ease(Tween.EASE_OUT)
+    _image_tween.tween_property(self, "_image_offset_x", 0.0, 0.36)
+    _image_tween.tween_property(self, "_image_alpha", 1.0, 0.36)
+
+func _play_content_transition() -> void:
+    if _content_tween != null and _content_tween.is_valid():
+        _content_tween.kill()
+
+    _header_offset_y = 10.0
+    _header_alpha = 0.0
+    _panel_offset_y = 10.0
+    _panel_alpha = 0.0
+
+    _content_tween = create_tween()
+    _content_tween.set_parallel(true)
+    _content_tween.set_trans(Tween.TRANS_QUAD)
+    _content_tween.set_ease(Tween.EASE_OUT)
+    _content_tween.tween_property(self, "_header_offset_y", 0.0, 0.36)
+    _content_tween.tween_property(self, "_header_alpha", 1.0, 0.36)
+    _content_tween.tween_property(self, "_panel_offset_y", 0.0, 0.38).set_delay(0.08)
+    _content_tween.tween_property(self, "_panel_alpha", 1.0, 0.38).set_delay(0.08)
+
+func _sync_preview_visuals() -> void:
+    if _lock_mask != null:
+        _lock_mask.visible = RoleVisualOverlay.is_locked_preview()
