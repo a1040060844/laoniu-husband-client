@@ -1,5 +1,8 @@
 extends Node
 
+signal preview_changed(display_level: int, current_level: int, locked: bool, direction: String)
+signal illustration_ready(level: int, direction: String)
+
 var _canvas: CanvasLayer
 var _root: Control
 var _illustration: TextureRect
@@ -16,6 +19,11 @@ var _swipe_bottom: Label
 var _loaded_level: int = -1
 var _current_exp: int = 0
 var _required_exp: int = 1
+var _progress_level: int = -1
+var _display_level: int = -1
+var _previewing: bool = false
+var _locked_preview: bool = false
+var _preview_direction: String = "none"
 
 func _ready() -> void:
     process_mode = Node.PROCESS_MODE_ALWAYS
@@ -166,22 +174,93 @@ func _on_state_changed(_state: Dictionary) -> void:
     var progress: Dictionary = GameState.get_progress()
     var level: int = int(progress.get("level", 0))
     _current_exp = int(progress.get("exp", 0))
+
+    if level != _progress_level:
+        _progress_level = level
+        _display_level = level
+        _previewing = false
+        _locked_preview = false
+        _preview_direction = "none"
+        _apply_display_level(level, "none")
+        preview_changed.emit(_display_level, _progress_level, false, "none")
+        return
+
+    if _display_level < 0:
+        _display_level = level
+
+    _apply_display_level(_display_level, _preview_direction)
+
+func show_preview_level(level: int, direction: String = "none") -> void:
+    var target: int = clampi(level, 0, get_max_role_level())
+    if target == _display_level:
+        return
+
+    _display_level = target
+    _previewing = target != _progress_level
+    _locked_preview = target > _progress_level
+    _preview_direction = direction
+    _apply_display_level(target, direction)
+    preview_changed.emit(_display_level, _progress_level, _locked_preview, _preview_direction)
+
+func reset_preview() -> void:
+    var progress: Dictionary = GameState.get_progress()
+    var level: int = int(progress.get("level", 0))
+    _progress_level = level
+    _display_level = level
+    _previewing = false
+    _locked_preview = false
+    _preview_direction = "none"
+    _current_exp = int(progress.get("exp", 0))
+    _apply_display_level(level, "none")
+    preview_changed.emit(_display_level, _progress_level, false, "none")
+
+func get_display_level() -> int:
+    return _display_level if _display_level >= 0 else int(GameState.get_progress().get("level", 0))
+
+func get_progress_level() -> int:
+    return _progress_level if _progress_level >= 0 else int(GameState.get_progress().get("level", 0))
+
+func is_previewing() -> bool:
+    return _previewing
+
+func is_locked_preview() -> bool:
+    return _locked_preview
+
+func get_preview_direction() -> String:
+    return _preview_direction
+
+func get_max_role_level() -> int:
+    var maximum: int = 0
+    var roles: Variant = GameState.state.get("roles", [])
+    if roles is Array:
+        for role_value: Variant in roles:
+            if role_value is Dictionary:
+                maximum = maxi(maximum, int(role_value.get("level", 0)))
+    return maximum
+
+func _apply_display_level(level: int, direction: String) -> void:
+    var progress: Dictionary = GameState.get_progress()
     var role: Dictionary = _role_for_level(level)
     if role.is_empty():
         return
 
     _required_exp = maxi(1, int(role.get("expRequired", role.get("exp_required", 1))))
+    _current_exp = int(progress.get("exp", 0)) if level == _progress_level else 0
+
     _level_label.text = "Lv. %02d" % level
     _title_label.text = str(role.get("title", "Lv.%s" % level))
     _salary_label.text = "基础零花钱  ¥%s" % int(role.get("salary", progress.get("wallet", 0)))
     _exp_label.text = "%s / %s" % [_current_exp, _required_exp]
+    _exp_label.visible = not _previewing
+    _exp_track.visible = not _previewing
     _bio_label.text = str(role.get("biography", ""))
     _build_dots(level)
     _update_exp_fill()
 
     if level != _loaded_level:
         _loaded_level = level
-        _load_role_illustration(level, str(role.get("roleImage", "")))
+        _illustration.texture = null
+        _load_role_illustration(level, str(role.get("roleImage", "")), direction)
 
 func _role_for_level(level: int) -> Dictionary:
     var roles: Variant = GameState.state.get("roles", [])
@@ -191,7 +270,7 @@ func _role_for_level(level: int) -> Dictionary:
                 return role
     return {}
 
-func _load_role_illustration(level: int, raw_url: String) -> void:
+func _load_role_illustration(level: int, raw_url: String, direction: String) -> void:
     if raw_url.is_empty():
         return
     var url: String = raw_url
@@ -203,11 +282,14 @@ func _load_role_illustration(level: int, raw_url: String) -> void:
     var texture: Texture2D = await CloudAssetManager.load_texture("role-%02d-illustration" % level, entry)
     if level == _loaded_level and texture != null:
         _illustration.texture = texture
+        illustration_ready.emit(level, direction)
 
 func _build_dots(active_level: int) -> void:
     for child: Node in _dots.get_children():
+        _dots.remove_child(child)
         child.queue_free()
-    for index: int in range(12):
+    var count: int = get_max_role_level() + 1
+    for index: int in range(count):
         var dot: ColorRect = ColorRect.new()
         dot.custom_minimum_size = Vector2(7, 7)
         dot.color = Color("e7c78d") if index == active_level else Color(0.91, 0.78, 0.55, 0.24)
