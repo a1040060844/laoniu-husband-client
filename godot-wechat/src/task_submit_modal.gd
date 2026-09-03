@@ -232,11 +232,11 @@ func _install_submit_interceptors() -> void:
         var action: Button = card.get_child(5) as Button
         if action == null:
             continue
-        _configure_action_interceptor(action, task)
+        _configure_action_interceptor(card, action, task)
 
-func _configure_action_interceptor(action: Button, task: Dictionary) -> void:
+func _configure_action_interceptor(card: Panel, action: Button, task: Dictionary) -> void:
     var status: String = str(task.get("status", ""))
-    var existing: Node = action.get_node_or_null("SubmitModalIntercept")
+    var existing: Node = card.get_node_or_null("SubmitModalIntercept")
     if status != "doing":
         if existing is Button:
             (existing as Button).visible = false
@@ -251,16 +251,17 @@ func _configure_action_interceptor(action: Button, task: Dictionary) -> void:
         intercept.text = ""
         intercept.focus_mode = Control.FOCUS_NONE
         intercept.mouse_filter = Control.MOUSE_FILTER_STOP
-        intercept.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-        intercept.z_index = 20
+        intercept.z_index = 30
         var clear_style: StyleBoxEmpty = StyleBoxEmpty.new()
         intercept.add_theme_stylebox_override("normal", clear_style)
         intercept.add_theme_stylebox_override("hover", clear_style)
         intercept.add_theme_stylebox_override("pressed", clear_style)
         intercept.add_theme_stylebox_override("focus", clear_style)
-        action.add_child(intercept)
+        card.add_child(intercept)
         intercept.pressed.connect(_on_intercept_pressed.bind(intercept))
     intercept.visible = true
+    intercept.position = action.position
+    intercept.size = action.size
     intercept.set_meta("task-data", task.duplicate(true))
 
 func _on_intercept_pressed(intercept: Button) -> void:
