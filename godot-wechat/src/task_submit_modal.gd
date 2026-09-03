@@ -259,10 +259,9 @@ func _configure_action_interceptor(action: Button, task: Dictionary) -> void:
         intercept.add_theme_stylebox_override("pressed", clear_style)
         intercept.add_theme_stylebox_override("focus", clear_style)
         action.add_child(intercept)
+        intercept.pressed.connect(_on_intercept_pressed.bind(intercept))
     intercept.visible = true
     intercept.set_meta("task-data", task.duplicate(true))
-    if not intercept.pressed.is_connected(_on_intercept_pressed.bind(intercept)):
-        intercept.pressed.connect(_on_intercept_pressed.bind(intercept))
 
 func _on_intercept_pressed(intercept: Button) -> void:
     if _root == null or _root.visible or _is_submitting:
