@@ -1,6 +1,13 @@
 extends Node
 
 const TaskLineIconScript = preload("res://src/task_line_icon.gd")
+const FILTERS: Dictionary = {
+    "all": ["todo", "doing", "submitted", "confirmed", "failed", "expired", "failed_pending", "completed"],
+    "todo": ["todo"],
+    "doing": ["doing"],
+    "submitted": ["submitted"],
+    "completed": ["confirmed", "completed"],
+}
 
 var _mounted: bool = false
 var _was_visible: bool = false
@@ -16,13 +23,15 @@ func _ready() -> void:
 
 func _mount_when_ready() -> void:
     for _attempt: int in range(120):
-        if TaskVisualOverlay._root != null and TaskVisualParity != null:
+        if TaskVisualOverlay._root != null:
             break
         await get_tree().process_frame
     if TaskVisualOverlay._root == null:
         return
     _last_source = str(TaskVisualOverlay._source)
     _last_filter = str(TaskVisualOverlay._filter)
+    _last_signature = _task_signature()
+    _configure_scroll_visuals()
     _mounted = true
 
 func _process(delta: float) -> void:
@@ -32,6 +41,9 @@ func _process(delta: float) -> void:
     var visible_now: bool = TaskVisualOverlay._root.visible
     if visible_now and not _was_visible:
         _page_age = 0.0
+        _last_source = str(TaskVisualOverlay._source)
+        _last_filter = str(TaskVisualOverlay._filter)
+        _last_signature = _task_signature()
         _animation_generation += 1
         call_deferred("_play_page_enter", _animation_generation)
     _was_visible = visible_now
@@ -50,30 +62,38 @@ func _process(delta: float) -> void:
         call_deferred("_refresh_cards", _animation_generation)
 
     _decorate_cards()
-    _animate_visible_controls()
+    _configure_scroll_visuals()
+
+func _configure_scroll_visuals() -> void:
+    if TaskVisualOverlay._scroll == null:
+        return
+    var bar: VScrollBar = TaskVisualOverlay._scroll.get_v_scroll_bar()
+    if bar != null:
+        bar.modulate.a = 0.0
+        bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 func _play_page_enter(generation: int) -> void:
     await get_tree().process_frame
     if generation != _animation_generation or not _is_task_page_visible():
         return
 
-    _animate_control(TaskVisualOverlay._level_label, 0.00, 0.34, Vector2(0.0, 14.0))
-    _animate_control(TaskVisualOverlay._title_label, 0.03, 0.34, Vector2(0.0, 14.0))
+    _animate_control(TaskVisualOverlay._level_label, 0.00, 0.34)
+    _animate_control(TaskVisualOverlay._title_label, 0.03, 0.34)
 
     var subtitle_value: Variant = TaskVisualParity.get("_header_subtitle")
     if subtitle_value is Control:
-        _animate_control(subtitle_value as Control, 0.06, 0.34, Vector2(0.0, 14.0))
+        _animate_control(subtitle_value as Control, 0.06, 0.34)
 
     var avatar_value: Variant = TaskVisualParity.get("_avatar_frame")
     if avatar_value is Control:
-        _animate_control(avatar_value as Control, 0.06, 0.36, Vector2(0.0, 10.0))
+        _animate_control(avatar_value as Control, 0.06, 0.36)
 
     var overview_value: Variant = TaskVisualParity.get("_overview_panel")
     if overview_value is Control:
-        _animate_control(overview_value as Control, 0.06, 0.36, Vector2(0.0, 14.0))
+        _animate_control(overview_value as Control, 0.06, 0.36)
 
-    _animate_control(TaskVisualOverlay._source_row, 0.24, 0.68, Vector2(0.0, 14.0))
-    _animate_control(TaskVisualOverlay._filter_row, 0.32, 0.68, Vector2(0.0, 14.0))
+    _animate_control(TaskVisualOverlay._source_row, 0.24, 0.68)
+    _animate_control(TaskVisualOverlay._filter_row, 0.32, 0.68)
     call_deferred("_refresh_cards", generation)
 
 func _refresh_cards(generation: int) -> void:
@@ -93,23 +113,23 @@ func _animate_task_cards(generation: int) -> void:
             continue
         var panel: Panel = child as Panel
         if panel.name == "ParityMonthPanel":
-            _animate_control(panel, 0.08, 0.38, Vector2(0.0, 14.0))
+            _animate_control(panel, 0.08, 0.38)
             continue
         var delay: float = 0.12 + float(index) * 0.055
-        _animate_control(panel, delay, 0.36, Vector2(0.0, 14.0))
+        _animate_control(panel, delay, 0.36)
         panel.set_meta("task-enter-generation", generation)
         index += 1
 
-func _animate_control(control: Control, delay: float, duration: float, offset: Vector2) -> void:
+func _animate_control(control: Control, delay: float, duration: float) -> void:
     if control == null or not is_instance_valid(control):
         return
-    var base_position: Vector2 = control.position
-    control.modulate.a = 0.0
-    control.position = base_position + offset
+    control.pivot_offset = control.size * 0.5
+    control.self_modulate.a = 0.0
+    control.scale = Vector2(0.985, 0.985)
     var tween: Tween = create_tween()
     tween.set_parallel(true)
-    tween.tween_property(control, "modulate:a", 1.0, duration).set_delay(delay).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
-    tween.tween_property(control, "position", base_position, duration).set_delay(delay).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+    tween.tween_property(control, "self_modulate:a", 1.0, duration).set_delay(delay).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+    tween.tween_property(control, "scale", Vector2.ONE, duration).set_delay(delay).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 
 func _decorate_cards() -> void:
     if TaskVisualOverlay._list == null:
@@ -121,7 +141,6 @@ func _decorate_cards() -> void:
             continue
         var card: Panel = child as Panel
         if card.name == "ParityMonthPanel":
-            _decorate_month_panel(card)
             continue
         if task_index >= visible_tasks.size():
             break
@@ -135,7 +154,6 @@ func _decorate_task_card(card: Panel, task: Dictionary) -> void:
     var action: Button = card.get_child(5) as Button
     if action == null:
         return
-
     _install_reward_chips(card, task)
     _install_action_icon(action, str(task.get("status", "")))
     _install_card_hover(card)
@@ -165,7 +183,8 @@ func _install_reward_chips(card: Panel, task: Dictionary) -> void:
         var chip_data: Dictionary = chips[index]
         var chip: Panel = Panel.new()
         chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-        chip.custom_minimum_size = Vector2(maxf(72.0, float(str(chip_data.get("text", "")).length()) * 7.0 + 30.0), 26.0)
+        var text_value: String = str(chip_data.get("text", ""))
+        chip.custom_minimum_size = Vector2(maxf(72.0, float(text_value.length()) * 7.0 + 30.0), 26.0)
         var style: StyleBoxFlat = StyleBoxFlat.new()
         style.bg_color = Color(0.906, 0.780, 0.553, 0.08)
         style.border_color = Color(0.906, 0.780, 0.553, 0.20)
@@ -182,7 +201,7 @@ func _install_reward_chips(card: Panel, task: Dictionary) -> void:
             chip.add_child(icon)
 
         var label: Label = Label.new()
-        label.text = str(chip_data.get("text", ""))
+        label.text = text_value
         label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
         label.add_theme_font_size_override("font_size", 11)
         label.add_theme_color_override("font_color", Color("e7c78d"))
@@ -257,7 +276,6 @@ func _install_action_icon(action: Button, status: String) -> void:
     icon.visible = true
     icon.position = Vector2(14.0, 14.0)
     icon.size = Vector2(18.0, 18.0)
-    action.add_theme_constant_override("icon_max_width", 18)
 
 func _install_card_hover(card: Panel) -> void:
     if bool(card.get_meta("parity-hover-installed", false)):
@@ -270,20 +288,18 @@ func _install_card_hover(card: Panel) -> void:
 func _on_card_hover(card: Panel, entered: bool) -> void:
     if card == null or not is_instance_valid(card):
         return
-    var target: Color = Color(1.04, 1.02, 0.98, 1.0) if entered else Color.WHITE
-    if card.modulate.a < 0.90:
-        target.a = card.modulate.a
+    card.pivot_offset = card.size * 0.5
+    var target_scale: Vector2 = Vector2(1.008, 1.008) if entered else Vector2.ONE
+    var target_color: Color = Color(1.0, 0.985, 0.95, 1.0) if entered else Color.WHITE
     var tween: Tween = create_tween()
-    tween.tween_property(card, "modulate", target, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-
-func _decorate_month_panel(panel: Panel) -> void:
-    if bool(panel.get_meta("motion-ready", false)):
-        return
-    panel.set_meta("motion-ready", true)
+    tween.set_parallel(true)
+    tween.tween_property(card, "scale", target_scale, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+    tween.tween_property(card, "self_modulate", target_color, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 func _visible_tasks() -> Array[Dictionary]:
     var result: Array[Dictionary] = []
-    var allowed_value: Variant = TaskVisualOverlay.FILTERS.get(str(TaskVisualOverlay._filter), TaskVisualOverlay.FILTERS["all"])
+    var filter_key: String = str(TaskVisualOverlay._filter)
+    var allowed_value: Variant = FILTERS.get(filter_key, FILTERS["all"])
     var allowed: Array = []
     if allowed_value is Array:
         allowed = allowed_value as Array
@@ -303,12 +319,6 @@ func _task_signature() -> String:
     for task: Dictionary in _visible_tasks():
         parts.append("%s:%s" % [str(task.get("id", "")), str(task.get("status", ""))])
     return "%s/%s/%s" % [str(TaskVisualOverlay._source), str(TaskVisualOverlay._filter), ",".join(parts)]
-
-func _animate_visible_controls() -> void:
-    if TaskVisualOverlay._source_row != null:
-        TaskVisualOverlay._source_row.modulate.a = clampf(TaskVisualOverlay._source_row.modulate.a, 0.0, 1.0)
-    if TaskVisualOverlay._filter_row != null:
-        TaskVisualOverlay._filter_row.modulate.a = clampf(TaskVisualOverlay._filter_row.modulate.a, 0.0, 1.0)
 
 func _is_task_page_visible() -> bool:
     return TaskVisualOverlay._root != null and TaskVisualOverlay._root.visible
