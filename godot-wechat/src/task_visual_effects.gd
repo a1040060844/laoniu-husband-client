@@ -156,7 +156,6 @@ func _decorate_task_card(card: Panel, task: Dictionary) -> void:
         return
     _install_reward_chips(card, task)
     _install_action_icon(action, str(task.get("status", "")))
-    _install_card_hover(card)
 
 func _install_reward_chips(card: Panel, task: Dictionary) -> void:
     var existing: Node = card.get_node_or_null("ParityRewardRow")
@@ -276,25 +275,6 @@ func _install_action_icon(action: Button, status: String) -> void:
     icon.visible = true
     icon.position = Vector2(14.0, 14.0)
     icon.size = Vector2(18.0, 18.0)
-
-func _install_card_hover(card: Panel) -> void:
-    if bool(card.get_meta("parity-hover-installed", false)):
-        return
-    card.set_meta("parity-hover-installed", true)
-    card.mouse_filter = Control.MOUSE_FILTER_PASS
-    card.mouse_entered.connect(_on_card_hover.bind(card, true))
-    card.mouse_exited.connect(_on_card_hover.bind(card, false))
-
-func _on_card_hover(card: Panel, entered: bool) -> void:
-    if card == null or not is_instance_valid(card):
-        return
-    card.pivot_offset = card.size * 0.5
-    var target_scale: Vector2 = Vector2(1.008, 1.008) if entered else Vector2.ONE
-    var target_color: Color = Color(1.0, 0.985, 0.95, 1.0) if entered else Color.WHITE
-    var tween: Tween = create_tween()
-    tween.set_parallel(true)
-    tween.tween_property(card, "scale", target_scale, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-    tween.tween_property(card, "self_modulate", target_color, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 func _visible_tasks() -> Array[Dictionary]:
     var result: Array[Dictionary] = []
