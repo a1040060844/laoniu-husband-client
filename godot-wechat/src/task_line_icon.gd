@@ -1,20 +1,54 @@
 extends Control
 
-var icon_key: String = "clock"
+var icon_key: String = "clock":
+    set(value):
+        icon_key = value
+        if is_inside_tree():
+            _refresh_svg()
 var stroke_color: Color = Color("f8dfac")
 var stroke_width: float = 1.6
+var _svg: TextureRect
 
 func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_IGNORE
+    _svg = TextureRect.new()
+    _svg.name = "LucideSvg"
+    _svg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    _svg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    _svg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    add_child(_svg)
+    _refresh_svg()
     queue_redraw()
 
 func configure(key: String, color: Color = Color("f8dfac"), width: float = 1.6) -> void:
     icon_key = key
     stroke_color = color
     stroke_width = width
+    _refresh_svg()
     queue_redraw()
 
+func _refresh_svg() -> void:
+    if _svg == null:
+        return
+    var path: String = "res://assets/task-icons/%s.svg" % icon_key
+    var texture_value: Variant = load(path)
+    _svg.texture = texture_value if texture_value is Texture2D else null
+    _svg.modulate = Color(
+        clampf(stroke_color.r / 0.973, 0.0, 1.0),
+        clampf(stroke_color.g / 0.875, 0.0, 1.0),
+        clampf(stroke_color.b / 0.675, 0.0, 1.0),
+        stroke_color.a
+    )
+    _svg.position = Vector2.ZERO
+    _svg.size = size
+
+func _notification(what: int) -> void:
+    if what == NOTIFICATION_RESIZED and _svg != null:
+        _svg.size = size
+
 func _draw() -> void:
+    if _svg != null and _svg.texture != null:
+        return
     var side: float = minf(size.x, size.y)
     if side <= 0.0:
         return
@@ -42,6 +76,8 @@ func _draw() -> void:
             _draw_alert(origin, scale_value)
         "gift":
             _draw_gift(origin, scale_value)
+        "file-text":
+            _draw_file_text(origin, scale_value)
         _:
             _draw_clock(origin, scale_value)
 
@@ -134,3 +170,12 @@ func _draw_gift(origin: Vector2, scale_value: float) -> void:
     _line(origin, scale_value, Vector2(16, 10), Vector2(16, 26))
     draw_arc(_p(origin, scale_value, 12, 8), 4.0 * scale_value, 0.1, PI * 1.65, 16, stroke_color, maxf(1.0, stroke_width * scale_value), true)
     draw_arc(_p(origin, scale_value, 20, 8), 4.0 * scale_value, PI * 1.35, PI * 2.9, 16, stroke_color, maxf(1.0, stroke_width * scale_value), true)
+
+func _draw_file_text(origin: Vector2, scale_value: float) -> void:
+    var rect: Rect2 = Rect2(_p(origin, scale_value, 7, 4), Vector2(18, 24) * scale_value)
+    draw_rect(rect, stroke_color, false, maxf(1.0, stroke_width * scale_value), true)
+    _line(origin, scale_value, Vector2(18, 4), Vector2(25, 11))
+    _line(origin, scale_value, Vector2(18, 4), Vector2(18, 11))
+    _line(origin, scale_value, Vector2(18, 11), Vector2(25, 11))
+    _line(origin, scale_value, Vector2(11, 16), Vector2(21, 16))
+    _line(origin, scale_value, Vector2(11, 21), Vector2(21, 21))

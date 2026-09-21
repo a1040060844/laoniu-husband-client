@@ -382,6 +382,8 @@ func _build_task_card(task: Dictionary) -> Panel:
     return card
 
 func _start_task(task_id: String) -> void:
+    if _fixture_action_blocked("start", task_id):
+        return
     if GameState.is_syncing:
         return
     var next_state: Dictionary = GameState.state.duplicate(true)
@@ -401,6 +403,8 @@ func _start_task(task_id: String) -> void:
     GameState.save_remote(next_state)
 
 func _submit_task(task_id: String) -> void:
+    if _fixture_action_blocked("submit", task_id):
+        return
     if GameState.is_syncing:
         return
     var next_state: Dictionary = GameState.state.duplicate(true)
@@ -441,6 +445,13 @@ func _submit_task(task_id: String) -> void:
     })
     next_state["logs"] = logs
     GameState.save_remote(next_state)
+
+func _fixture_action_blocked(action: String, task_id: String) -> bool:
+    var fixture: Node = get_node_or_null("/root/TaskAcceptanceFixture")
+    if fixture != null and fixture.has_method("is_fixture_mode") and bool(fixture.call("is_fixture_mode")):
+        print("Task fixture action blocked: %s task=%s (no save)" % [action, task_id])
+        return true
+    return false
 
 func _on_sync_status(message: String) -> void:
     if _status_label != null:

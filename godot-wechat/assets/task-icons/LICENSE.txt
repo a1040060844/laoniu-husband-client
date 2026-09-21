@@ -1,0 +1,4 @@
+Task page icons are derived from the lucide-react 0.468.0 icon definitions
+declared by husband-client/package.json. Lucide is distributed under the
+ISC License. See https://github.com/lucide-icons/lucide for the full text.
+

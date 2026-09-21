@@ -18,6 +18,7 @@ var _note: TextEdit
 var _submit_button: Button
 var _current_task: Dictionary = {}
 var _is_submitting: bool = false
+var _preview_only: bool = false
 var _scan_elapsed: float = 0.0
 
 func _ready() -> void:
@@ -235,6 +236,12 @@ func _install_submit_interceptors() -> void:
         _configure_action_interceptor(card, action, task)
 
 func _configure_action_interceptor(card: Panel, action: Button, task: Dictionary) -> void:
+    var fixture: Node = get_node_or_null("/root/TaskAcceptanceFixture")
+    if fixture != null and fixture.has_method("is_fixture_mode") and bool(fixture.call("is_fixture_mode")):
+        var fixture_intercept: Node = card.get_node_or_null("SubmitModalIntercept")
+        if fixture_intercept is CanvasItem:
+            (fixture_intercept as CanvasItem).visible = false
+        return
     var status: String = str(task.get("status", ""))
     var existing: Node = card.get_node_or_null("SubmitModalIntercept")
     if status != "doing":
@@ -276,9 +283,9 @@ func _open_modal(task: Dictionary) -> void:
     _title_label.text = str(task.get("title", "任务"))
     _note.text = ""
     _is_submitting = false
-    _submit_button.disabled = false
-    _submit_button.text = "提交给老妞确认"
-    _style_submit_button(_submit_button, false)
+    _submit_button.disabled = _preview_only
+    _submit_button.text = "预览模式 · 不会提交" if _preview_only else "提交给老妞确认"
+    _style_submit_button(_submit_button, _preview_only)
     _root.visible = true
     _layout()
     _root.modulate.a = 0.0
@@ -290,14 +297,25 @@ func _open_modal(task: Dictionary) -> void:
     tween.tween_property(_sheet, "scale", Vector2.ONE, 0.36).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
     print("Task submit modal opened: %s" % str(task.get("id", "")))
 
+func open_preview(task: Dictionary) -> void:
+    if not OS.is_debug_build():
+        return
+    _preview_only = true
+    _open_modal(task)
+    print("Task submit modal preview opened: no save path")
+
 func _close_modal() -> void:
     if _root == null or not _root.visible or _is_submitting:
         return
     _root.visible = false
     _current_task = {}
     _note.text = ""
+    _preview_only = false
 
 func _begin_submit() -> void:
+    if _preview_only:
+        print("Task submit preview blocked: no save")
+        return
     if _is_submitting or _current_task.is_empty() or GameState.is_syncing:
         return
     _is_submitting = true
