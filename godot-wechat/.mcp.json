@@ -9,7 +9,10 @@
 			],
 			"command": "cmd",
 			"env": {
-				"GODOT_MCP_CONFIG_VERSION": "1"
+				"GODOT_MCP_CONFIG_VERSION": "1",
+				"GODOT_MCP_EDITOR_PORT": "6551",
+				"GODOT_MCP_RUNTIME_PORT": "6571",
+				"GODOT_MCP_LSP_PORT": "6005"
 			}
 		}
 	}

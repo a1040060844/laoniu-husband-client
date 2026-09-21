@@ -1,3 +1,4 @@
 .godot/
 *.translation
 assets/task-icons/*.svg.import
+.acceptance/

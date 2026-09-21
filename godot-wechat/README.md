@@ -186,6 +186,8 @@ https://www.laoniulaoge.cn/assets/...
 - 已用 Godot 4.7.1 headless 完成项目与脚本解析检查；当前没有发现 Parser Error、SCRIPT Error 或 Autoload 加载错误。
 - 项目内置 Godot MCP Toolkit 1.0.0；Windows 通过 `godot-wechat/.mcp.json` 使用 `cmd /c npx -y @npgamedev/godot-mcp-server`。
 - Debug 运行时可用 `F8` 展开验收面板，`F6` 循环 `314×706 → 376×806 → 390×844`，也可用 `--debug-window-size=376x806` 直接启动指定尺寸。
+- 固定端口验收可运行 `tools/start-godot-mcp-acceptance.ps1 -Size 390x844|376x806|314x706`；它会为 Godot 编辑器与独立运行时同时注入 Editor `6551`、Runtime `6571`、LSP `6005`，避免依赖机器级 MCP registry。
+- 生产零写入门禁可运行 `tools/acceptance-state-guard.ps1 -Mode before`，验收结束后运行 `-Mode after`；脚本只读取 `/api/state` 并比较 revision、任务、日志、权益、通知和聊天指纹。
 - 当前代码已保留编辑器与运行时 MCP 通道、输入诊断和独立窗口复现器；本环境的 MCP registry 写入受沙箱权限限制，运行时双通道和截图仍需在本机 Godot 任务中复验，不能以静态检查代替。
 - 任务页第二轮已完成代码侧响应式布局、字体、SVG 图标、动态任务卡、零写入夹具和提交弹窗预览；三种尺寸的截图热图仍需在 MCP runtime bridge 可用后生成。
 - 既有功能基线：任务页 BGM 为 `none`，返回职务后恢复 `bgm-role-03`；验收禁止点击任务执行/提交或权益申请/使用控件。
