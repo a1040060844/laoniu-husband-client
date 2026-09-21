@@ -202,6 +202,7 @@ https://www.laoniulaoge.cn/assets/...
 - 生产零写入门禁可运行 `tools/acceptance-state-guard.ps1 -Mode before`，验收结束后运行 `-Mode after`；脚本只读取 `/api/state` 并比较 revision、任务、日志、权益、通知和聊天指纹。
 - 当前代码已保留编辑器与运行时 MCP 通道、输入诊断和独立窗口复现器；本环境的 MCP registry 写入受沙箱权限限制，运行时双通道和截图仍需在本机 Godot 任务中复验，不能以静态检查代替。
 - 已加入可复用的老哥通知/聊天覆盖层和纯内存状态变换测试；本机 Godot 4.7.1 日志已确认 `Communication state transforms: PASS`，但通知/聊天的 MCP 截图与三尺寸交互仍需桌面 runtime bridge 完成。
+- 通信层零写入脚本：`tools/communication-zero-write-check.ps1`。它先后调用状态守卫，再运行纯内存变换测试；验收产物写入被忽略的 `.acceptance/`。
 - 任务页第二轮已完成代码侧响应式布局、字体、SVG 图标、动态任务卡、零写入夹具和提交弹窗预览；三种尺寸的截图热图仍需在 MCP runtime bridge 可用后生成。
 - 既有功能基线：任务页 BGM 为 `none`，返回职务后恢复 `bgm-role-03`；验收禁止点击任务执行/提交或权益申请/使用控件。
 - 验收期间不点击任务执行/提交或权益申请/使用控件，避免写入正式数据。
