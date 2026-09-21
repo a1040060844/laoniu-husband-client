@@ -32,7 +32,7 @@ try {
         $pids = ($existing | ForEach-Object { $_.ProcessId }) -join ", "
         throw "A Godot process already targets this project (PID $pids). Close it before starting the deterministic harness."
     }
-} catch [System.Management.Automation.CommandNotFoundException] {
+} catch {
     Write-Warning "Win32_Process inspection is unavailable; continuing without duplicate-process detection."
 }
 
@@ -48,11 +48,14 @@ function Test-LocalPortBusy {
     try {
         $listeners = @(Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort $Port -State Listen -ErrorAction Stop)
         return $listeners.Count -gt 0
-    } catch [System.Management.Automation.CommandNotFoundException] {
-        $probe = Test-NetConnection -ComputerName 127.0.0.1 -Port $Port -InformationLevel Quiet -WarningAction SilentlyContinue
-        return [bool]$probe
     } catch {
-        return $false
+        try {
+            $probe = Test-NetConnection -ComputerName 127.0.0.1 -Port $Port -InformationLevel Quiet -WarningAction SilentlyContinue
+            return [bool]$probe
+        } catch {
+            Write-Warning "Unable to inspect local port $Port; Godot will enforce the pinned port itself."
+            return $false
+        }
     }
 }
 
