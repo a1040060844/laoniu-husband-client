@@ -35,6 +35,7 @@ HusbandQuickControls="*res://src/husband_quick_controls.gd"
 InputDiagnostics="*res://src/input_diagnostics.gd"
 DebugWindowResizer="*res://src/debug_window_resizer.gd"
 ValidationDebugOverlay="*res://src/validation_debug_overlay.gd"
+MCPRuntimeServer="*res://addons/godot_mcp_toolkit/runtime/mcp_runtime_server.gd"
 
 [display]
 window/size/viewport_width=390
@@ -42,6 +43,9 @@ window/size/viewport_height=844
 window/size/window_width_override=390
 window/size/window_height_override=844
 window/stretch/mode="canvas_items"
+
+[editor_plugins]
+enabled=PackedStringArray("res://addons/godot_mcp_toolkit/plugin.cfg")
 
 [audio]
 driver/enable_input=false

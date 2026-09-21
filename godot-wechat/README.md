@@ -158,17 +158,19 @@ https://www.laoniulaoge.cn/assets/...
 
 ## 当前验收状态
 
-- GitHub 分支代码和资源路径已完成静态核对。
-- 使用 Godot 4.x 官方稳定 API 编写。
-- 当前执行容器没有预装 Godot，且容器到 GitHub 的直接 DNS/二进制下载受限，所以尚未完成 `godot --headless` 真机解析。
-- 因此当前不能把“代码已写入”表述为“Godot 已实际启动通过”。
+- 当前开发分支已包含登录、职务、权益和任务页第一轮视觉/交互实现，以及 376×806 输入诊断工具。
+- 已用 Godot 4.7.1 headless 完成项目与 MCP Toolkit 扫描，当前没有 Parser Error 或 SCRIPT Error。
+- 项目内置 Godot MCP Toolkit 1.0.0；Windows 通过根目录 `.mcp.json` 使用 `cmd /c npx -y @npgamedev/godot-mcp-server`。
+- Debug 运行时可用 `F8` 展开验收面板，`F6` 循环 `314×706 → 376×806 → 390×844`，也可用 `--debug-window-size=376x806` 直接启动指定尺寸。
+- MCP 运行时双通道、376×806/390×844 输入回归和任务页截图对照仍需在 Godot 独立运行窗口中完成。
+- 验收期间不点击任务执行/提交或权益申请/使用控件，避免写入正式数据。
 
 ## 后续
 
-1. 在可运行 Godot 4.x 的环境执行 headless import / parse。
-2. 运行 390×844 场景并与 Web 截图 overlay 校准。
-3. 修正人物 anchor、气泡、职务页面板等像素差异。
-4. 补职务左右等级预览、通知和聊天快捷入口。
+1. 通过 MCP runtime bridge 完成 376×806 与 390×844 的输入、导航和 BGM 回归。
+2. 使用 Web/Godot 对照截图复核任务页首屏、统计卡、筛选、任务卡和本月统计。
+3. 根据截图做第二轮 1–3px 视觉微调，并继续保持任务滚动/顶部下拉返回行为。
+4. 补职务页通知和聊天快捷入口。
 5. 继续迁移老妞端。
 6. 把开发期 GitHub 动画资源迁到正式云资源。
 7. 接入 Godot → 微信小游戏导出适配层并在微信开发者工具验证。
