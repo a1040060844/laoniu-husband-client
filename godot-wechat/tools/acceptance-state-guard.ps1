@@ -2,7 +2,8 @@ param(
     [ValidateSet("before", "after")]
     [string]$Mode,
     [string]$ApiBase = "https://www.laoniulaoge.cn",
-    [string]$SnapshotPath = ""
+    [string]$SnapshotPath = "",
+    [string]$Proxy = ""
 )
 
 Set-StrictMode -Version Latest
@@ -78,7 +79,16 @@ function Get-Projection {
 
 $uri = "$($ApiBase.TrimEnd('/'))/api/state"
 Write-Output "Reading state fingerprint from $uri"
-$response = Invoke-WebRequest -UseBasicParsing -Method Get -Uri $uri -Headers @{ Accept = "application/json" }
+$requestArgs = @{
+    UseBasicParsing = $true
+    Method = "Get"
+    Uri = $uri
+    Headers = @{ Accept = "application/json" }
+}
+if (-not [string]::IsNullOrWhiteSpace($Proxy)) {
+    $requestArgs.Proxy = $Proxy
+}
+$response = Invoke-WebRequest @requestArgs
 $payload = $response.Content | ConvertFrom-Json
 $projection = Get-Projection $payload
 $json = $projection | ConvertTo-Json -Depth 40 -Compress
