@@ -1,6 +1,9 @@
 extends Node
 
 const TaskLineIconScript = preload("res://src/task_line_icon.gd")
+const SERIF_FONT_NAMES: PackedStringArray = ["Songti SC", "STSong", "SimSun", "Noto Serif CJK SC"]
+const SANS_FONT_NAMES: PackedStringArray = ["PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC"]
+const NUMERIC_FONT_NAMES: PackedStringArray = ["Georgia", "Times New Roman", "Noto Serif CJK SC"]
 
 var _mounted: bool = false
 var _was_visible: bool = false
@@ -25,6 +28,9 @@ var _month_note: Label
 
 var _sync_elapsed: float = 0.0
 var _float_elapsed: float = 0.0
+var _serif_font: Font
+var _sans_font: Font
+var _numeric_font: Font
 
 func _ready() -> void:
     process_mode = Node.PROCESS_MODE_ALWAYS
@@ -39,6 +45,9 @@ func _mount_when_ready() -> void:
     if TaskVisualOverlay._root == null:
         return
 
+    _serif_font = _make_system_font(SERIF_FONT_NAMES)
+    _sans_font = _make_system_font(SANS_FONT_NAMES)
+    _numeric_font = _make_system_font(NUMERIC_FONT_NAMES)
     _install_background()
     _install_swipe_hint()
     _install_header()
@@ -71,6 +80,23 @@ func _process(delta: float) -> void:
     _style_tabs()
     _style_task_cards()
     _animate_swipe_hint()
+
+func _make_system_font(names: PackedStringArray) -> Font:
+    var font: SystemFont = SystemFont.new()
+    font.font_names = names
+    font.allow_system_fallback = true
+    return font
+
+func apply_web_font(control: Control, family: String = "sans") -> void:
+    if control == null:
+        return
+    var font: Font = _sans_font
+    if family == "serif":
+        font = _serif_font
+    elif family == "numeric":
+        font = _numeric_font
+    if font != null:
+        control.add_theme_font_override("font", font)
 
 func _install_background() -> void:
     TaskVisualOverlay._backdrop.visible = false
@@ -202,16 +228,19 @@ void fragment() {
 
 func _install_header() -> void:
     TaskVisualOverlay._level_label.z_index = 3
+    apply_web_font(TaskVisualOverlay._level_label, "numeric")
     TaskVisualOverlay._level_label.add_theme_font_size_override("font_size", 20)
     TaskVisualOverlay._level_label.add_theme_color_override("font_color", Color("e7c78d"))
 
     TaskVisualOverlay._title_label.z_index = 3
+    apply_web_font(TaskVisualOverlay._title_label, "serif")
     TaskVisualOverlay._title_label.add_theme_font_size_override("font_size", 42)
     TaskVisualOverlay._title_label.add_theme_color_override("font_color", Color("f3eadb"))
     TaskVisualOverlay._title_label.add_theme_color_override("font_shadow_color", Color(0.906, 0.780, 0.553, 0.24))
     TaskVisualOverlay._title_label.add_theme_constant_override("shadow_offset_y", 2)
 
     _header_subtitle = Label.new()
+    apply_web_font(_header_subtitle, "serif")
     _header_subtitle.text = "老哥任务簿 · 今日待执行"
     _header_subtitle.add_theme_font_size_override("font_size", 14)
     _header_subtitle.add_theme_color_override("font_color", Color("e7c78d"))
@@ -296,6 +325,7 @@ func _panel_style() -> StyleBoxFlat:
 
 func _add_panel_title(panel: Control, text_value: String, top: float) -> void:
     var title: Label = Label.new()
+    apply_web_font(title, "serif")
     title.text = text_value
     title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     title.add_theme_font_size_override("font_size", 16)
@@ -334,6 +364,7 @@ func _stat_cell(label_text: String, icon_key: String, muted: bool) -> Panel:
     cell.add_child(icon)
 
     var caption: Label = Label.new()
+    apply_web_font(caption, "sans")
     caption.name = "Caption"
     caption.text = label_text
     caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -345,6 +376,7 @@ func _stat_cell(label_text: String, icon_key: String, muted: bool) -> Panel:
     cell.add_child(caption)
 
     var value_label: Label = Label.new()
+    apply_web_font(value_label, "numeric")
     value_label.name = "Value"
     value_label.text = "0"
     value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -356,6 +388,7 @@ func _stat_cell(label_text: String, icon_key: String, muted: bool) -> Panel:
     cell.add_child(value_label)
 
     var muted_label: Label = Label.new()
+    apply_web_font(muted_label, "sans")
     muted_label.name = "Muted"
     muted_label.text = "EXP" if muted else ""
     muted_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -372,6 +405,9 @@ func _layout() -> void:
     if not _mounted and TaskVisualOverlay._root == null:
         return
     var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+    var compact: bool = viewport_size.x <= 380.0
+    var side: float = 16.0
+    var content_width: float = maxf(220.0, viewport_size.x - side * 2.0)
 
     if _edge_mask != null:
         _edge_mask.position = Vector2.ZERO
@@ -381,14 +417,19 @@ func _layout() -> void:
         _swipe_root.position = Vector2((viewport_size.x - 320.0) * 0.5, 12.0)
         _swipe_root.size = Vector2(320.0, 48.0)
 
-    TaskVisualOverlay._level_label.position = Vector2(16.0, 72.0)
-    TaskVisualOverlay._level_label.size = Vector2(220.0, 24.0)
+    TaskVisualOverlay._level_label.position = Vector2(side, 72.0)
+    TaskVisualOverlay._level_label.size = Vector2(content_width - 104.0, 24.0)
+    TaskVisualOverlay._level_label.add_theme_font_size_override("font_size", 20 if not compact else 18)
     TaskVisualOverlay._title_label.position = Vector2(16.0, 94.0)
-    TaskVisualOverlay._title_label.size = Vector2(258.0, 50.0)
+    TaskVisualOverlay._title_label.size = Vector2(maxf(130.0, viewport_size.x - 16.0 - 14.0 - 88.0 - 16.0), 50.0)
+    TaskVisualOverlay._title_label.add_theme_font_size_override("font_size", 42 if not compact else 36)
 
     if _header_subtitle != null:
-        _header_subtitle.position = Vector2(16.0, 145.0)
-        _header_subtitle.size = Vector2(250.0, 22.0)
+        var subtitle_y: float = 145.0
+        if compact:
+            subtitle_y = 140.0
+        _header_subtitle.position = Vector2(side, subtitle_y)
+        _header_subtitle.size = Vector2(maxf(130.0, viewport_size.x - 120.0), 22.0)
 
     if _avatar_frame != null:
         _avatar_frame.position = Vector2(viewport_size.x - 16.0 - 88.0, 72.0)
@@ -398,12 +439,17 @@ func _layout() -> void:
 
     if _overview_panel != null:
         _overview_panel.position = Vector2(16.0, 174.0)
-        _overview_panel.size = Vector2(viewport_size.x - 32.0, 120.0)
-        var cell_width: float = (_overview_panel.size.x - 24.0 - 24.0) / 4.0
+        _overview_panel.size = Vector2(content_width, 196.0 if compact else 120.0)
+        var columns: int = 2 if compact else 4
+        var rows: int = 2 if compact else 1
+        var cell_width: float = (_overview_panel.size.x - 24.0 - float(columns - 1) * 8.0) / float(columns)
+        var cell_height: float = 68.0
         for index: int in range(_overview_cells.size()):
             var cell: Panel = _overview_cells[index]
-            cell.position = Vector2(12.0 + float(index) * (cell_width + 8.0), 42.0)
-            cell.size = Vector2(cell_width, 68.0)
+            var column: int = index % columns
+            var row: int = index / columns
+            cell.position = Vector2(12.0 + float(column) * (cell_width + 8.0), 42.0 + float(row) * (cell_height + 8.0))
+            cell.size = Vector2(cell_width, cell_height)
             var icon: Control = cell.get_node("Icon") as Control
             var caption: Label = cell.get_node("Caption") as Label
             var value_label: Label = cell.get_node("Value") as Label
@@ -413,16 +459,19 @@ func _layout() -> void:
             value_label.size.x = cell_width - 4.0
             muted_label.size.x = cell_width - 4.0
 
-    TaskVisualOverlay._source_row.position = Vector2(16.0, 308.0)
-    TaskVisualOverlay._source_row.size = Vector2(viewport_size.x - 32.0, 44.0)
+    var source_y: float = 308.0 if not compact else 384.0
+    var filter_y: float = source_y + 58.0
+    var scroll_y: float = filter_y + 58.0
+    TaskVisualOverlay._source_row.position = Vector2(side, source_y)
+    TaskVisualOverlay._source_row.size = Vector2(content_width, 44.0)
     TaskVisualOverlay._source_row.z_index = 4
 
-    TaskVisualOverlay._filter_row.position = Vector2(16.0, 366.0)
-    TaskVisualOverlay._filter_row.size = Vector2(viewport_size.x - 32.0, 44.0)
+    TaskVisualOverlay._filter_row.position = Vector2(side, filter_y)
+    TaskVisualOverlay._filter_row.size = Vector2(content_width, 44.0)
     TaskVisualOverlay._filter_row.z_index = 4
 
-    TaskVisualOverlay._scroll.position = Vector2(16.0, 424.0)
-    TaskVisualOverlay._scroll.size = Vector2(viewport_size.x - 32.0, viewport_size.y - 442.0)
+    TaskVisualOverlay._scroll.position = Vector2(side, scroll_y)
+    TaskVisualOverlay._scroll.size = Vector2(content_width, maxf(128.0, viewport_size.y - scroll_y - 18.0))
     TaskVisualOverlay._scroll.z_index = 3
     TaskVisualOverlay._list.custom_minimum_size = Vector2(TaskVisualOverlay._scroll.size.x - 8.0, 0.0)
     TaskVisualOverlay._list.add_theme_constant_override("separation", 12)
@@ -441,6 +490,7 @@ func _style_tabs() -> void:
             _style_tab_button(button, active, false)
 
 func _style_tab_button(button: Button, active: bool, source_tab: bool) -> void:
+    apply_web_font(button, "serif" if source_tab else "sans")
     button.custom_minimum_size = Vector2(0.0, 44.0)
     button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     button.add_theme_font_size_override("font_size", 18 if source_tab else 12)
@@ -459,15 +509,20 @@ func _style_task_cards() -> void:
     if TaskVisualOverlay._list == null:
         return
 
+    var visible_tasks: Array[Dictionary] = _visible_tasks()
+    var task_index: int = 0
     for child: Node in TaskVisualOverlay._list.get_children():
         if not child is Panel:
             continue
         var card: Panel = child as Panel
         if card == _month_panel:
             continue
-        _style_task_card(card)
+        if task_index >= visible_tasks.size():
+            break
+        _style_task_card(card, visible_tasks[task_index])
+        task_index += 1
 
-func _style_task_card(card: Panel) -> void:
+func _style_task_card(card: Panel, task: Dictionary) -> void:
     if card.get_child_count() < 6:
         return
 
@@ -488,7 +543,11 @@ func _style_task_card(card: Panel) -> void:
         type_text = type_text.replace("    ", " ")
 
     head.visible = false
-    card.custom_minimum_size = Vector2(0.0, 238.0)
+    apply_web_font(title, "serif")
+    apply_web_font(description, "sans")
+    apply_web_font(reward, "sans")
+    apply_web_font(deadline, "sans")
+    apply_web_font(action, "sans")
     var card_style: StyleBoxFlat = StyleBoxFlat.new()
     card_style.bg_color = Color(0.055, 0.040, 0.026, 0.76)
     card_style.border_color = _status_border(status_text)
@@ -500,8 +559,56 @@ func _style_task_card(card: Panel) -> void:
     card.modulate = Color(1, 1, 1, 0.82) if status_text == "已确认" or status_text == "已完成" else Color.WHITE
 
     var width_value: float = maxf(card.size.x, TaskVisualOverlay._scroll.size.x - 8.0)
+    var compact: bool = get_viewport().get_visible_rect().size.x <= 380.0
     var content_x: float = 80.0
-    var content_width: float = maxf(180.0, width_value - content_x - 14.0)
+    var content_width: float = maxf(124.0, width_value - content_x - 14.0)
+
+    var title_chars: int = maxi(8, int(content_width / 16.0))
+    var title_lines: int = clampi(int(ceil(float(title.text.length()) / float(title_chars))), 1, 2)
+    var description_chars: int = maxi(14, int(content_width / 7.2))
+    var description_lines: int = clampi(int(ceil(float(description.text.length()) / float(description_chars))), 1, 4)
+    var repeat_count: int = _task_repeat_count(task)
+    var completed_count: int = _task_completed_count(task)
+    var has_repeat: bool = repeat_count > 1
+    var result_text: String = str(task.get("resultText", ""))
+    var has_result: bool = not result_text.is_empty()
+    var title_y: float = 48.0
+    var title_height: float = 27.0 * float(title_lines)
+    var description_y: float = title_y + title_height + 4.0
+    var description_height: float = 19.0 * float(description_lines)
+    var reward_y: float = description_y + description_height + 8.0
+    var deadline_y: float = reward_y + 32.0
+    var next_y: float = deadline_y + 22.0
+    var card_height: float = next_y + 14.0
+
+    var repeat_label: Label = _ensure_extra_label(card, "ParityRepeat", Color("e7c78d"), 12)
+    repeat_label.visible = has_repeat
+    if has_repeat:
+        repeat_label.text = "本周期进度 %s/%s" % [completed_count, repeat_count]
+        repeat_label.position = Vector2(content_x + 21.0, next_y - 2.0)
+        repeat_label.size = Vector2(content_width - 21.0, 20.0)
+        next_y += 22.0
+        card_height = next_y + 14.0
+
+    var result_label: Label = _ensure_extra_label(card, "ParityResult", Color("e7c78d"), 12)
+    result_label.visible = has_result
+    if has_result:
+        result_label.text = result_text
+        result_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        result_label.position = Vector2(content_x, next_y - 2.0)
+        result_label.size = Vector2(content_width, 38.0)
+        next_y += 42.0
+        card_height = next_y + 14.0
+
+    if compact:
+        card_height = maxf(card_height, 222.0)
+    else:
+        card_height = maxf(card_height, 206.0)
+    card.custom_minimum_size = Vector2(0.0, card_height)
+    card.set_meta("parity_content_x", content_x)
+    card.set_meta("parity_content_width", content_width)
+    card.set_meta("parity_reward_y", reward_y)
+    card.set_meta("parity_reward_height", 26.0)
 
     var mark: Panel = _ensure_mark(card)
     mark.position = Vector2(14.0, 14.0)
@@ -513,48 +620,94 @@ func _style_task_card(card: Panel) -> void:
 
     var type_chip: Panel = _ensure_chip(card, "ParityType", type_text, false)
     type_chip.position = Vector2(content_x, 14.0)
-    type_chip.size = Vector2(minf(148.0, content_width - 76.0), 26.0)
+    type_chip.size = Vector2(minf(148.0, maxf(92.0, content_width - 76.0)), 26.0)
 
     var status_chip: Panel = _ensure_chip(card, "ParityStatus", status_text, true)
     status_chip.position = Vector2(width_value - 14.0 - 70.0, 14.0)
     status_chip.size = Vector2(70.0, 26.0)
     _style_status_chip(status_chip, status_text)
 
-    title.position = Vector2(content_x, 48.0)
-    title.size = Vector2(content_width, 28.0)
+    title.position = Vector2(content_x, title_y)
+    title.size = Vector2(content_width, title_height)
     title.add_theme_font_size_override("font_size", 23)
     title.add_theme_color_override("font_color", Color("f3eadb"))
+    title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    title.max_lines_visible = 2
 
-    description.position = Vector2(content_x, 80.0)
-    description.size = Vector2(content_width, 42.0)
+    description.position = Vector2(content_x, description_y)
+    description.size = Vector2(content_width, description_height)
     description.add_theme_font_size_override("font_size", 13)
     description.add_theme_color_override("font_color", Color(0.953, 0.918, 0.859, 0.68))
     description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
+    reward.visible = false
     var reward_chip: Panel = _ensure_reward_chip(card)
-    reward_chip.position = Vector2(content_x, 128.0)
+    reward_chip.visible = false
+    reward_chip.position = Vector2(content_x, reward_y)
     reward_chip.size = Vector2(minf(158.0, content_width), 26.0)
     var gift_icon: Control = reward_chip.get_node("Icon") as Control
     gift_icon.position = Vector2(7.0, 4.0)
     gift_icon.size = Vector2(18.0, 18.0)
-    reward.position = Vector2(content_x + 28.0, 131.0)
+    reward.position = Vector2(content_x + 28.0, reward_y + 3.0)
     reward.size = Vector2(minf(128.0, content_width - 28.0), 20.0)
     reward.text = reward.text.trim_prefix("奖励：")
     reward.add_theme_font_size_override("font_size", 11)
     reward.add_theme_color_override("font_color", Color("e7c78d"))
 
     var deadline_icon: Control = _ensure_deadline_icon(card)
-    deadline_icon.position = Vector2(content_x, 159.0)
+    deadline_icon.position = Vector2(content_x, deadline_y)
     deadline_icon.size = Vector2(16.0, 16.0)
-    deadline.position = Vector2(content_x + 21.0, 157.0)
+    deadline.position = Vector2(content_x + 21.0, deadline_y - 2.0)
     deadline.size = Vector2(content_width - 21.0, 20.0)
     deadline.add_theme_font_size_override("font_size", 12)
     deadline.add_theme_color_override("font_color", Color(0.953, 0.918, 0.859, 0.42))
 
-    action.position = Vector2(width_value - 14.0 - 148.0, 180.0)
+    action.position = Vector2(width_value - 14.0 - 148.0, card_height - 60.0)
     action.size = Vector2(148.0, 46.0)
     action.add_theme_font_size_override("font_size", 13)
     _style_action(action)
+
+func _visible_tasks() -> Array[Dictionary]:
+    var result: Array[Dictionary] = []
+    var allowed_value: Variant = TaskVisualOverlay.FILTERS.get(str(TaskVisualOverlay._filter), TaskVisualOverlay.FILTERS["all"])
+    var allowed: Array = allowed_value if allowed_value is Array else []
+    for value: Variant in TaskVisualOverlay._tasks:
+        if not value is Dictionary:
+            continue
+        var task: Dictionary = value as Dictionary
+        if str(task.get("source", "wife")) != str(TaskVisualOverlay._source):
+            continue
+        if not allowed.has(str(task.get("status", ""))):
+            continue
+        result.append(task)
+    return result
+
+func _ensure_extra_label(card: Panel, node_name: String, color: Color, font_size: int) -> Label:
+    var existing: Node = card.get_node_or_null(node_name)
+    if existing is Label:
+        return existing as Label
+    var label: Label = Label.new()
+    label.name = node_name
+    label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    label.add_theme_color_override("font_color", color)
+    label.add_theme_font_size_override("font_size", font_size)
+    apply_web_font(label, "sans")
+    card.add_child(label)
+    return label
+
+func _task_repeat_count(task: Dictionary) -> int:
+    var value: int = int(task.get("repeatCount", 1))
+    var time_config: Variant = task.get("timeConfig", {})
+    if value <= 1 and time_config is Dictionary:
+        value = int((time_config as Dictionary).get("repeatCount", 1))
+    return maxi(1, value)
+
+func _task_completed_count(task: Dictionary) -> int:
+    var value: int = int(task.get("completedCount", 0))
+    var time_config: Variant = task.get("timeConfig", {})
+    if value <= 0 and time_config is Dictionary:
+        value = int((time_config as Dictionary).get("completedCount", 0))
+    return maxi(0, value)
 
 func _ensure_mark(card: Panel) -> Panel:
     var existing: Node = card.get_node_or_null("ParityMark")
@@ -605,6 +758,7 @@ func _ensure_chip(card: Panel, node_name: String, text_value: String, status: bo
         label.add_theme_font_size_override("font_size", 12)
         label.add_theme_color_override("font_color", Color("f3eadb") if status else Color("e7c78d"))
         label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        apply_web_font(label, "sans")
         panel.add_child(label)
 
     var chip_label: Label = panel.get_node("Label") as Label
@@ -652,7 +806,7 @@ func _ensure_deadline_icon(card: Panel) -> Control:
         return existing as Control
     var icon: Control = TaskLineIconScript.new() as Control
     icon.name = "ParityDeadlineIcon"
-    icon.set("icon_key", "clipboard")
+    icon.set("icon_key", "file-text")
     icon.set("stroke_color", Color(0.953, 0.918, 0.859, 0.42))
     card.add_child(icon)
     return icon

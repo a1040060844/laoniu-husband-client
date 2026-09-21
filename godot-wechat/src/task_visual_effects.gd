@@ -205,6 +205,7 @@ func _install_reward_chips(card: Panel, task: Dictionary) -> void:
         label.add_theme_font_size_override("font_size", 11)
         label.add_theme_color_override("font_color", Color("e7c78d"))
         label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        TaskVisualParity.apply_web_font(label, "sans")
         label.position = Vector2(27.0 if index == 0 else 9.0, 0.0)
         label.size = Vector2(chip.custom_minimum_size.x - (34.0 if index == 0 else 18.0), 26.0)
         chip.add_child(label)
@@ -219,8 +220,11 @@ func _install_reward_chips(card: Panel, task: Dictionary) -> void:
 
 func _layout_reward_row(card: Panel, row: HBoxContainer) -> void:
     var width_value: float = maxf(card.size.x, TaskVisualOverlay._scroll.size.x - 8.0)
-    row.position = Vector2(80.0, 128.0)
-    row.size = Vector2(maxf(180.0, width_value - 94.0), 26.0)
+    var content_x: float = float(card.get_meta("parity_content_x", 80.0))
+    var reward_y: float = float(card.get_meta("parity_reward_y", 128.0))
+    var reward_height: float = float(card.get_meta("parity_reward_height", 26.0))
+    row.position = Vector2(content_x, reward_y)
+    row.size = Vector2(maxf(120.0, width_value - content_x - 14.0), reward_height)
 
 func _reward_chips(task: Dictionary) -> Array[Dictionary]:
     var result: Array[Dictionary] = []

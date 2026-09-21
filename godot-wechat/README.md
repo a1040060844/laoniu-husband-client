@@ -131,6 +131,30 @@ https://www.laoniulaoge.cn/game-assets/manifest.json
 - 追加 `task_submitted` 日志
 - 保存继续走 revision 冲突保护
 
+任务页第二轮视觉复刻已加入：
+
+- Web 字体栈：宋体/思源衬线、微软雅黑/苹方控件字、Georgia/Times 数字字形
+- 本地 Lucide SVG 图标与许可证说明，不依赖 emoji 或彩色表情字体
+- 390×844 四列概况卡；宽度 ≤380 时自动切换为 2×2
+- 任务卡按标题、说明、重复进度和结果文字动态计算高度
+- 多枚经验/零花钱/权益奖励胶囊、重复任务进度与 `resultText`
+- 来源、状态、卡片和提交预览的 Web 对齐动画与阴影
+- 仅 Debug 存在的零写入验收夹具：`live`、`all_statuses`、`empty`、`stress`、`modal_preview`
+
+Debug 夹具快捷键：
+
+```text
+F2  all_statuses       展示 todo / doing / submitted / completed 等状态
+F3  empty              空列表
+F4  stress             长标题、多奖励、重复进度、结果文字
+F5  modal_preview      只打开提交弹窗预览，不允许提交
+F7  live               恢复真实只读任务
+F8  展开/收起验收面板
+F6  循环 314×706 → 376×806 → 390×844
+```
+
+夹具会禁用任务操作，并在业务函数入口再次硬性短路；不会修改 `GameState.state`、revision、日志或调用保存接口。Release 构建不创建夹具入口。
+
 ### BGM 路由
 
 保持 Web 版规则：
@@ -159,11 +183,12 @@ https://www.laoniulaoge.cn/assets/...
 ## 当前验收状态
 
 - 当前开发分支已包含登录、职务、权益和任务页第一轮视觉/交互实现，以及 376×806 输入诊断工具。
-- 已用 Godot 4.7.1 headless 完成项目与 MCP Toolkit 扫描，当前没有 Parser Error、SCRIPT Error 或任务页运行时错误。
-- 项目内置 Godot MCP Toolkit 1.0.0；Windows 通过根目录 `.mcp.json` 使用 `cmd /c npx -y @npgamedev/godot-mcp-server`。
+- 已用 Godot 4.7.1 headless 完成项目与脚本解析检查；当前没有发现 Parser Error、SCRIPT Error 或 Autoload 加载错误。
+- 项目内置 Godot MCP Toolkit 1.0.0；Windows 通过 `godot-wechat/.mcp.json` 使用 `cmd /c npx -y @npgamedev/godot-mcp-server`。
 - Debug 运行时可用 `F8` 展开验收面板，`F6` 循环 `314×706 → 376×806 → 390×844`，也可用 `--debug-window-size=376x806` 直接启动指定尺寸。
-- 已通过 MCP runtime bridge 读取编辑器/运行时通道、场景树、截图和日志，并以独立进程完成 376×806 与 390×844 的输入回归：职务预览、横向滑动、职务↔权益、职务↔任务、任务顶部下拉返回和音频路由均通过。
-- 任务页首轮对照已覆盖 390×844 首屏、来源切换、五种状态筛选、列表滚动不换页、顶部下拉返回；任务页 BGM 为 `none`，返回职务后恢复 `bgm-role-03`。
+- 当前代码已保留编辑器与运行时 MCP 通道、输入诊断和独立窗口复现器；本环境的 MCP registry 写入受沙箱权限限制，运行时双通道和截图仍需在本机 Godot 任务中复验，不能以静态检查代替。
+- 任务页第二轮已完成代码侧响应式布局、字体、SVG 图标、动态任务卡、零写入夹具和提交弹窗预览；三种尺寸的截图热图仍需在 MCP runtime bridge 可用后生成。
+- 既有功能基线：任务页 BGM 为 `none`，返回职务后恢复 `bgm-role-03`；验收禁止点击任务执行/提交或权益申请/使用控件。
 - 验收期间不点击任务执行/提交或权益申请/使用控件，避免写入正式数据。
 
 ## 后续
