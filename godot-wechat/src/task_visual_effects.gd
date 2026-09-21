@@ -191,13 +191,12 @@ func _install_reward_chips(card: Panel, task: Dictionary) -> void:
         chip.add_theme_stylebox_override("panel", style)
         row.add_child(chip)
 
-        if index == 0:
-            var icon: Control = TaskLineIconScript.new() as Control
-            icon.set("icon_key", "gift")
-            icon.set("stroke_color", Color("e7c78d"))
-            icon.position = Vector2(7.0, 4.0)
-            icon.size = Vector2(18.0, 18.0)
-            chip.add_child(icon)
+        var icon: Control = TaskLineIconScript.new() as Control
+        icon.set("icon_key", str(chip_data.get("icon", "gift")))
+        icon.set("stroke_color", Color("e7c78d"))
+        icon.position = Vector2(7.0, 4.0)
+        icon.size = Vector2(18.0, 18.0)
+        chip.add_child(icon)
 
         var label: Label = Label.new()
         label.text = text_value
@@ -206,8 +205,8 @@ func _install_reward_chips(card: Panel, task: Dictionary) -> void:
         label.add_theme_color_override("font_color", Color("e7c78d"))
         label.mouse_filter = Control.MOUSE_FILTER_IGNORE
         TaskVisualParity.apply_web_font(label, "sans")
-        label.position = Vector2(27.0 if index == 0 else 9.0, 0.0)
-        label.size = Vector2(chip.custom_minimum_size.x - (34.0 if index == 0 else 18.0), 26.0)
+        label.position = Vector2(27.0, 0.0)
+        label.size = Vector2(chip.custom_minimum_size.x - 34.0, 26.0)
         chip.add_child(label)
 
     var old_reward: Label = card.get_child(3) as Label
@@ -237,20 +236,20 @@ func _reward_chips(task: Dictionary) -> Array[Dictionary]:
             var reward_type: String = str(reward.get("type", ""))
             var value: int = int(reward.get("value", 0))
             if reward_type == "experience" and value > 0:
-                result.append({"text": "+%s EXP" % value})
+                result.append({"text": "+%s EXP" % value, "icon": "sparkles"})
             elif reward_type == "allowance" and value > 0:
-                result.append({"text": "¥%s" % value})
+                result.append({"text": "¥%s" % value, "icon": "money"})
             elif value > 0:
-                result.append({"text": "+%s" % value})
+                result.append({"text": "+%s" % value, "icon": "gift"})
     if result.is_empty():
         var exp_value: int = int(task.get("rewardExp", 0))
         var money_value: int = int(task.get("rewardMoney", 0))
         if exp_value > 0:
-            result.append({"text": "+%s EXP" % exp_value})
+            result.append({"text": "+%s EXP" % exp_value, "icon": "sparkles"})
         if money_value > 0:
-            result.append({"text": "¥%s" % money_value})
+            result.append({"text": "¥%s" % money_value, "icon": "money"})
     if result.is_empty():
-        result.append({"text": "任务奖励"})
+        result.append({"text": "任务奖励", "icon": "gift"})
     return result
 
 func _reward_signature(task: Dictionary) -> String:
