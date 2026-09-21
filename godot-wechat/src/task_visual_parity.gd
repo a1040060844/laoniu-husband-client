@@ -431,13 +431,13 @@ func _style_tabs() -> void:
     for child: Node in TaskVisualOverlay._source_row.get_children():
         if child is Button:
             var button: Button = child as Button
-            var active: bool = str(button.get_meta("source-key", "")) == str(TaskVisualOverlay._source)
+            var active: bool = str(button.get_meta("source_key", "")) == str(TaskVisualOverlay._source)
             _style_tab_button(button, active, true)
 
     for child: Node in TaskVisualOverlay._filter_row.get_children():
         if child is Button:
             var button: Button = child as Button
-            var active: bool = str(button.get_meta("filter-key", "")) == str(TaskVisualOverlay._filter)
+            var active: bool = str(button.get_meta("filter_key", "")) == str(TaskVisualOverlay._filter)
             _style_tab_button(button, active, false)
 
 func _style_tab_button(button: Button, active: bool, source_tab: bool) -> void:
@@ -803,12 +803,22 @@ func _load_avatar(level: int, raw_url: String) -> void:
 
 func _sync_stats() -> void:
     var stats: Dictionary = _calculate_stats()
-    if _overview_values.size() == 4:
+    var overview_ready: bool = _overview_values.size() == 4
+    for value_label: Label in _overview_values:
+        if not is_instance_valid(value_label):
+            overview_ready = false
+            break
+    if overview_ready:
         _overview_values[0].text = str(stats.get("pending", 0))
         _overview_values[1].text = str(stats.get("doing", 0))
         _overview_values[2].text = str(stats.get("submitted", 0))
         _overview_values[3].text = "+%s" % int(stats.get("today_exp", 0))
-    if _month_values.size() == 3:
+    var month_ready: bool = _month_values.size() == 3
+    for value_label: Label in _month_values:
+        if not is_instance_valid(value_label):
+            month_ready = false
+            break
+    if month_ready:
         _month_values[0].text = "¥ %s" % int(stats.get("month_money", 0))
         _month_values[1].text = str(stats.get("month_count", 0))
         _month_values[2].text = "%s EXP" % int(stats.get("month_exp", 0))

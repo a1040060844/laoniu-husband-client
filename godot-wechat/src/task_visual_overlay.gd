@@ -156,10 +156,10 @@ func _tab_button(text_value: String, key: String, source_tab: bool) -> Button:
     button.custom_minimum_size = Vector2(62, 30)
     if source_tab:
         button.pressed.connect(_select_source.bind(key))
-        button.set_meta("source-key", key)
+        button.set_meta("source_key", key)
     else:
         button.pressed.connect(_select_filter.bind(key))
-        button.set_meta("filter-key", key)
+        button.set_meta("filter_key", key)
     return button
 
 func _process(_delta: float) -> void:
@@ -271,11 +271,11 @@ func _update_tab_states() -> void:
     for child: Node in _source_row.get_children():
         if child is Button:
             var button: Button = child as Button
-            button.modulate = Color.WHITE if str(button.get_meta("source-key")) == _source else Color(1, 1, 1, 0.55)
+            button.modulate = Color.WHITE if str(button.get_meta("source_key")) == _source else Color(1, 1, 1, 0.55)
     for child: Node in _filter_row.get_children():
         if child is Button:
             var button: Button = child as Button
-            button.modulate = Color.WHITE if str(button.get_meta("filter-key")) == _filter else Color(1, 1, 1, 0.55)
+            button.modulate = Color.WHITE if str(button.get_meta("filter_key")) == _filter else Color(1, 1, 1, 0.55)
 
 func _rebuild_task_list() -> void:
     if _list == null:

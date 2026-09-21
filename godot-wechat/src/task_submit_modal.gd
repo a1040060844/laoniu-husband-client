@@ -262,12 +262,12 @@ func _configure_action_interceptor(card: Panel, action: Button, task: Dictionary
     intercept.visible = true
     intercept.position = action.position
     intercept.size = action.size
-    intercept.set_meta("task-data", task.duplicate(true))
+    intercept.set_meta("task_data", task.duplicate(true))
 
 func _on_intercept_pressed(intercept: Button) -> void:
     if _root == null or _root.visible or _is_submitting:
         return
-    var value: Variant = intercept.get_meta("task-data", {})
+    var value: Variant = intercept.get_meta("task_data", {})
     if value is Dictionary:
         _open_modal(value as Dictionary)
 

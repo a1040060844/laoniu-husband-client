@@ -117,7 +117,7 @@ func _animate_task_cards(generation: int) -> void:
             continue
         var delay: float = 0.12 + float(index) * 0.055
         _animate_control(panel, delay, 0.36)
-        panel.set_meta("task-enter-generation", generation)
+        panel.set_meta("task_enter_generation", generation)
         index += 1
 
 func _animate_control(control: Control, delay: float, duration: float) -> void:

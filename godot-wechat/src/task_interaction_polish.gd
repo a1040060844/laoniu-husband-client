@@ -167,10 +167,10 @@ func _attach_submit_modal_buttons() -> void:
 func _attach_button(button: Button, spark_enabled: bool) -> void:
     if button == null or not is_instance_valid(button):
         return
-    if bool(button.get_meta("task-polish-feedback", false)):
+    if bool(button.get_meta("task_polish_feedback", false)):
         return
-    button.set_meta("task-polish-feedback", true)
-    button.set_meta("task-polish-spark", spark_enabled)
+    button.set_meta("task_polish_feedback", true)
+    button.set_meta("task_polish_spark", spark_enabled)
     button.button_down.connect(_on_button_down.bind(button))
     button.button_up.connect(_on_button_up.bind(button))
 
@@ -180,7 +180,7 @@ func _on_button_down(button: Button) -> void:
     button.pivot_offset = button.size * 0.5
     var tween: Tween = create_tween()
     tween.tween_property(button, "scale", Vector2(0.97, 0.97), 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-    if bool(button.get_meta("task-polish-spark", false)):
+    if bool(button.get_meta("task_polish_spark", false)):
         _spawn_click_spark(button.get_global_rect().get_center())
 
 func _on_button_up(button: Button) -> void:
