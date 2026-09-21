@@ -105,6 +105,9 @@ func _enter_husband() -> void:
     _snap_to_page(false)
 
 func _input(event: InputEvent) -> void:
+    var communication_overlay: Node = get_node_or_null("/root/HusbandCommunicationOverlay")
+    if communication_overlay != null and communication_overlay.has_method("is_blocking_input") and communication_overlay.is_blocking_input():
+        return
     if not is_instance_valid(husband_view) or not husband_view.visible:
         return
 

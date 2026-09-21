@@ -43,6 +43,25 @@ $envValues = @{
     "GODOT_MCP_PROJECT_PATH" = $projectRoot
 }
 
+function Test-LocalPortBusy {
+    param([int]$Port)
+    try {
+        $listeners = @(Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort $Port -State Listen -ErrorAction Stop)
+        return $listeners.Count -gt 0
+    } catch [System.Management.Automation.CommandNotFoundException] {
+        $probe = Test-NetConnection -ComputerName 127.0.0.1 -Port $Port -InformationLevel Quiet -WarningAction SilentlyContinue
+        return [bool]$probe
+    } catch {
+        return $false
+    }
+}
+
+foreach ($port in @(6551, 6571, 6005)) {
+    if (Test-LocalPortBusy -Port $port) {
+        throw "Deterministic MCP startup refused: local port $port is already occupied. Close the owning editor/runtime and retry; no fallback port will be scanned."
+    }
+}
+
 function Start-GodotChild {
     param(
         [string]$Arguments,

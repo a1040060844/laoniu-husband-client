@@ -26,6 +26,9 @@ godot-wechat/
     ├── task_visual_overlay.gd
     ├── husband_audio_controller.gd
     ├── husband_quick_controls.gd
+    ├── husband_communication_overlay.gd
+    ├── communication_acceptance_fixture.gd
+    ├── communication_state_transforms.gd
     └── main.gd
 ```
 
@@ -105,6 +108,11 @@ https://www.laoniulaoge.cn/game-assets/manifest.json
 - 全屏插画 contain + 暗角
 - 返回登录按钮
 - 音乐开关
+- 通知快捷入口、通知弹窗和未读标记
+- 聊天留言快捷入口、独立滚动抽屉、头像和上奏图标
+- 通知/聊天 Debug 夹具：`F9` 未读、`F10` 空状态、`F11` 长文本、`F12` 恢复只读
+- 通知、已读、略过、发送在 Debug 构建中均由 UI 和控制器双层短路，不调用 `save_remote()`
+- 聊天状态变换由 `CommunicationStateTransforms` 纯函数承载，便于后续老妞端复用
 
 ### 老哥权益页
 
@@ -151,6 +159,10 @@ F5  modal_preview      只打开提交弹窗预览，不允许提交
 F7  live               恢复真实只读任务
 F8  展开/收起验收面板
 F6  循环 314×706 → 376×806 → 390×844
+F9  通知/聊天未读夹具
+F10 通知/聊天空状态夹具
+F11 通知/聊天长文本夹具
+F12 恢复真实只读状态
 ```
 
 夹具会禁用任务操作，并在业务函数入口再次硬性短路；不会修改 `GameState.state`、revision、日志或调用保存接口。Release 构建不创建夹具入口。
@@ -189,6 +201,7 @@ https://www.laoniulaoge.cn/assets/...
 - 固定端口验收可运行 `tools/start-godot-mcp-acceptance.ps1 -Size 390x844|376x806|314x706`；它会为 Godot 编辑器与独立运行时同时注入 Editor `6551`、Runtime `6571`、LSP `6005`，避免依赖机器级 MCP registry。
 - 生产零写入门禁可运行 `tools/acceptance-state-guard.ps1 -Mode before`，验收结束后运行 `-Mode after`；脚本只读取 `/api/state` 并比较 revision、任务、日志、权益、通知和聊天指纹。
 - 当前代码已保留编辑器与运行时 MCP 通道、输入诊断和独立窗口复现器；本环境的 MCP registry 写入受沙箱权限限制，运行时双通道和截图仍需在本机 Godot 任务中复验，不能以静态检查代替。
+- 已加入可复用的老哥通知/聊天覆盖层和纯内存状态变换测试；本机 Godot 4.7.1 日志已确认 `Communication state transforms: PASS`，但通知/聊天的 MCP 截图与三尺寸交互仍需桌面 runtime bridge 完成。
 - 任务页第二轮已完成代码侧响应式布局、字体、SVG 图标、动态任务卡、零写入夹具和提交弹窗预览；三种尺寸的截图热图仍需在 MCP runtime bridge 可用后生成。
 - 既有功能基线：任务页 BGM 为 `none`，返回职务后恢复 `bgm-role-03`；验收禁止点击任务执行/提交或权益申请/使用控件。
 - 验收期间不点击任务执行/提交或权益申请/使用控件，避免写入正式数据。
@@ -196,8 +209,8 @@ https://www.laoniulaoge.cn/assets/...
 ## 后续
 
 1. 根据 Web/Godot 对照截图做任务页第二轮 1–3px 视觉微调，并继续保持任务滚动/顶部下拉返回行为。
-2. 补职务页通知和聊天快捷入口。
-3. 继续迁移老妞端。
+2. 用 MCP runtime bridge 完成三尺寸通知/聊天截图和状态守卫验收。
+3. 继续迁移老妞端（复用通信公共层）。
 4. 把开发期 GitHub 动画资源迁到正式云资源。
 5. 接入 Godot → 微信小游戏导出适配层并在微信开发者工具验证。
 
